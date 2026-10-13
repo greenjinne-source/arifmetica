@@ -150,6 +150,28 @@ body[data-lvl="4"] .qbox,body[data-lvl="5"] .qbox{box-shadow:inset 3px 3px 0 var
 .chpad{grid-template-columns:repeat(5,1fr);max-width:600px;flex-basis:100%}
 .chpad button{height:80px;font-size:clamp(16px,4.6vw,26px);padding:0}
 .tblrow{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.frow{display:flex;align-items:center;gap:10px;padding:8px 10px;margin:10px 3px;color:#fff;text-shadow:1px 1px 0 #000;flex-wrap:wrap}
+.frn{font-family:var(--font-px);font-weight:400;font-size:12px;line-height:1.5;word-break:break-word}
+.dot{width:12px;height:12px;flex:none;display:inline-block;background:#8a8a8a;box-shadow:0 0 0 2px #000}
+.dot.on{background:#46e83f;box-shadow:0 0 0 2px #000,0 0 8px #46e83f}
+.badge{display:inline-block;background:#e33;color:#fff;font-family:var(--font-px);font-size:10px;padding:3px 6px;box-shadow:0 0 0 2px #000;text-shadow:none}
+.chathead{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:12px}
+.chat{height:38vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:12px;text-align:left;margin:3px}
+.msg{max-width:82%;align-self:flex-start;padding:8px 10px;font-weight:800;color:#fff;background:#4c4c5a;box-shadow:0 0 0 2px #000;word-break:break-word}
+.msg.me{align-self:flex-end;background:#3a8a28}
+.msg small{display:block;font-size:10px;opacity:.75;margin-top:2px}
+.phr{display:flex;flex-wrap:wrap;gap:10px;margin:14px 3px 6px;max-height:24vh;overflow-y:auto;padding:3px;justify-content:center}
+.phr .btn{font-size:10px;padding:8px 9px}
+.phr.emo .btn{font-size:20px;padding:6px 8px}
+.mjwrap{position:fixed;inset:0;z-index:85;background:rgba(8,10,26,.86);display:flex;flex-direction:column;align-items:center;padding:12px 8px 24px;overflow:auto}
+.mjbar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:center;margin:6px 0 10px}
+.mjboard{position:relative;flex:none;margin:8px auto}
+.mjt{position:absolute;display:grid;place-items:center;padding:0;line-height:1;background:#f3ead2;border-radius:3px;
+ box-shadow:inset 2px 2px 0 #fff,inset -2px -2px 0 #b9a47a,3px 4px 0 #6b5a3a,4px 6px 0 rgba(0,0,0,.35);transition:transform .1s}
+.mjt.blocked{filter:brightness(.62) saturate(.7)}
+.mjt.sel{background:#ffe066;outline:3px solid #ff9100;transform:translateY(-3px)}
+.mjt.hint{animation:mjh .5s ease-in-out infinite alternate}
+@keyframes mjh{to{background:#a8ffb5;transform:translateY(-4px)}}
 @media (max-width:700px),(pointer:coarse){
  #app{transform:none!important;padding:12px 16px 32px}
  body[data-lvl="4"] #hype,body[data-lvl="5"] #hype{animation:none}
@@ -937,7 +959,7 @@ let rzT=null;addEventListener('resize',()=>{fitFx();clearTimeout(rzT);rzT=setTim
 /* ============ ОБЩИЙ UI ============ */
 const app=document.getElementById('app');
 let SCREEN='login',LB_COUNTRY='';
-function render(){({login:renderLogin,menu:renderMenu,collection:renderCollection,stats:renderStats,leaders:renderLeaders}[SCREEN]||(()=>{}))()}
+function render(){({login:renderLogin,menu:renderMenu,collection:renderCollection,stats:renderStats,leaders:renderLeaders,friends:renderFriends}[SCREEN]||(()=>{}))()}
 function modal(html,lock=false,cls=''){closeModal();const m=document.createElement('div');m.className='overlay';m.innerHTML=`<div class="modal blk ${cls}" role="dialog" aria-modal="true">${html}</div>`;
  if(!lock)m.addEventListener('click',e=>{if(e.target===m)closeModal()});document.body.appendChild(m);const i=m.querySelector('input:not([type=range])');if(i)setTimeout(()=>i.focus(),60);return m}
 function closeModal(){document.querySelectorAll('.overlay').forEach(o=>o.remove())}
@@ -970,7 +992,7 @@ const ACT={
   <input type="password" id="pw" class="inp" placeholder="${esc(t('password'))}" aria-label="${esc(t('password'))}" autocomplete="off"><div class="err" id="err"></div>
   <div class="row"><button class="btn" data-act="close">${t('cancel')}</button><button class="btn pri big" data-act="login" data-arg="${esc(id)}" data-enter>${t('enter')}</button></div>`)},
  login(id){const p=DB.players[id],v=document.getElementById('pw').value;
-  if(p&&passOk(p,v)){SESSION=id;norm(p);p.last=Date.now();if(p.lang&&LI[p.lang]!==undefined&&p.lang!==LANG)setLang(p.lang,false);save(p);closeModal();renderMenu();toast(`${ava(p.avatar,p.frame,'s')} ${esc(t('hello',{n:p.name}))}`,2200)}
+  if(p&&passOk(p,v)){SESSION=id;norm(p);p.last=Date.now();if(p.lang&&LI[p.lang]!==undefined&&p.lang!==LANG)setLang(p.lang,false);save(p);closeModal();renderMenu();socialStart();toast(`${ava(p.avatar,p.frame,'s')} ${esc(t('hello',{n:p.name}))}`,2200)}
   else{document.getElementById('err').textContent=t('wrongPass');restartAnim(document.querySelector('.modal'),'shake');sndWrong()}},
  newPlayer(){tmpAva=STARTERS[0];const gc=guessCountry();modal(`<h2>${t('newPlayer')}</h2>
   <input id="nm" class="inp" maxlength="16" placeholder="${esc(t('nick'))}" aria-label="${esc(t('nick'))}" autocomplete="off">
@@ -989,8 +1011,8 @@ const ACT={
   const id=makePlayer(name,pw,tmpAva,country);
   const ok=await claimName(name,id);busy=false;
   if(!ok){delete DB.players[id];err.textContent=t('errTaken');return}
-  SESSION=id;save(DB.players[id]);closeModal();renderMenu();sndFanfare();burst(innerWidth/2,120,60,9);toast(`<big>${tmpAva}</big> ${esc(t('welcome',{n:name}))}`)},
- logout(){SESSION=null;SCREEN='login';render()},
+  SESSION=id;save(DB.players[id]);closeModal();renderMenu();socialStart();sndFanfare();burst(innerWidth/2,120,60,9);toast(`<big>${tmpAva}</big> ${esc(t('welcome',{n:name}))}`)},
+ logout(){if(socialOn()&&SESSION)STORE.db.fs.collection('presence').doc(SESSION).set({t:0}).catch(()=>{});socialStop();SESSION=null;SCREEN='login';render()},
  play(m){startGame(m)},
  locked(){const p=cur();toast(t('lockedToast',{d:done(p),t:REGULAR.length}))},
  back(){SCREEN=SESSION?'menu':'login';render()},
@@ -1041,6 +1063,7 @@ document.addEventListener('change',e=>{const el=e.target;if(el.dataset&&el.datas
 document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.vol;if(!k)return;SET[k]=e.target.value/100;applyVol();clearTimeout(volT);volT=setTimeout(saveSettings,300)});
 let volT=null;
 document.addEventListener('keydown',e=>{
+ if(document.getElementById('mjwrap'))return;
  if(document.querySelector('.overlay')){if(e.key==='Enter'){const b=document.querySelector('.overlay [data-enter]');if(b){e.preventDefault();b.click()}}else if(e.key==='Escape'&&!document.querySelector('.overlay .modal.lockm'))closeModal();return}
  if(SCREEN!=='game')return;
  const KS={'<':'lt',',':'lt','=':'eq','>':'gt','.':'gt'};
@@ -1059,7 +1082,7 @@ function renderMenu(){
   <button class="icon" data-act="audioPanel" title="${esc(t('audTitle'))}" aria-label="${esc(t('audTitle'))}">🎧</button><button class="btn sm" data-act="logout">${t('switchPlayer')}</button></header>
  <h2 class="on-sky">${t('chooseTraining')}</h2><div class="modes">${REGULAR.map(card).join('')}</div>
  <h2 class="on-sky">${t('specialModes')} ${p.special?'🎁':'🔒'}</h2><div class="modes">${SPECIAL.map(sp).join('')}</div>
- <div class="row"><button class="btn" data-act="collection">${t('btnCollection')}</button><button class="btn" data-act="stats">${t('btnStats')}</button><button class="btn" data-act="leaders">${t('allPlayers')}</button></div>`;
+ <div class="row"><button class="btn" data-act="collection">${t('btnCollection')}</button><button class="btn" data-act="stats">${t('btnStats')}</button><button class="btn" data-act="leaders">${t('allPlayers')}</button><button class="btn pri" data-act="friends">${t('friends')} <span class="badge" id="frBadge" hidden></span></button></div>`;socialRefresh();
 }
 
 /* ============ ИГРА ============ */
@@ -1129,7 +1152,7 @@ function answer(ok){
   G.streak++;G.correct++;p.correct++;if(G.streak>p.bestStreak)p.bestStreak=G.streak;
   const gain=Math.min(5,1+Math.floor(G.streak/5));p.dopa+=gain;G.dopa+=gain;
   if(st){const before=st.points;st.correct++;st.points=Math.min(100,st.points+(G.streak>=10?2:1));if(before<100&&st.points>=100){hit100=true;setTimeout(moneyThrow,450)}}
-  slot.classList.add('ok');mascot(G.streak>=5?'joy':'happy');fb.textContent=pick(tl('praise'));fb.className='fb ok';
+  if(G.streak%10===0)G.mjOffer=true;slot.classList.add('ok');mascot(G.streak>=5?'joy':'happy');fb.textContent=pick(tl('praise'));fb.className='fb ok';
   document.getElementById('dopaVal').textContent=p.dopa;celebrate(G.streak,gain)}
  else{
   G.streak=0;G.wrong++;p.wrong++;if(st)st.wrong++;if(G.mode==='extra')G.lives--;
@@ -1137,7 +1160,7 @@ function answer(ok){
   fb.textContent=G.input?t('almost',{a:G.q.a}):t('timeout',{a:G.q.a});fb.className='fb bad';
   document.body.dataset.lvl=0;restartAnim(document.getElementById('qbox'),'shake');sndWrong();mascot('sad')}
  updateMeter();const un=checkUnlocks(p);save(p);announce(un);
- setTimeout(()=>{if(SCREEN!=='game')return;if(G.mode==='extra'&&G.lives<=0)endGame(true);else nextQ()},hit100?3500:ok?800:1700)}
+ setTimeout(()=>{if(SCREEN!=='game')return;if(G.mode==='extra'&&G.lives<=0)endGame(true);else if(G.mjOffer){G.mjOffer=false;offerMahjong(()=>{if(SCREEN==='game')nextQ()})}else nextQ()},hit100?3500:ok?800:1700)}
 function endGame(finished){
  clearInterval(timerId);const p=cur();if(!G||!p){SCREEN='menu';return render()}
  p.timeMs+=Date.now()-G.start;p.last=Date.now();
@@ -1189,7 +1212,7 @@ function renderLeaders(){
  app.innerHTML=`<header class="top blk"><button class="icon" data-act="back" aria-label="←">⬅</button><h2 style="margin:0">${t('allPlayers')}</h2><div class="sp"></div><span style="font-weight:800">${STORE.mode==='remote'?t('online'):t('offline')}</span></header>
  <div class="chips" style="margin:20px 0">${[['',t('allCountries')],...used.map(c=>[c,flagOf(c)+' '+(c==='ZZ'?'—':countryName(c))])].map(([c,n])=>`<button class="btn sm ${LB_COUNTRY===c?'pri':''}" data-act="lbCountry" data-arg="${c}">${esc(n)}</button>`).join('')}</div>
  <section class="panel blk">${list.length?`<div class="tblwrap"><table class="tbl"><tr><th>#</th><th>${t('th_player')}</th><th>⚡</th><th>✅</th><th>🎯</th><th>🔥</th><th>${t('th_modes')}</th><th>🚀</th><th>⭐</th><th>⏱</th></tr>
-  ${list.map((p,i)=>`<tr class="${p.id===SESSION?'me':''}"><td>${i<3?['🥇','🥈','🥉'][i]:i+1}</td><td><span class="pl">${ava(p.avatar,p.frame,'s')}${pname(p)}</span></td><td>${p.dopa}</td><td>${p.correct}</td><td>${acc(p.correct,p.wrong)}</td><td>${p.bestStreak}</td><td>${done(p)}/${REGULAR.length}</td><td>${p.extraBest}</td><td>${fives(p)}</td><td>${fmtTime(p.timeMs)}</td></tr>`).join('')}</table></div>`:`<p style="font-weight:800">${t('noPlayersShort')}</p>`}</section>
+  ${list.map((p,i)=>`<tr class="${p.id===SESSION?'me':''}"><td>${i<3?['🥇','🥈','🥉'][i]:i+1}</td><td>${lbName(p)}</td><td>${p.dopa}</td><td>${p.correct}</td><td>${acc(p.correct,p.wrong)}</td><td>${p.bestStreak}</td><td>${done(p)}/${REGULAR.length}</td><td>${p.extraBest}</td><td>${fives(p)}</td><td>${fmtTime(p.timeMs)}</td></tr>`).join('')}</table></div>`:`<p style="font-weight:800">${t('noPlayersShort')}</p>`}</section>
  <section class="panel blk"><h2>${t('backup')}</h2><p style="font-weight:800;max-width:65ch">${STORE.mode==='remote'?t('backupOnline'):t('backupLocal')}</p>
  <div class="row" style="justify-content:flex-start"><button class="btn sm" data-act="exportData">${t('exportB')}</button><button class="btn sm" data-act="importData">${t('importB')}</button></div></section>`}
 
@@ -1214,5 +1237,197 @@ function refreshAudio(){const m=document.querySelector('.overlay .modal.audm');i
 document.body.dataset.lvl=0;
 loadSettings();buildScene();if(!SC.reduce)requestAnimationFrame(sceneTick);
 render();initStore();
+/* ============ ТЕКСТЫ: ДРУЗЬЯ, ЧАТ, МАДЖОНГ ============ */
+Object.assign(S,{
+ friends:['👥 Друзья','👥 Friends','👥 Достар','👥 Amigos','👥 Freunde','👥 Amis'],
+ requests:['Запросы в друзья','Friend requests','Достық сұраныстары','Solicitudes','Freundschaftsanfragen','Demandes d’amis'],
+ myFriends:['Мои друзья','My friends','Менің достарым','Mis amigos','Meine Freunde','Mes amis'],
+ onlineNow:['Сейчас в игре','Playing now','Қазір ойында','Jugando ahora','Gerade online','En ligne'],
+ noFriends:['Пока нет друзей. Добавь кого-нибудь из тех, кто сейчас в игре, или из таблицы «Все игроки».','No friends yet. Add someone who is playing now or from “All players”.','Әзірге дос жоқ. Қазір ойнап жүргендерден немесе «Барлық ойыншылар» тізімінен қос.','Aún no tienes amigos. Añade a alguien que esté jugando o de «Todos».','Noch keine Freunde. Füge jemanden hinzu, der gerade spielt.','Pas encore d’amis. Ajoute quelqu’un qui joue en ce moment.'],
+ nobodyOnline:['Сейчас никого нет в игре','Nobody else is playing right now','Қазір ешкім ойнап жатқан жоқ','Ahora no hay nadie más','Gerade spielt sonst niemand','Personne d’autre ne joue'],
+ addFriend:['➕ В друзья','➕ Add friend','➕ Дос қосу','➕ Añadir','➕ Hinzufügen','➕ Ajouter'],
+ reqSent:['Запрос отправлен ⏳','Request sent ⏳','Сұраныс жіберілді ⏳','Solicitud enviada ⏳','Anfrage gesendet ⏳','Demande envoyée ⏳'],
+ waiting:['⏳ ждёт ответа','⏳ waiting','⏳ жауап күтуде','⏳ esperando','⏳ wartet','⏳ en attente'],
+ accept:['✅ Принять','✅ Accept','✅ Қабылдау','✅ Aceptar','✅ Annehmen','✅ Accepter'],
+ decline:['✖ Отклонить','✖ Decline','✖ Бас тарту','✖ Rechazar','✖ Ablehnen','✖ Refuser'],
+ removeFriend:['Удалить из друзей','Remove friend','Достан өшіру','Quitar amigo','Freund entfernen','Retirer l’ami'],
+ newRequest:['{n} хочет дружить!','{n} wants to be friends!','{n} дос болғысы келеді!','¡{n} quiere ser tu amigo!','{n} möchte dein Freund sein!','{n} veut être ton ami !'],
+ nowFriends:['Теперь вы друзья с {n}! 🎉','You and {n} are friends now! 🎉','Сен {n} екеуің енді доссыңдар! 🎉','¡Ahora eres amigo de {n}! 🎉','Du und {n} seid jetzt Freunde! 🎉','{n} et toi êtes amis ! 🎉'],
+ chatWith:['Чат с {n}','Chat with {n}','{n} чат','Chat con {n}','Chat mit {n}','Chat avec {n}'],
+ safeNote:['Пиши готовыми фразами и смайликами — так безопасно и понятно на любом языке.','Use ready phrases and emoji: safe and understood in every language.','Дайын сөйлемдер мен смайликтер жаз — қауіпсіз әрі кез келген тілде түсінікті.','Usa frases listas y emojis: seguro y se entiende en cualquier idioma.','Schreib mit fertigen Sätzen und Emojis: sicher und in jeder Sprache verständlich.','Utilise des phrases prêtes et des emojis : sûr et compris dans toutes les langues.'],
+ noMsgs:['Сообщений пока нет. Скажи «Привет!» 👋','No messages yet. Say “Hi!” 👋','Әзірге хабар жоқ. «Сәлем!» де 👋','Aún no hay mensajes. ¡Di «Hola»! 👋','Noch keine Nachrichten. Sag „Hallo!“ 👋','Pas encore de messages. Dis « Salut ! » 👋'],
+ onlineOnly:['Друзья и чат работают в онлайн-версии игры.','Friends and chat work in the online version.','Достар мен чат онлайн нұсқада жұмыс істейді.','Amigos y chat funcionan en la versión en línea.','Freunde und Chat gibt es in der Online-Version.','Amis et chat fonctionnent dans la version en ligne.'],
+ dotOn:['в игре','online','ойында','en línea','online','en ligne'],
+ mjOffer:['10 подряд! 🔥 Сыграешь партию в маджонг?','10 in a row! 🔥 Play a game of mahjong?','Қатарынан 10! 🔥 Маджонг ойнайсың ба?','¡10 seguidas! 🔥 ¿Jugamos al mahjong?','10 in Folge! 🔥 Eine Runde Mahjong?','10 d’affilée ! 🔥 Une partie de mahjong ?'],
+ mjPlay:['Играть 🀄','Play 🀄','Ойнау 🀄','Jugar 🀄','Spielen 🀄','Jouer 🀄'],
+ mjLater:['Позже','Later','Кейін','Luego','Später','Plus tard'],
+ mjTitle:['Маджонг','Mahjong','Маджонг','Mahjong','Mahjong','Mahjong'],
+ mjRules:['Убирай пары одинаковых плиток. Брать можно плитку, сверху которой ничего нет и у которой свободен левый или правый бок.','Remove pairs of matching tiles. A tile is free if nothing is on top and its left or right side is open.','Бірдей тақталарды жұппен алып таста. Үстінде ештеңе жоқ және сол не оң жағы бос тақтаны алуға болады.','Quita parejas iguales. Una ficha está libre si no tiene nada encima y su lado izquierdo o derecho está libre.','Entferne gleiche Paare. Ein Stein ist frei, wenn nichts darauf liegt und links oder rechts frei ist.','Retire les paires identiques. Une tuile est libre si rien n’est dessus et que son côté gauche ou droit est libre.'],
+ mjHint:['💡 Подсказка','💡 Hint','💡 Кеңес','💡 Pista','💡 Tipp','💡 Indice'],
+ mjShuffle:['🔀 Перемешать','🔀 Shuffle','🔀 Араластыру','🔀 Mezclar','🔀 Mischen','🔀 Mélanger'],
+ mjPairs:['Осталось пар: {n}','Pairs left: {n}','Қалған жұптар: {n}','Parejas: {n}','Paare: {n}','Paires : {n}'],
+ mjWin:['Победа! +10 ⚡','You win! +10 ⚡','Жеңіс! +10 ⚡','¡Ganaste! +10 ⚡','Gewonnen! +10 ⚡','Gagné ! +10 ⚡'],
+ mjNoMoves:['Ходов нет. Перемешай плитки!','No moves left. Shuffle the tiles!','Жүріс жоқ. Араластыр!','No hay jugadas. ¡Mezcla!','Keine Züge mehr. Misch die Steine!','Plus de coups. Mélange !'],
+ mjLost:['Ходов больше нет 😅','No more moves 😅','Жүріс қалмады 😅','No quedan jugadas 😅','Keine Züge mehr 😅','Plus aucun coup 😅'],
+ mjNoHint:['Подсказок не осталось','No hints left','Кеңес қалмады','Sin pistas','Keine Tipps mehr','Plus d’indices'],
+ mjAgain:['Новая партия','New game','Жаңа ойын','Nueva partida','Neues Spiel','Nouvelle partie'],
+ mjBack:['К примерам ▶','Back to math ▶','Мысалдарға ▶','A los ejercicios ▶','Zurück zu Aufgaben ▶','Retour aux calculs ▶'],
+});
+const PHRASES={hi:['Привет! 👋','Hi! 👋','Сәлем! 👋','¡Hola! 👋','Hallo! 👋','Salut ! 👋'],how:['Как дела?','How are you?','Қалайсың?','¿Qué tal?','Wie geht’s?','Ça va ?'],good:['У меня всё отлично!','I’m great!','Менде бәрі жақсы!','¡Estoy genial!','Mir geht’s super!','Ça va super !'],
+ race:['Давай соревноваться!','Let’s race!','Жарысайық!','¡Compitamos!','Lass uns wetteifern!','On fait la course !'],who:['Кто быстрее решит?','Who solves faster?','Кім тезірек шешеді?','¿Quién resuelve antes?','Wer rechnet schneller?','Qui calcule le plus vite ?'],
+ p100:['Я набрал 100 очков! 💯','I got 100 points! 💯','Мен 100 ұпай жинадым! 💯','¡Tengo 100 puntos! 💯','Ich habe 100 Punkte! 💯','J’ai 100 points ! 💯'],five:['Я получил пятёрку! ⭐','I got 5 stars! ⭐','Мен бестік алдым! ⭐','¡Saqué 5 estrellas! ⭐','Ich habe 5 Sterne! ⭐','J’ai eu 5 étoiles ! ⭐'],
+ mul:['Учу таблицу умножения ✖️','I’m learning times tables ✖️','Көбейту кестесін үйреніп жатырмын ✖️','Aprendo a multiplicar ✖️','Ich lerne das Einmaleins ✖️','J’apprends les tables ✖️'],
+ mj:['Сыграем в маджонг? 🀄','Mahjong? 🀄','Маджонг ойнаймыз ба? 🀄','¿Mahjong? 🀄','Mahjong? 🀄','Un mahjong ? 🀄'],
+ wow:['Ты молодец!','Well done!','Жарайсың!','¡Bien hecho!','Gut gemacht!','Bravo !'],super:['Ты супер! 🦸','You’re awesome! 🦸','Сен кереметсің! 🦸','¡Eres genial! 🦸','Du bist super! 🦸','Tu es génial ! 🦸'],
+ luck:['Удачи! 🍀','Good luck! 🍀','Сәттілік! 🍀','¡Suerte! 🍀','Viel Glück! 🍀','Bonne chance ! 🍀'],thx:['Спасибо!','Thanks!','Рахмет!','¡Gracias!','Danke!','Merci !'],
+ haha:['Ха-ха! 😂','Ha-ha! 😂','Ха-ха! 😂','¡Ja, ja! 😂','Haha! 😂','Ha ha ! 😂'],yes:['Да','Yes','Иә','Sí','Ja','Oui'],no:['Нет','No','Жоқ','No','Nein','Non'],
+ bye:['Пока! 👋','Bye! 👋','Сау бол! 👋','¡Adiós! 👋','Tschüss! 👋','Salut ! 👋']};
+const EMO=['😀','😂','😎','🤩','👍','👏','❤️','🔥','⭐','🎉','🚀','💯','🐱','🦄','🍀','🤔'];
+
+/* ============ ДРУЗЬЯ, ОНЛАЙН, ЧАТ (только онлайн-версия на Firebase) ============ */
+const SOC={presence:{},friends:{},unsubs:[],hb:null,chatUnsub:null,chatId:null,first:true};
+const socialOn=()=>STORE.mode==='remote'&&STORE.db&&STORE.db.kind==='fb';
+const isOnline=id=>Date.now()-(SOC.presence[id]||0)<120000;
+const pairId=(a,b)=>[a,b].sort().join('__');
+const otherOf=f=>f.members.find(x=>x!==SESSION);
+const readKey=pid=>'arif_read_'+SESSION+'_'+pid;
+const lastRead=pid=>{try{return +localStorage.getItem(readKey(pid))||0}catch(e){return 0}};
+const setRead=(pid,t0)=>{try{localStorage.setItem(readKey(pid),String(t0||Date.now()))}catch(e){}};
+const unread=(pid,f)=>f.status==='ok'&&f.last&&f.last.from!==SESSION&&f.last.t>lastRead(pid);
+const msgText=s=>{s=String(s||'');if(s.startsWith('p:')&&PHRASES[s.slice(2)])return tx(PHRASES[s.slice(2)]);if(s.startsWith('e:'))return s.slice(2);return ''};
+function socialStart(){
+ socialStop();if(!socialOn()||!SESSION)return;const fs=STORE.db.fs,me=SESSION;SOC.first=true;
+ const beat=()=>fs.collection('presence').doc(me).set({t:Date.now()}).catch(()=>{});
+ beat();SOC.hb=setInterval(()=>{if(!document.hidden)beat()},45000);
+ SOC.unsubs.push(fs.collection('presence').onSnapshot(s=>{SOC.presence={};s.docs.forEach(d=>SOC.presence[d.id]=+(d.data().t)||0);socialRefresh()},()=>{}));
+ SOC.unsubs.push(fs.collection('friends').where('members','array-contains',me).onSnapshot(s=>{
+  const prev=SOC.friends;SOC.friends={};s.docs.forEach(d=>SOC.friends[d.id]=d.data());
+  if(!SOC.first)for(const id in SOC.friends){const f=SOC.friends[id],o=prev[id],other=DB.players[otherOf(f)],nm=other?other.name:'?';
+   if(!o&&f.status==='pending'&&f.by!==me){toast('👥 '+esc(t('newRequest',{n:nm})),5000);sndFanfare()}
+   else if(o&&o.status==='pending'&&f.status==='ok'){toast('🎉 '+esc(t('nowFriends',{n:nm})),5000);sndFanfare()}
+   else if(f.last&&(!o||!o.last||o.last.t!==f.last.t)&&f.last.from!==me&&SOC.chatId!==id){toast('💬 <b>'+esc(nm)+':</b> '+esc(msgText(f.last.text)),4500);tone(1046,0,.12,'square',.05);tone(1318,.1,.15,'square',.05)}}
+  SOC.first=false;socialRefresh()},()=>{}));
+}
+function socialStop(){clearInterval(SOC.hb);SOC.unsubs.forEach(u=>{try{u()}catch(e){}});SOC.unsubs=[];if(SOC.chatUnsub){SOC.chatUnsub();SOC.chatUnsub=null}SOC.chatId=null;SOC.friends={}}
+addEventListener('pagehide',()=>{if(socialOn()&&SESSION)try{STORE.db.fs.collection('presence').doc(SESSION).set({t:0})}catch(e){}});
+function socialRefresh(){
+ const b=document.getElementById('frBadge');if(b){const n=socialCount();b.textContent=n?n:'';b.hidden=!n}
+ if(SCREEN==='friends'&&!document.querySelector('.overlay'))renderFriends();
+ if(SCREEN==='leaders'&&!document.querySelector('.overlay'))renderLeaders()}
+function socialCount(){let n=0;for(const id in SOC.friends){const f=SOC.friends[id];if(f.status==='pending'&&f.by!==SESSION)n++;else if(unread(id,f))n++}return n}
+function relation(pid){const f=SOC.friends[pairId(SESSION,pid)];if(!f)return'none';if(f.status==='ok')return'friend';return f.by===SESSION?'sent':'incoming'}
+const dot=id=>`<span class="dot ${isOnline(id)?'on':''}" title="${isOnline(id)?esc(t('dotOn')):''}"></span>`;
+function lbName(p){
+ let act='';
+ if(socialOn()&&SESSION&&p.id!==SESSION){const r=relation(p.id);
+  act=r==='none'?`<button class="btn sm" data-act="frAdd" data-arg="${esc(p.id)}" aria-label="${esc(t('addFriend'))}">➕</button>`:r==='friend'?`<button class="btn sm" data-act="chatOpen" data-arg="${esc(p.id)}" aria-label="💬">💬</button>`:r==='incoming'?`<button class="btn sm pri" data-act="frAccept" data-arg="${esc(p.id)}">✅</button>`:'⏳'}
+ return `<span class="pl">${socialOn()?dot(p.id):''}${ava(p.avatar,p.frame,'s')}${pname(p)} ${act}</span>`}
+function frRow(pid,extra){const p=DB.players[pid];if(!p)return'';
+ return `<div class="frow slotbox">${dot(pid)}${ava(p.avatar,p.frame,'s')}<b class="frn">${pname(p)}</b><div class="sp"></div>${extra}</div>`}
+function renderFriends(){
+ SCREEN='friends';const me=SESSION;
+ let body='';
+ if(!socialOn())body=`<section class="panel blk"><p style="font-weight:800">${t('onlineOnly')}</p></section>`;
+ else{
+  const fr=Object.entries(SOC.friends);
+  const inc=fr.filter(([id,f])=>f.status==='pending'&&f.by!==me),out=fr.filter(([id,f])=>f.status==='pending'&&f.by===me),ok=fr.filter(([id,f])=>f.status==='ok');
+  ok.sort((a,b)=>(isOnline(otherOf(b[1]))-isOnline(otherOf(a[1])))||((b[1].last&&b[1].last.t)||0)-((a[1].last&&a[1].last.t)||0));
+  if(inc.length)body+=`<section class="panel blk"><h2>${t('requests')}</h2>${inc.map(([id,f])=>frRow(otherOf(f),`<button class="btn sm pri" data-act="frAccept" data-arg="${esc(otherOf(f))}">${t('accept')}</button><button class="btn sm" data-act="frRemove" data-arg="${esc(otherOf(f))}">${t('decline')}</button>`)).join('')}</section>`;
+  body+=`<section class="panel blk"><h2>${t('myFriends')}</h2>${ok.length?ok.map(([id,f])=>{const o=otherOf(f);return frRow(o,`${unread(id,f)?'<span class="badge">!</span>':''}<button class="btn sm pri" data-act="chatOpen" data-arg="${esc(o)}">💬</button>`)}).join(''):`<p style="font-weight:800">${t('noFriends')}</p>`}
+   ${out.map(([id,f])=>frRow(otherOf(f),`<span style="font-weight:800">${t('waiting')}</span>`)).join('')}</section>`;
+  const online=Object.keys(DB.players).filter(id=>id!==me&&isOnline(id)&&relation(id)==='none');
+  body+=`<section class="panel blk"><h2>${t('onlineNow')}</h2>${online.length?online.map(id=>frRow(id,`<button class="btn sm" data-act="frAdd" data-arg="${esc(id)}">${t('addFriend')}</button>`)).join(''):`<p style="font-weight:800">${t('nobodyOnline')}</p>`}</section>`}
+ app.innerHTML=`<header class="top blk"><button class="icon" data-act="back" aria-label="←">⬅</button><h2 style="margin:0">${t('friends')}</h2></header>${body}
+ <p class="on-sky" style="font-weight:900;text-align:center">${t('safeNote')}</p>`}
+async function frWrite(pid,fn){if(!socialOn()||!SESSION)return;try{await fn(STORE.db.fs.collection('friends').doc(pairId(SESSION,pid)))}catch(e){handleWriteErr(e);toast('⚠️ '+(e.message||e.code||'error'))}}
+Object.assign(ACT,{
+ friends(){renderFriends()},
+ frAdd(pid){if(relation(pid)==='incoming')return ACT.frAccept(pid);frWrite(pid,r=>r.set({members:[SESSION,pid].sort(),status:'pending',by:SESSION,t:Date.now()}));toast(t('reqSent'))},
+ frAccept(pid){frWrite(pid,r=>r.update({status:'ok',t:Date.now()}))},
+ frRemove(pid){frWrite(pid,r=>r.delete());closeModal()},
+ chatOpen(pid){openChat(pid)},
+ chatSay(arg){sendMsg(arg)},
+});
+function openChat(pid){
+ if(!socialOn())return;const p=DB.players[pid];if(!p)return;const id=pairId(SESSION,pid);
+ if(SOC.chatUnsub){SOC.chatUnsub();SOC.chatUnsub=null}
+ SOC.chatId=id;SOC.chatWith=pid;
+ const m=modal(`<div class="chathead">${dot(pid)}${ava(p.avatar,p.frame,'s')}<h2 style="margin:0">${esc(t('chatWith',{n:p.name}))}</h2></div>
+  <div class="chat slotbox" id="chatBox"><p style="font-weight:800;color:#fff">${t('noMsgs')}</p></div>
+  <div class="phr">${Object.keys(PHRASES).map(k=>`<button class="btn sm" data-act="chatSay" data-arg="p:${k}">${esc(tx(PHRASES[k]))}</button>`).join('')}</div>
+  <div class="phr emo">${EMO.map(e=>`<button class="btn sm" data-act="chatSay" data-arg="e:${e}">${e}</button>`).join('')}</div>
+  <p class="muted" style="font-size:12px;font-weight:800">${t('safeNote')}</p>
+  <div class="row"><button class="btn sm danger" data-act="frRemove" data-arg="${esc(pid)}">${t('removeFriend')}</button><button class="btn pri" data-act="close">${t('doneB')}</button></div>`,false,'chatm');
+ const fs=STORE.db.fs;
+ SOC.chatUnsub=fs.collection('friends').doc(id).collection('msgs').orderBy('t').limitToLast(60).onSnapshot(s=>{
+  const box=document.getElementById('chatBox');if(!box||SOC.chatId!==id){if(SOC.chatUnsub){SOC.chatUnsub();SOC.chatUnsub=null}SOC.chatId=null;return}
+  const msgs=s.docs.map(d=>d.data());
+  box.innerHTML=msgs.length?msgs.map(x=>`<div class="msg ${x.from===SESSION?'me':''}">${esc(msgText(x.text))}<small>${new Date(x.t).toLocaleTimeString(loc(),{hour:'2-digit',minute:'2-digit'})}</small></div>`).join(''):`<p style="font-weight:800;color:#fff">${t('noMsgs')}</p>`;
+  box.scrollTop=box.scrollHeight;if(msgs.length)setRead(SOC.chatWith,msgs[msgs.length-1].t);socialRefresh()},e=>{handleWriteErr(e)});
+ const obs=new MutationObserver(()=>{if(!document.getElementById('chatBox')){obs.disconnect();if(SOC.chatId===id){if(SOC.chatUnsub){SOC.chatUnsub();SOC.chatUnsub=null}SOC.chatId=null;socialRefresh()}}});obs.observe(document.body,{childList:true});
+}
+let lastSend=0;
+async function sendMsg(text){
+ if(!SOC.chatId||!socialOn()||!msgText(text))return;if(Date.now()-lastSend<1200)return;lastSend=Date.now();
+ const fs=STORE.db.fs,ref=fs.collection('friends').doc(SOC.chatId),now=Date.now();
+ try{await ref.collection('msgs').add({from:SESSION,text,t:now});await ref.update({last:{from:SESSION,text,t:now}});setRead(SOC.chatWith,now);sndTick()}catch(e){handleWriteErr(e);toast('⚠️ '+(e.message||e.code))}}
+
+/* ============ МАДЖОНГ (награда за 10 правильных подряд) ============ */
+const MJ_SYM=['🍎','🍌','🍇','🍓','🍒','🥕','🌽','🍄','🐟','🐸','🐼','🦊','🐝','🌸','⭐','🌙','⚡','💎','🎈','🎲','🚀'];
+const MJ={tiles:[],sel:null,hints:3,shuffles:2,after:null,hintIds:[]};
+function mjLayout(){const P=[];for(let r=0;r<6;r++)for(let c=0;c<8;c++)P.push([c,r,0]);for(let r=1;r<5;r++)for(let c=1;c<7;c++)P.push([c,r,1]);
+ for(let r=2;r<4;r++)for(let c=2;c<6;c++)P.push([c,r,2]);for(let r=2;r<4;r++)for(let c=3;c<5;c++)P.push([c,r,3]);return P}
+const mk=(c,r,z)=>c+','+r+','+z;
+function mjFreeIn(set,c,r,z){if(set.has(mk(c,r,z+1)))return false;return !set.has(mk(c-1,r,z))||!set.has(mk(c+1,r,z))}
+function mjPairs(pos){for(let a=0;a<300;a++){const set=new Set(pos.map(p=>mk(...p))),left=pos.slice(),pairs=[];let ok=true;
+ while(left.length){const free=left.filter(p=>mjFreeIn(set,...p));if(free.length<2){ok=false;break}
+  const i=rnd(0,free.length-1);let j;do{j=rnd(0,free.length-1)}while(j===i);const A=free[i],B=free[j];pairs.push([A,B]);
+  for(const p of [A,B]){set.delete(mk(...p));left.splice(left.indexOf(p),1)}}
+ if(ok)return pairs}return null}
+function mjDeal(){const pairs=mjPairs(mjLayout()),syms=MJ_SYM.slice().sort(()=>Math.random()-.5);let id=0;MJ.tiles=[];
+ pairs.forEach((pr,k)=>{const s=syms[k%syms.length];pr.forEach(([c,r,z])=>MJ.tiles.push({id:id++,c,r,z,s,on:true}))});
+ MJ.sel=null;MJ.hints=3;MJ.shuffles=2;MJ.hintIds=[]}
+const mjSet=()=>new Set(MJ.tiles.filter(x=>x.on).map(x=>mk(x.c,x.r,x.z)));
+const mjFree=(x,set)=>mjFreeIn(set||mjSet(),x.c,x.r,x.z);
+function mjFindPair(){const set=mjSet(),free=MJ.tiles.filter(x=>x.on&&mjFree(x,set));
+ for(let i=0;i<free.length;i++)for(let j=i+1;j<free.length;j++)if(free[i].s===free[j].s)return[free[i],free[j]];return null}
+function mjReshuffle(){const live=MJ.tiles.filter(x=>x.on),pairs=mjPairs(live.map(x=>[x.c,x.r,x.z]));if(!pairs)return false;
+ const cnt={};live.forEach(x=>cnt[x.s]=(cnt[x.s]||0)+1);const sp=[];for(const s in cnt)for(let i=0;i<cnt[s]/2;i++)sp.push(s);sp.sort(()=>Math.random()-.5);
+ const at={};live.forEach(x=>at[mk(x.c,x.r,x.z)]=x);pairs.forEach((pr,k)=>pr.forEach(p=>at[mk(...p)].s=sp[k]));return true}
+function offerMahjong(after){
+ modal(`<div style="font-size:64px">🀄</div><h2>${t('mjOffer')}</h2><p style="font-weight:800">${t('mjRules')}</p>
+  <div class="row"><button class="btn" data-act="mjLater">${t('mjLater')}</button><button class="btn pri big" data-act="mjPlay" data-enter>${t('mjPlay')}</button></div>`,true,'lockm');
+ MJ.after=after}
+function openMahjong(){mjDeal();const w=document.createElement('div');w.className='mjwrap';w.id='mjwrap';document.body.appendChild(w);mjRender()}
+function mjClose(){const w=document.getElementById('mjwrap');if(w)w.remove();const f=MJ.after;MJ.after=null;if(f)f()}
+function mjRender(msg){
+ const w=document.getElementById('mjwrap');if(!w)return;const set=mjSet(),live=MJ.tiles.filter(x=>x.on);
+ const tw=Math.max(34,Math.min(60,Math.floor((Math.min(innerWidth,720)-40)/8.3))),th=Math.round(tw*1.28),dx=Math.round(tw*.09),dy=Math.round(tw*.11);
+ const tiles=live.map(x=>{const free=mjFree(x,set);return `<button class="mjt ${free?'':'blocked'} ${MJ.sel===x.id?'sel':''} ${MJ.hintIds.includes(x.id)?'hint':''}" data-act="mjTap" data-arg="${x.id}"
+  style="left:${x.c*tw-x.z*dx+3*dx}px;top:${x.r*th-x.z*dy+3*dy}px;width:${tw-2}px;height:${th-2}px;font-size:${Math.round(tw*.62)}px;z-index:${x.z*100+x.r*10+x.c}">${x.s}</button>`}).join('');
+ const won=!live.length,stuck=!won&&!mjFindPair();
+ w.innerHTML=`<div class="mjbar"><h2 class="on-sky" style="margin:0">🀄 ${t('mjTitle')}</h2><span class="status">${t('mjPairs',{n:live.length/2})}</span></div>
+ <div class="mjbar"><button class="btn sm" data-act="mjHint" ${MJ.hints?'':'disabled'}>${t('mjHint')} (${MJ.hints})</button><button class="btn sm" data-act="mjShuffle" ${MJ.shuffles?'':'disabled'}>${t('mjShuffle')} (${MJ.shuffles})</button><button class="btn sm danger" data-act="mjExit">✖</button></div>
+ ${msg||stuck?`<div class="status" style="margin-bottom:10px">${esc(msg||(MJ.shuffles?t('mjNoMoves'):t('mjLost')))}</div>`:''}
+ ${won||(stuck&&!MJ.shuffles)?`<div class="modal blk" style="max-width:420px"><div style="font-size:60px">${won?'🏆':'😅'}</div><h2>${won?t('mjWin'):t('mjLost')}</h2>
+   <div class="row"><button class="btn" data-act="mjNew">${t('mjAgain')}</button><button class="btn pri big" data-act="mjExit">${t('mjBack')}</button></div></div>`:''}
+ <div class="mjboard" style="width:${8*tw+4*dx}px;height:${6*th+4*dy}px">${tiles}</div>`}
+Object.assign(ACT,{
+ mjLater(){closeModal();const f=MJ.after;MJ.after=null;if(f)f()},
+ mjPlay(){closeModal();openMahjong()},
+ mjExit(){mjClose()},
+ mjNew(){mjDeal();mjRender()},
+ mjTap(a){const x=MJ.tiles.find(y=>y.id===+a);if(!x||!x.on)return;
+  if(!mjFree(x)){sndWrong();const el=document.querySelector(`.mjt[data-arg="${x.id}"]`);restartAnim(el,'shake');return}
+  if(MJ.sel===null||MJ.sel===x.id){MJ.sel=MJ.sel===x.id?null:x.id;sndTick();return mjRender()}
+  const y=MJ.tiles.find(z=>z.id===MJ.sel);
+  if(y&&y.s===x.s){x.on=false;y.on=false;MJ.sel=null;MJ.hintIds=[];sndCorrect(3);
+   const el=document.querySelector(`.mjt[data-arg="${x.id}"]`);if(el){const r=el.getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,14,5)}
+   if(!MJ.tiles.some(z=>z.on)){const p=cur();if(p){p.dopa+=10;save(p);announce(checkUnlocks(p))}sndFanfare();fireworks(4);rain(60)}}
+  else{MJ.sel=x.id;sndTick()}
+  mjRender()},
+ mjHint(){if(!MJ.hints)return toast(t('mjNoHint'));const pr=mjFindPair();if(!pr)return mjRender(t('mjNoMoves'));MJ.hints--;MJ.hintIds=pr.map(x=>x.id);MJ.sel=null;mjRender()},
+ mjShuffle(){if(!MJ.shuffles)return;if(mjReshuffle()){MJ.shuffles--;MJ.sel=null;MJ.hintIds=[];sndFanfare();mjRender()}},
+});
 </script>
 </body></html>
