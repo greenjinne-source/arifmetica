@@ -520,17 +520,30 @@ async function flush(){if(STORE.mode!=='remote')return;if(STORE.flushing){schedF
   try{await STORE.db.doc('players/'+id).set(clone(p))}catch(e){if(e&&e.code==='unavailable'){STORE.dirty.add(id);schedFlush(2500)}else handleWriteErr(e)}}}
  finally{STORE.flushing=false}}
 function handleWriteErr(e){const c=e&&e.code;
- if(c==='invalid_argument'||c==='not_granted'||c==='revoked'){STORE.readonly=true;if(!STORE.warned){STORE.warned=true;toast(t('errSave'),7000)}}
+ if(c==='invalid_argument'||c==='not_granted'||c==='revoked'||c==='permission-denied'){STORE.readonly=true;if(!STORE.warned){STORE.warned=true;toast(t('errSave'),7000)}}
  else if(c==='quota_exceeded'||c==='resource_exhausted')toast('⚠️ '+(e.message||c),6000)}
 function onPlayers(snap){const seen=new Set();
  for(const d of snap.docs){seen.add(d.id);const r=d.data()||{},l=DB.players[d.id];
   if(!l||(r.rev||0)>(l.rev||0)||(!STORE.dirty.has(d.id)&&d.id!==SESSION&&(r.rev||0)>=(l.rev||0)))DB.players[d.id]=clone(r)}
  for(const id in DB.players)if(!seen.has(id)&&!STORE.dirty.has(id)&&id!==SESSION)delete DB.players[id];
- const first=!STORE.ready;STORE.ready=true;
+ if(STORE.mode!=='remote')return;const first=!STORE.ready;STORE.ready=true;
  if(SCREEN==='login'||SCREEN==='leaders'||first)render()}
+/* --- Firebase (общая база для версии на GitHub и локального файла) --- */
+const FB_CONFIG={apiKey:"AIzaSyDLRLdTEf9Kobr1RkN-ihOekoMVsQqeT38",authDomain:"arifmetica-dofa.firebaseapp.com",projectId:"arifmetica-dofa",storageBucket:"arifmetica-dofa.firebasestorage.app",messagingSenderId:"529754183422",appId:"1:529754183422:web:1198e0cda95d210e0937af"};
+const FB_SDK='https://www.gstatic.com/firebasejs/10.12.2/';
+function loadScript(src){return new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=src;sc.onload=res;sc.onerror=rej;document.head.appendChild(sc)})}
+function fbAdapter(fs){return{kind:'fb',fs,
+ doc(path){const r=fs.doc(path);return{set:d=>r.set(d),delete:()=>r.delete(),get:async()=>{const x=await r.get();return{exists:x.exists,data:()=>x.data()}}}},
+ collection(path){const c=fs.collection(path);return{onSnapshot:(next,err)=>c.onSnapshot(x=>next({docs:x.docs.map(d=>({id:d.id,data:()=>d.data()}))}),err)}}}}
+function fallbackLocal(){if(STORE.unsub)try{STORE.unsub()}catch(e){}STORE.mode='local';STORE.db=null;loadLocal();STORE.ready=true;render()}
+async function tryFirebase(){
+ try{await loadScript(FB_SDK+'firebase-app-compat.js');await loadScript(FB_SDK+'firebase-firestore-compat.js')}catch(e){return false}
+ try{firebase.initializeApp(FB_CONFIG);STORE.db=fbAdapter(firebase.firestore());STORE.mode='remote'}catch(e){return false}
+ STORE.unsub=STORE.db.collection('players').onSnapshot(onPlayers,e=>{if(!STORE.ready)fallbackLocal();else toast('⚠️ '+((e&&e.message)||'db'),5000)});
+ setTimeout(()=>{if(!STORE.ready)fallbackLocal()},9000);return true}
 async function initStore(){
  for(let i=0;i<15&&!(window.claude&&typeof window.claude.use==='function');i++)await new Promise(r=>setTimeout(r,100));
- if(!(window.claude&&typeof window.claude.use==='function')){loadLocal();STORE.ready=true;return render()}
+ if(!(window.claude&&typeof window.claude.use==='function')){if(!(await tryFirebase())){loadLocal();STORE.ready=true;render()}return}
  let db=null;try{db=await window.claude.use('db')}catch(e){}
  if(!db){loadLocal();STORE.ready=true;return render()}
  STORE.db=db;STORE.mode='remote';
@@ -541,6 +554,9 @@ const nameKey=n=>'n'+[...n.trim().toLowerCase()].map(c=>c.codePointAt(0).toStrin
 const nameTaken=(name,exceptId)=>{const k=name.trim().toLowerCase();return Object.values(DB.players).some(p=>p.id!==exceptId&&String(p.name).trim().toLowerCase()===k)};
 async function claimName(name,pid){
  if(STORE.mode!=='remote'||STORE.readonly)return true;
+ if(STORE.db.kind==='fb'){const fs=STORE.db.fs,ref=fs.collection('names').doc(nameKey(name));
+  try{return await fs.runTransaction(async tx=>{const x=await tx.get(ref);if(x.exists){const o=(x.data()||{}).pid;if(o&&o!==pid&&DB.players[o])return false}tx.set(ref,{pid,name:name.trim()});return true})}
+  catch(e){handleWriteErr(e);return STORE.readonly}}
  const ref=STORE.db.doc('names/'+nameKey(name));
  try{const l=await ref.acquire({holder:pid,ttlMs:5000});if(!l.acquired)return false;
   const s=await ref.get();if(s.exists){const o=(s.data()||{}).pid;if(o&&o!==pid&&DB.players[o])return false}
@@ -959,7 +975,7 @@ const ACT={
  async delDo(){const p=cur();if(!passOk(p,document.getElementById('pw').value))return document.getElementById('err').textContent=t('wrongPass');
   SESSION=null;closeModal();await removePlayer(p);SCREEN='login';render()},
  async exportData(){const json=JSON.stringify({players:DB.players},null,1),fn='arifmetika-'+new Date().toISOString().slice(0,10)+'.json';
-  if(STORE.mode==='remote'){try{const dl=await window.claude.use('downloads');if(dl){await dl.save({filename:fn,data:json});toast(t('saved'))}}catch(e){}return}
+  if(STORE.mode==='remote'&&STORE.db.kind!=='fb'){try{const dl=await window.claude.use('downloads');if(dl){await dl.save({filename:fn,data:json});toast(t('saved'))}}catch(e){}return}
   const b=new Blob([json],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast(t('saved'))},
  importData(){document.getElementById('importFile').click()},
  lbCountry(c){LB_COUNTRY=c;renderLeaders()},
