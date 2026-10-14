@@ -172,6 +172,35 @@ body[data-lvl="4"] .qbox,body[data-lvl="5"] .qbox{box-shadow:inset 3px 3px 0 var
 .mjt.sel{background:#ffe066;outline:3px solid #ff9100;transform:translateY(-3px)}
 .mjt.hint{animation:mjh .5s ease-in-out infinite alternate}
 @keyframes mjh{to{background:#a8ffb5;transform:translateY(-4px)}}
+.kidq{font-size:clamp(26px,7vw,40px);line-height:1.35;margin:10px 0 14px;word-break:break-word;letter-spacing:2px}
+.kidgrp{display:inline-flex;flex-wrap:wrap;justify-content:center;gap:2px;max-width:100%}
+.kgrid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:12px 0}
+.kgrid .btn{min-width:72px;font-size:22px;padding:14px 16px}
+.kgrid .btn.emo{font-size:34px;padding:10px 14px}
+.kgrid .btn.grp{font-size:24px;max-width:46%;padding:12px;line-height:1.25}
+.kgrid .btn.right{background:#3a8a28}
+.kgrid .btn.bad{background:#a32a2a}
+.kprog{display:flex;gap:6px;justify-content:center;margin:6px 0 4px;flex-wrap:wrap}
+.kprog i{width:16px;height:16px;background:#555;box-shadow:0 0 0 2px #000}
+.kprog i.ok{background:#46e83f}.kprog i.no{background:#e33}.kprog i.now{background:#ffd23f}
+.mgpick{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.mgpick .btn{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;padding:14px 8px}
+.mgpick .btn span{font-size:34px;line-height:1}
+.mz{display:grid;margin:8px auto;background:#2b2b38;box-shadow:0 0 0 4px #000;touch-action:none;flex:none}
+.mzc{position:relative;box-sizing:border-box;display:grid;place-items:center;line-height:1;background:#e9dfc0}
+.mzc.n{border-top:3px solid #3b2a14}.mzc.s{border-bottom:3px solid #3b2a14}.mzc.w{border-left:3px solid #3b2a14}.mzc.e{border-right:3px solid #3b2a14}
+.mzc.seen{background:#c8f0b8}
+.mzpad{display:grid;grid-template-columns:repeat(3,64px);gap:8px;justify-content:center;margin-top:10px}
+.mzpad .btn{font-size:22px;padding:10px 0}
+.mem{display:grid;gap:10px;margin:10px auto;flex:none}
+.memc{aspect-ratio:3/4;display:grid;place-items:center;font-size:clamp(26px,8vw,42px);padding:0;line-height:1}
+.memc.hid{color:transparent;text-shadow:none}
+.memc.hid::after{content:'❓';color:#fff;font-size:.7em;text-shadow:2px 2px 0 #000}
+.memc.got{background:#3a8a28;opacity:.75}
+.pz{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px auto;flex:none}
+.pzt{aspect-ratio:1;font-size:clamp(28px,9vw,44px);padding:0;display:grid;place-items:center}
+.pzt.empty{visibility:hidden}
+.pzt.home{background:#3a8a28}
 @media (max-width:700px),(pointer:coarse){
  #app{transform:none!important;padding:12px 16px 32px}
  body[data-lvl="4"] #hype,body[data-lvl="5"] #hype{animation:none}
@@ -959,7 +988,7 @@ let rzT=null;addEventListener('resize',()=>{fitFx();clearTimeout(rzT);rzT=setTim
 /* ============ ОБЩИЙ UI ============ */
 const app=document.getElementById('app');
 let SCREEN='login',LB_COUNTRY='';
-function render(){({login:renderLogin,menu:renderMenu,collection:renderCollection,stats:renderStats,leaders:renderLeaders,friends:renderFriends}[SCREEN]||(()=>{}))()}
+function render(){({login:renderLogin,menu:renderMenu,collection:renderCollection,stats:renderStats,leaders:renderLeaders,friends:renderFriends,kids:renderKids}[SCREEN]||(()=>{}))()}
 function modal(html,lock=false,cls=''){closeModal();const m=document.createElement('div');m.className='overlay';m.innerHTML=`<div class="modal blk ${cls}" role="dialog" aria-modal="true">${html}</div>`;
  if(!lock)m.addEventListener('click',e=>{if(e.target===m)closeModal()});document.body.appendChild(m);const i=m.querySelector('input:not([type=range])');if(i)setTimeout(()=>i.focus(),60);return m}
 function closeModal(){document.querySelectorAll('.overlay').forEach(o=>o.remove())}
@@ -1063,7 +1092,7 @@ document.addEventListener('change',e=>{const el=e.target;if(el.dataset&&el.datas
 document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.vol;if(!k)return;SET[k]=e.target.value/100;applyVol();clearTimeout(volT);volT=setTimeout(saveSettings,300)});
 let volT=null;
 document.addEventListener('keydown',e=>{
- if(document.getElementById('mjwrap'))return;
+ if(document.getElementById('mjwrap')||document.getElementById('mgwrap'))return;
  if(document.querySelector('.overlay')){if(e.key==='Enter'){const b=document.querySelector('.overlay [data-enter]');if(b){e.preventDefault();b.click()}}else if(e.key==='Escape'&&!document.querySelector('.overlay .modal.lockm'))closeModal();return}
  if(SCREEN!=='game')return;
  const KS={'<':'lt',',':'lt','=':'eq','>':'gt','.':'gt'};
@@ -1082,7 +1111,7 @@ function renderMenu(){
   <button class="icon" data-act="audioPanel" title="${esc(t('audTitle'))}" aria-label="${esc(t('audTitle'))}">🎧</button><button class="btn sm" data-act="logout">${t('switchPlayer')}</button></header>
  <h2 class="on-sky">${t('chooseTraining')}</h2><div class="modes">${REGULAR.map(card).join('')}</div>
  <h2 class="on-sky">${t('specialModes')} ${p.special?'🎁':'🔒'}</h2><div class="modes">${SPECIAL.map(sp).join('')}</div>
- <div class="row"><button class="btn" data-act="collection">${t('btnCollection')}</button><button class="btn" data-act="stats">${t('btnStats')}</button><button class="btn" data-act="leaders">${t('allPlayers')}</button><button class="btn pri" data-act="friends">${t('friends')} <span class="badge" id="frBadge" hidden></span></button></div>`;socialRefresh();
+ <div class="row"><button class="btn" data-act="collection">${t('btnCollection')}</button><button class="btn" data-act="stats">${t('btnStats')}</button><button class="btn" data-act="leaders">${t('allPlayers')}</button><button class="btn" data-act="kids">${t('kidsBtn')}</button><button class="btn" data-act="mgMenu">${t('mgBtn')}</button><button class="btn pri" data-act="friends">${t('friends')} <span class="badge" id="frBadge" hidden></span></button></div>`;socialRefresh();
 }
 
 /* ============ ИГРА ============ */
@@ -1152,7 +1181,7 @@ function answer(ok){
   G.streak++;G.correct++;p.correct++;if(G.streak>p.bestStreak)p.bestStreak=G.streak;
   const gain=Math.min(5,1+Math.floor(G.streak/5));p.dopa+=gain;G.dopa+=gain;
   if(st){const before=st.points;st.correct++;st.points=Math.min(100,st.points+(G.streak>=10?2:1));if(before<100&&st.points>=100){hit100=true;setTimeout(moneyThrow,450)}}
-  if(G.streak%10===0)G.mjOffer=true;slot.classList.add('ok');mascot(G.streak>=5?'joy':'happy');fb.textContent=pick(tl('praise'));fb.className='fb ok';
+  if(mgTick())G.mjOffer=true;slot.classList.add('ok');mascot(G.streak>=5?'joy':'happy');fb.textContent=pick(tl('praise'));fb.className='fb ok';
   document.getElementById('dopaVal').textContent=p.dopa;celebrate(G.streak,gain)}
  else{
   G.streak=0;G.wrong++;p.wrong++;if(st)st.wrong++;if(G.mode==='extra')G.lives--;
@@ -1386,7 +1415,7 @@ function mjPairs(pos){for(let a=0;a<300;a++){const set=new Set(pos.map(p=>mk(...
  if(ok)return pairs}return null}
 function mjDeal(){const pairs=mjPairs(mjLayout()),syms=MJ_SYM.slice().sort(()=>Math.random()-.5);let id=0;MJ.tiles=[];
  pairs.forEach((pr,k)=>{const s=syms[k%syms.length];pr.forEach(([c,r,z])=>MJ.tiles.push({id:id++,c,r,z,s,on:true}))});
- MJ.sel=null;MJ.hints=3;MJ.shuffles=2;MJ.hintIds=[]}
+ MJ.sel=null;MJ.paid=false;MJ.hints=3;MJ.shuffles=2;MJ.hintIds=[]}
 const mjSet=()=>new Set(MJ.tiles.filter(x=>x.on).map(x=>mk(x.c,x.r,x.z)));
 const mjFree=(x,set)=>mjFreeIn(set||mjSet(),x.c,x.r,x.z);
 function mjFindPair(){const set=mjSet(),free=MJ.tiles.filter(x=>x.on&&mjFree(x,set));
@@ -1409,7 +1438,7 @@ function mjRender(msg){
  w.innerHTML=`<div class="mjbar"><h2 class="on-sky" style="margin:0">🀄 ${t('mjTitle')}</h2><span class="status">${t('mjPairs',{n:live.length/2})}</span></div>
  <div class="mjbar"><button class="btn sm" data-act="mjHint" ${MJ.hints?'':'disabled'}>${t('mjHint')} (${MJ.hints})</button><button class="btn sm" data-act="mjShuffle" ${MJ.shuffles?'':'disabled'}>${t('mjShuffle')} (${MJ.shuffles})</button><button class="btn sm danger" data-act="mjExit">✖</button></div>
  ${msg||stuck?`<div class="status" style="margin-bottom:10px">${esc(msg||(MJ.shuffles?t('mjNoMoves'):t('mjLost')))}</div>`:''}
- ${won||(stuck&&!MJ.shuffles)?`<div class="modal blk" style="max-width:420px"><div style="font-size:60px">${won?'🏆':'😅'}</div><h2>${won?t('mjWin'):t('mjLost')}</h2>
+ ${won||(stuck&&!MJ.shuffles)?`<div class="modal blk" style="max-width:420px"><div style="font-size:60px">${won?'🏆':'😅'}</div><h2>${won?(MJ.paid?t('mjWin'):t('mgWinFree')):t('mjLost')}</h2>
    <div class="row"><button class="btn" data-act="mjNew">${t('mjAgain')}</button><button class="btn pri big" data-act="mjExit">${t('mjBack')}</button></div></div>`:''}
  <div class="mjboard" style="width:${8*tw+4*dx}px;height:${6*th+4*dy}px">${tiles}</div>`}
 Object.assign(ACT,{
@@ -1423,11 +1452,178 @@ Object.assign(ACT,{
   const y=MJ.tiles.find(z=>z.id===MJ.sel);
   if(y&&y.s===x.s){x.on=false;y.on=false;MJ.sel=null;MJ.hintIds=[];sndCorrect(3);
    const el=document.querySelector(`.mjt[data-arg="${x.id}"]`);if(el){const r=el.getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,14,5)}
-   if(!MJ.tiles.some(z=>z.on)){const p=cur();if(p){p.dopa+=10;save(p);announce(checkUnlocks(p))}sndFanfare();fireworks(4);rain(60)}}
+   if(!MJ.tiles.some(z=>z.on)){const p=cur();if(p&&MJ.rw){MJ.rw=false;MJ.paid=true;p.dopa+=10;save(p);announce(checkUnlocks(p))}sndFanfare();fireworks(4);rain(60)}}
   else{MJ.sel=x.id;sndTick()}
   mjRender()},
  mjHint(){if(!MJ.hints)return toast(t('mjNoHint'));const pr=mjFindPair();if(!pr)return mjRender(t('mjNoMoves'));MJ.hints--;MJ.hintIds=pr.map(x=>x.id);MJ.sel=null;mjRender()},
  mjShuffle(){if(!MJ.shuffles)return;if(mjReshuffle()){MJ.shuffles--;MJ.sel=null;MJ.hintIds=[];sndFanfare();mjRender()}},
+});
+/* ============ ТЕКСТЫ: МИНИ-ИГРЫ И МАЛЫШАМ ============ */
+Object.assign(S,{
+ mgOffer:['10 правильных ответов! 🔥 Выбери мини-игру:','10 correct answers! 🔥 Pick a mini-game:','10 дұрыс жауап! 🔥 Мини-ойын таңда:','¡10 respuestas correctas! 🔥 Elige un minijuego:','10 richtige Antworten! 🔥 Wähle ein Minispiel:','10 bonnes réponses ! 🔥 Choisis un mini-jeu :'],
+ mgBtn:['🧩 Мини-игры','🧩 Mini-games','🧩 Мини-ойындар','🧩 Minijuegos','🧩 Minispiele','🧩 Mini-jeux'],
+ mgTitle:['Мини-игры','Mini-games','Мини-ойындар','Minijuegos','Minispiele','Mini-jeux'],
+ mgFree:['Тренировка: здесь дофа не начисляется. За награду играй после каждых 10 правильных ответов!','Practice: no dopa here. Win rewards after every 10 correct answers!','Жаттығу: мұнда дофа берілмейді. Әр 10 дұрыс жауаптан кейін ойна!','Práctica: aquí no hay dopa. ¡Gana premios cada 10 respuestas correctas!','Training: hier gibt es kein Dopa. Belohnung nach je 10 richtigen Antworten!','Entraînement : pas de dopa ici. Récompense toutes les 10 bonnes réponses !'],
+ mgWinFree:['Победа! 🏆','You win! 🏆','Жеңіс! 🏆','¡Ganaste! 🏆','Gewonnen! 🏆','Gagné ! 🏆'],
+ gMaze:['Лабиринт','Maze','Лабиринт','Laberinto','Labyrinth','Labyrinthe'],
+ gMem:['Найди пары','Memory','Жұбын тап','Memoria','Memory','Mémoire'],
+ gPz:['Пятнашки','Slide puzzle','Пятнашки','Puzle deslizante','Schiebepuzzle','Taquin'],
+ gMj:['Маджонг','Mahjong','Маджонг','Mahjong','Mahjong','Mahjong'],
+ mzRules:['Доведи котика до сыра! Стрелки, свайп или нажми на клетку рядом.','Lead the cat to the cheese! Arrows, swipe or tap a neighbouring cell.','Мысықты ірімшікке жеткіз! Нұсқар, сырғыт немесе көрші торды бас.','¡Lleva al gato al queso! Flechas, desliza o toca una casilla vecina.','Führe die Katze zum Käse! Pfeile, Wischen oder Nachbarfeld antippen.','Mène le chat au fromage ! Flèches, glisse ou touche une case voisine.'],
+ memRules:['Открывай по две карточки и находи одинаковые.','Flip two cards at a time and find matching pairs.','Екі карточкадан аш та, бірдейлерін тап.','Gira dos cartas y encuentra las parejas.','Decke zwei Karten auf und finde Paare.','Retourne deux cartes et trouve les paires.'],
+ pzRules:['Расставь числа по порядку: 1 2 3 / 4 5 6 / 7 8. Нажимай на плитку рядом с пустым местом.','Put the numbers in order: 1 2 3 / 4 5 6 / 7 8. Tap a tile next to the empty spot.','Сандарды ретімен қой: 1 2 3 / 4 5 6 / 7 8. Бос орынның қасындағы тақтаны бас.','Ordena los números: 1 2 3 / 4 5 6 / 7 8. Toca una ficha junto al hueco.','Ordne die Zahlen: 1 2 3 / 4 5 6 / 7 8. Tippe ein Feld neben der Lücke an.','Range les nombres : 1 2 3 / 4 5 6 / 7 8. Touche une tuile à côté de la case vide.'],
+ moves:['Ходов: {n}','Moves: {n}','Жүріс: {n}','Movimientos: {n}','Züge: {n}','Coups : {n}'],
+ kidsBtn:['🧸 Малышам','🧸 Little ones','🧸 Кішкентайларға','🧸 Peques','🧸 Für Kleine','🧸 Petits'],
+ kidsTitle:['Малышам: задачки и головоломки','Little ones: puzzles and riddles','Кішкентайларға: есептер мен жұмбақтар','Peques: acertijos y problemas','Für Kleine: Rätsel und Aufgaben','Petits : énigmes et casse-têtes'],
+ kHowMany:['Сколько здесь {e}?','How many {e}?','Мұнда неше {e}?','¿Cuántos {e} hay?','Wie viele {e}?','Combien de {e} ?'],
+ kMore:['Где больше?','Where are there more?','Қай жерде көп?','¿Dónde hay más?','Wo sind mehr?','Où y en a-t-il plus ?'],
+ kLess:['Где меньше?','Where are there fewer?','Қай жерде аз?','¿Dónde hay menos?','Wo sind weniger?','Où y en a-t-il moins ?'],
+ kNext:['Что будет дальше?','What comes next?','Әрі қарай не болады?','¿Qué sigue?','Was kommt als Nächstes?','Qu’est-ce qui vient ensuite ?'],
+ kOdd:['Что здесь лишнее?','Which one does not belong?','Мұнда не артық?','¿Cuál sobra?','Was passt nicht dazu?','Quel est l’intrus ?'],
+ kSum:['Сколько всего?','How many in total?','Барлығы неше?','¿Cuántos hay en total?','Wie viele sind es zusammen?','Combien en tout ?'],
+ kTake:['Сколько осталось?','How many are left?','Неше қалды?','¿Cuántos quedan?','Wie viele bleiben übrig?','Combien en reste-t-il ?'],
+ kMiss:['Какого числа не хватает?','Which number is missing?','Қай сан жетпейді?','¿Qué número falta?','Welche Zahl fehlt?','Quel nombre manque ?'],
+ kBig:['Какое число больше?','Which number is bigger?','Қай сан үлкен?','¿Qué número es mayor?','Welche Zahl ist größer?','Quel nombre est le plus grand ?'],
+ kDone:['Готово! Правильно: {n} из {t}','Done! Correct: {n} of {t}','Дайын! Дұрыс: {t} ішінен {n}','¡Listo! Correctas: {n} de {t}','Fertig! Richtig: {n} von {t}','Terminé ! Bonnes réponses : {n} sur {t}'],
+ kAgain:['Ещё задачки','More puzzles','Тағы есептер','Más acertijos','Noch mehr','Encore'],
+ kMenu:['В меню','Menu','Мәзірге','Menú','Menü','Menu'],
+});
+
+/* ============ МИНИ-ИГРЫ: ОБЩЕЕ ============ */
+const MG={after:null,reward:false,type:null};
+function mgTick(){const p=cur();if(!p)return false;p.mg=(+p.mg||0)+1;if(p.mg>=10){p.mg=0;return true}return false}
+function offerMahjong(after){offerMinigame(after)}
+function mgPickHtml(){return `<div class="mgpick">${[['maze','🐱','gMaze'],['mem','🃏','gMem'],['pz','🔢','gPz'],['mj','🀄','gMj']].map(([k,i,n])=>`<button class="btn" data-act="mgStart" data-arg="${k}"><span>${i}</span>${t(n)}</button>`).join('')}</div>`}
+function offerMinigame(after){
+ MG.after=after;MG.reward=true;sndFanfare();
+ modal(`<div style="font-size:56px">🎮</div><h2>${t('mgOffer')}</h2>${mgPickHtml()}
+  <div class="row"><button class="btn" data-act="mgLater">${t('mjLater')}</button></div>`,true,'lockm')}
+function mgShell(title,rules,inner,bar){
+ let w=document.getElementById('mgwrap');if(!w){w=document.createElement('div');w.className='mjwrap';w.id='mgwrap';document.body.appendChild(w)}
+ w.innerHTML=`<div class="mjbar"><h2 class="on-sky" style="margin:0">${title}</h2>${bar||''}<button class="btn sm danger" data-act="mgExit">✖</button></div>
+ <p class="on-sky" style="font-weight:800;max-width:560px;text-align:center;margin:0 0 6px">${rules}</p>${MG.reward?'':`<p class="on-sky" style="font-size:12px;font-weight:800;opacity:.8;margin:0 0 6px">${t('mgFree')}</p>`}
+ ${inner}<div id="mgEnd"></div>`;return w}
+function mgWin(){
+ const p=cur();if(MG.reward&&p){p.dopa+=10;save(p);announce(checkUnlocks(p));const d=document.getElementById('dopaVal');if(d)d.textContent=p.dopa}
+ sndFanfare();fireworks(4);rain(60);
+ const e=document.getElementById('mgEnd');if(e)e.innerHTML=`<div class="modal blk" style="max-width:420px;margin:14px auto"><div style="font-size:60px">🏆</div><h2>${MG.reward?t('mjWin'):t('mgWinFree')}</h2>
+  <div class="row"><button class="btn" data-act="mgStart" data-arg="${MG.type}">${t('mjAgain')}</button><button class="btn pri big" data-act="mgExit" data-enter>${MG.reward?t('mjBack'):t('kMenu')}</button></div></div>`;
+ if(MG.reward)MG.reward=false}
+function mgClose(){const w=document.getElementById('mgwrap');if(w)w.remove();MG.type=null;const f=MG.after;MG.after=null;if(f)f()}
+Object.assign(ACT,{
+ mgLater(){closeModal();const f=MG.after;MG.after=null;MG.reward=false;if(f)f()},
+ mgMenu(){MG.after=null;MG.reward=false;modal(`<div style="font-size:56px">🎮</div><h2>${t('mgTitle')}</h2><p style="font-weight:800">${t('mgFree')}</p>${mgPickHtml()}
+  <div class="row"><button class="btn" data-act="close">${t('kMenu')}</button></div>`)},
+ mgStart(k){closeModal();MG.type=k;
+  if(k==='mj'){const w=document.getElementById('mgwrap');if(w)w.remove();MJ.after=MG.after;MG.after=null;MJ.rw=MG.reward;MG.reward=false;openMahjong();return}
+  ({maze:mzStart,mem:memStart,pz:pzStart}[k]||mzStart)()},
+ mgExit(){mgClose()},
+});
+
+/* ============ ЛАБИРИНТ ============ */
+const MZ={n:7,cells:[],x:0,y:0,seen:null,done:false};
+function mzGen(n){const C=[];for(let y=0;y<n;y++)for(let x=0;x<n;x++)C.push({n:1,e:1,s:1,w:1,v:0});
+ const at=(x,y)=>C[y*n+x],st=[[0,0]];at(0,0).v=1;
+ const D=[[0,-1,'n','s'],[1,0,'e','w'],[0,1,'s','n'],[-1,0,'w','e']];
+ while(st.length){const [x,y]=st[st.length-1],opts=D.filter(([dx,dy])=>{const nx=x+dx,ny=y+dy;return nx>=0&&ny>=0&&nx<n&&ny<n&&!at(nx,ny).v});
+  if(!opts.length){st.pop();continue}const [dx,dy,a,b]=pick(opts);at(x,y)[a]=0;at(x+dx,y+dy)[b]=0;at(x+dx,y+dy).v=1;st.push([x+dx,y+dy])}
+ return C}
+function mzStart(){const p=cur(),lvl=Math.min(4,Math.floor(((p&&+p.mzWins)||0)/2));MZ.n=[6,7,8,9,10][lvl];MZ.cells=mzGen(MZ.n);MZ.x=0;MZ.y=0;MZ.done=false;MZ.seen=new Set(['0,0']);mzRender()}
+function mzRender(){
+ const n=MZ.n,cs=Math.max(26,Math.min(48,Math.floor((Math.min(innerWidth,560)-32)/n)));
+ const cells=MZ.cells.map((c,i)=>{const x=i%n,y=Math.floor(i/n),me=x===MZ.x&&y===MZ.y,goal=x===n-1&&y===n-1;
+  return `<div class="mzc ${c.n?'n':''} ${c.e?'e':''} ${c.s?'s':''} ${c.w?'w':''} ${MZ.seen.has(x+','+y)?'seen':''}" data-act="mzTap" data-arg="${x},${y}" style="font-size:${Math.round(cs*.7)}px">${me?'🐱':goal?'🧀':''}</div>`}).join('');
+ mgShell('🐱 '+t('gMaze'),t('mzRules'),`<div class="mz" id="mzBoard" style="grid-template-columns:repeat(${n},${cs}px);grid-auto-rows:${cs}px">${cells}</div>
+  <div class="mzpad"><span></span><button class="btn" data-act="mzGo" data-arg="0,-1" aria-label="↑">⬆</button><span></span><button class="btn" data-act="mzGo" data-arg="-1,0" aria-label="←">⬅</button><span></span><button class="btn" data-act="mzGo" data-arg="1,0" aria-label="→">➡</button><span></span><button class="btn" data-act="mzGo" data-arg="0,1" aria-label="↓">⬇</button><span></span></div>`);
+ const b=document.getElementById('mzBoard');let sx=0,sy=0;
+ b.addEventListener('touchstart',e=>{const t0=e.touches[0];sx=t0.clientX;sy=t0.clientY},{passive:true});
+ b.addEventListener('touchend',e=>{const t0=e.changedTouches[0],dx=t0.clientX-sx,dy=t0.clientY-sy;if(Math.max(Math.abs(dx),Math.abs(dy))<24)return;
+  if(Math.abs(dx)>Math.abs(dy))mzMove(dx>0?1:-1,0);else mzMove(0,dy>0?1:-1)})}
+function mzMove(dx,dy){if(MZ.done)return;const n=MZ.n,c=MZ.cells[MZ.y*n+MZ.x],w=dx>0?'e':dx<0?'w':dy>0?'s':'n';
+ if(c[w]){sndWrong();restartAnim(document.getElementById('mzBoard'),'shake');return}
+ MZ.x+=dx;MZ.y+=dy;MZ.seen.add(MZ.x+','+MZ.y);tone(660+MZ.seen.size*6,0,.06,'square',.03);
+ if(MZ.x===n-1&&MZ.y===n-1){MZ.done=true;const p=cur();if(p){p.mzWins=(+p.mzWins||0)+1;save(p)}mzRender();mgWin();return}
+ mzRender()}
+Object.assign(ACT,{
+ mzGo(a){const [dx,dy]=a.split(',').map(Number);mzMove(dx,dy)},
+ mzTap(a){const [x,y]=a.split(',').map(Number),dx=x-MZ.x,dy=y-MZ.y;if(Math.abs(dx)+Math.abs(dy)===1)mzMove(dx,dy)},
+});
+document.addEventListener('keydown',e=>{if(!document.getElementById('mgwrap'))return;
+ const K={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};
+ if(MG.type==='maze'&&K[e.key]){e.preventDefault();mzMove(...K[e.key])}
+ else if(e.key==='Enter'){const b=document.querySelector('#mgEnd [data-enter]');if(b){e.preventDefault();b.click()}}},true);
+
+/* ============ НАЙДИ ПАРЫ ============ */
+const MEM={cards:[],open:[],lock:false,moves:0};
+const MEM_SYM=['🐶','🐱','🐰','🦊','🐻','🐼','🐸','🐵','🦁','🐯','🐷','🐮','🐔','🐧','🦉','🐢','🐙','🦋'];
+function memStart(){const p=cur(),pairs=((p&&+p.memWins)||0)>=3?8:6,s=MEM_SYM.slice().sort(()=>Math.random()-.5).slice(0,pairs);
+ MEM.cards=[...s,...s].sort(()=>Math.random()-.5).map((e,i)=>({id:i,e,up:false,got:false}));MEM.open=[];MEM.lock=false;MEM.moves=0;memRender()}
+function memRender(){const n=MEM.cards.length,cols=4,cw=Math.min(96,Math.floor((Math.min(innerWidth,520)-40)/cols));
+ mgShell('🃏 '+t('gMem'),t('memRules'),`<div class="mem" style="grid-template-columns:repeat(${cols},${cw}px)">${MEM.cards.map(c=>`<button class="btn memc ${c.up||c.got?'':'hid'} ${c.got?'got':''}" data-act="memTap" data-arg="${c.id}">${c.e}</button>`).join('')}</div>`,
+  `<span class="status" style="margin:0">${t('moves',{n:MEM.moves})}</span>`)}
+Object.assign(ACT,{memTap(a){if(MEM.lock)return;const c=MEM.cards[+a];if(!c||c.up||c.got)return;c.up=true;MEM.open.push(c);sndTick();
+ if(MEM.open.length===2){MEM.moves++;const [x,y]=MEM.open;
+  if(x.e===y.e){x.got=y.got=true;MEM.open=[];sndCorrect(4);memRender();
+   if(MEM.cards.every(z=>z.got)){const p=cur();if(p){p.memWins=(+p.memWins||0)+1;save(p)}mgWin()}return}
+  MEM.lock=true;memRender();setTimeout(()=>{x.up=y.up=false;MEM.open=[];MEM.lock=false;if(MG.type==='mem')memRender()},800);return}
+ memRender()}});
+
+/* ============ ПЯТНАШКИ 3×3 ============ */
+const PZ={b:[],moves:0,done:false};
+const pzSolved=b=>b.every((v,i)=>v===(i===8?0:i+1));
+function pzNb(i){const r=Math.floor(i/3),c=i%3,o=[];if(r>0)o.push(i-3);if(r<2)o.push(i+3);if(c>0)o.push(i-1);if(c<2)o.push(i+1);return o}
+function pzStart(){const b=[1,2,3,4,5,6,7,8,0];let z=8,prev=-1;for(let k=0;k<60||pzSolved(b);k++){const o=pzNb(z).filter(x=>x!==prev),j=pick(o);b[z]=b[j];b[j]=0;prev=z;z=j}
+ PZ.b=b;PZ.moves=0;PZ.done=false;pzRender()}
+function pzRender(){const s=Math.min(100,Math.floor((Math.min(innerWidth,420)-56)/3));
+ mgShell('🔢 '+t('gPz'),t('pzRules'),`<div class="pz" style="width:${3*s+16}px">${PZ.b.map((v,i)=>`<button class="btn pzt ${v?'':'empty'} ${v&&v===i+1?'home':''}" data-act="pzTap" data-arg="${i}">${v||''}</button>`).join('')}</div>`,
+  `<span class="status" style="margin:0">${t('moves',{n:PZ.moves})}</span>`)}
+Object.assign(ACT,{pzTap(a){if(PZ.done)return;const i=+a,z=PZ.b.indexOf(0);if(!pzNb(z).includes(i)){sndWrong();return}
+ PZ.b[z]=PZ.b[i];PZ.b[i]=0;PZ.moves++;sndTick();
+ if(pzSolved(PZ.b)){PZ.done=true;pzRender();mgWin();return}pzRender()}});
+
+/* ============ МАЛЫШАМ: ЗАДАЧКИ И ГОЛОВОЛОМКИ ============ */
+const KID_CAT=[['🍎','🍌','🍇','🍓','🍒','🍐','🍑','🍋'],['🐶','🐱','🐭','🐰','🦊','🐻','🐼','🐸'],['🚗','🚕','🚌','🚓','🚑','🚒','🚜','🚲'],['🌸','🌻','🌷','🌹','🌼','🌺','🍀','🌵']];
+const KID_ITEMS=['🍎','⭐','🐟','🎈','🍓','🐞','🌸','🍪','⚽','🐥','🍄','🦋'];
+const KID={n:0,total:10,ok:0,res:[],q:null,busy:false};
+const rep=(e,k)=>`<span class="kidgrp">${e.repeat(k)}</span>`;
+function kidOpts(a,lo,hi,k){const s=new Set([a]);let g=0;while(s.size<k&&g++<200){const v=rnd(Math.max(lo,a-3),Math.min(hi,a+3));s.add(v)}while(s.size<k)s.add(rnd(lo,hi));return [...s].sort((x,y)=>x-y)}
+function kidGen(){
+ const type=pick(['count','count','more','next','odd','sum','take','miss','big']),e=pick(KID_ITEMS);
+ if(type==='count'){const a=rnd(1,10);return {q:t('kHowMany',{e}),body:rep(e,a),opts:kidOpts(a,1,10,4).map(v=>({h:v,ok:v===a}))}}
+ if(type==='more'){let a=rnd(1,8),b;do{b=rnd(1,8)}while(b===a);const less=Math.random()<.35,e2=pick(KID_ITEMS.filter(x=>x!==e));
+  return {q:t(less?'kLess':'kMore'),body:'',grp:true,opts:[{h:e.repeat(a),ok:less?a<b:a>b},{h:e2.repeat(b),ok:less?b<a:b>a}]}}
+ if(type==='next'){const sets=[['🔴','🔵'],['🟡','🟢','🔴'],['⭐','🌙'],['🍎','🍎','🍌'],['🐱','🐶','🐶'],['🟥','🟦','🟩']],pat=pick(sets),len=rnd(5,7);
+  const seq=[];for(let i=0;i<len;i++)seq.push(pat[i%pat.length]);const ans=pat[len%pat.length];
+  const pool=[...new Set([...pat,'🟣','🟠','⚪','🍇','🐸'])].filter(x=>x!==ans).sort(()=>Math.random()-.5).slice(0,2);
+  return {q:t('kNext'),body:seq.join(' ')+' ❓',emo:true,opts:[ans,...pool].sort(()=>Math.random()-.5).map(x=>({h:x,ok:x===ans}))}}
+ if(type==='odd'){const ci=rnd(0,KID_CAT.length-1),A=KID_CAT[ci].slice().sort(()=>Math.random()-.5).slice(0,3),B=pick(KID_CAT.filter((_,i)=>i!==ci)),o=pick(B);
+  return {q:t('kOdd'),body:'',emo:true,opts:[...A,o].sort(()=>Math.random()-.5).map(x=>({h:x,ok:x===o}))}}
+ if(type==='sum'){const a=rnd(1,5),b=rnd(1,5),s=a+b;return {q:t('kSum'),body:`${rep(e,a)} ➕ ${rep(e,b)}`,opts:kidOpts(s,1,10,4).map(v=>({h:v,ok:v===s}))}}
+ if(type==='take'){const a=rnd(3,9),b=rnd(1,a-1),s=a-b;return {q:t('kTake'),body:`${rep(e,a)} ➖ ${rep(e,b)}`,opts:kidOpts(s,0,9,4).map(v=>({h:v,ok:v===s}))}}
+ if(type==='miss'){const st=rnd(1,6),k=rnd(1,3),seq=[0,1,2,3,4].map(i=>st+i),ans=seq[k];seq[k]='❓';
+  return {q:t('kMiss'),body:seq.join(' '),opts:kidOpts(ans,1,10,4).map(v=>({h:v,ok:v===ans}))}}
+ let a=rnd(1,10),b;do{b=rnd(1,10)}while(b===a);return {q:t('kBig'),body:'',opts:[a,b].map(v=>({h:v,ok:v===Math.max(a,b)}))}}
+function renderKids(){SCREEN='kids';KID.busy=false;
+ const p=cur();if(!p){SCREEN='login';return render()}
+ if(KID.n>=KID.total){const n=KID.ok;app.innerHTML=`<header class="top blk"><button class="icon" data-act="back" aria-label="←">⬅</button><h2 style="margin:0">${t('kidsBtn')}</h2><div class="sp"></div><span class="dopa">⚡ <b id="dopaVal">${p.dopa}</b></span></header>
+  <section class="panel blk" style="text-align:center"><div style="font-size:56px">${n>=9?'🏆':n>=6?'🌟':'🙂'}</div><div class="stars">${'⭐'.repeat(Math.round(n/2))}</div><h2>${t('kDone',{n,t:KID.total})}</h2>
+  <div class="row"><button class="btn" data-act="back">${t('kMenu')}</button><button class="btn pri big" data-act="kids" data-enter>${t('kAgain')}</button></div></section>`;if(n>=8){sndFanfare();fireworks(3)}return}
+ const q=KID.q||(KID.q=kidGen());
+ app.innerHTML=`<header class="top blk"><button class="icon" data-act="back" aria-label="←">⬅</button><h2 style="margin:0">${t('kidsBtn')}</h2><div class="sp"></div><span class="dopa">⚡ <b id="dopaVal">${p.dopa}</b></span></header>
+ <div class="kprog">${Array.from({length:KID.total},(_,i)=>`<i class="${i<KID.res.length?(KID.res[i]?'ok':'no'):i===KID.n?'now':''}"></i>`).join('')}</div>
+ <section class="panel blk" style="text-align:center" id="kidPanel"><h2>${esc(q.q)}</h2>${q.body?`<div class="kidq">${q.body}</div>`:''}
+ <div class="kgrid">${q.opts.map((o,i)=>`<button class="btn ${q.emo?'emo':''} ${q.grp?'grp':''}" data-act="kidAns" data-arg="${i}">${o.h}</button>`).join('')}</div></section>
+ <p class="on-sky" style="text-align:center;font-weight:900">${t('kidsTitle')}</p>`}
+Object.assign(ACT,{
+ kids(){KID.n=0;KID.ok=0;KID.res=[];KID.q=null;renderKids()},
+ kidAns(a,btn){if(KID.busy||!KID.q)return;KID.busy=true;const o=KID.q.opts[+a],p=cur(),ok=!!(o&&o.ok);
+  const bs=[...document.querySelectorAll('.kgrid .btn')];KID.q.opts.forEach((x,i)=>{if(x.ok)bs[i].classList.add('right')});
+  let mg=false;
+  if(ok){KID.ok++;if(p){p.dopa+=1;p.kidsCorrect=(+p.kidsCorrect||0)+1;mg=mgTick();save(p);announce(checkUnlocks(p));const d=document.getElementById('dopaVal');if(d)d.textContent=p.dopa}
+   sndCorrect(KID.ok);const r=btn.getBoundingClientRect();burst(r.left+r.width/2,r.top+r.height/2,24,7)}
+  else{btn.classList.add('bad');sndWrong();restartAnim(document.getElementById('kidPanel'),'shake')}
+  KID.res.push(ok);KID.n++;KID.q=null;
+  setTimeout(()=>{if(SCREEN!=='kids')return;if(mg)offerMinigame(()=>{if(SCREEN==='kids')renderKids()});else renderKids()},ok?750:1500)},
 });
 </script>
 </body></html>
