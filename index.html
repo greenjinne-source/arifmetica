@@ -819,7 +819,7 @@ const nf=n=>523.25*Math.pow(2,SCALE[Math.min(n,SCALE.length-1)]/12);
 function sndCorrect(s){const i=Math.min(s-1,13);tone(nf(i),0,.16,'square',.06);tone(nf(i+2),.08,.2,'square',.05);if(s>=5)tone(nf(i+4),.16,.3,'triangle',.1);if(s>=10)tone(nf(i)/2,0,.45,'square',.03);if(s>=15)[0,1,2,3].forEach(k=>tone(nf(i+k*2),.25+k*.07,.25,'square',.04))}
 function sndWrong(){tone(220,0,.18,'square',.05);tone(165,.12,.28,'square',.05)}
 function sndFanfare(){[0,4,7,12,16].forEach((n,k)=>tone(523.25*Math.pow(2,n/12),k*.1,.35,'square',.06))}
-const sndTick=()=>tone(880,0,.03,'square',.02);
+const sndTick=()=>{if(SET.clicks!==false)tone(880,0,.03,'square',.02)};
 const sndCash=()=>{tone(1318,0,.08,'square',.04);tone(1760,.07,.3,'triangle',.08)};
 /* ============ ЛОУ-ФАЙ МУЗЫКА И ФОНОВЫЕ ЗВУКИ ============ */
 const AU={amb:{},started:false};
@@ -1608,7 +1608,7 @@ function mzRender(){
   if(Math.abs(dx)>Math.abs(dy))mzMove(dx>0?1:-1,0);else mzMove(0,dy>0?1:-1)})}
 function mzMove(dx,dy){if(MZ.done)return;const n=MZ.n,c=MZ.cells[MZ.y*n+MZ.x],w=dx>0?'e':dx<0?'w':dy>0?'s':'n';
  if(c[w]){sndWrong();restartAnim(document.getElementById('mzBoard'),'shake');return}
- MZ.x+=dx;MZ.y+=dy;MZ.seen.add(MZ.x+','+MZ.y);tone(660+MZ.seen.size*6,0,.06,'square',.03);
+ MZ.x+=dx;MZ.y+=dy;MZ.seen.add(MZ.x+','+MZ.y);if(SET.clicks!==false)tone(660+MZ.seen.size*6,0,.06,'square',.03);
  if(MZ.x===n-1&&MZ.y===n-1){MZ.done=true;const p=cur();if(p){p.mzWins=(+p.mzWins||0)+1;save(p)}mzRender();mgWin();return}
  mzRender()}
 Object.assign(ACT,{
@@ -2087,7 +2087,7 @@ mzMove=function(dx,dy){if(MZ.done)return;const n=MZ.n,c=MZ.cells[MZ.y*n+MZ.x],w=
  if(c[w]){sndWrong();restartAnim(document.getElementById('mzBoard'),'shake');return}
  const nx=MZ.x+dx,ny=MZ.y+dy,ni=ny*n+nx;
  if(ni===n*n-1&&!MZ.hasKey){sndWrong();toast(t('mzKey'),1800);return}
- MZ.x=nx;MZ.y=ny;MZ.seen.add(nx+','+ny);tone(660+(MZ.seen.size%40)*8,0,.05,'square',.03);
+ MZ.x=nx;MZ.y=ny;MZ.seen.add(nx+','+ny);if(SET.clicks!==false)tone(660+(MZ.seen.size%40)*8,0,.05,'square',.03);
  if(ni===MZ.key&&!MZ.hasKey){MZ.hasKey=true;sndFanfare();toast(t('mzGot'),1800)}
  if(ni===n*n-1){MZ.done=true;const p=cur();if(p){p.mzWins=(+p.mzWins||0)+1;save(p)}mzRender();mgWin();return}
  mzRender()};
@@ -2719,7 +2719,7 @@ function seaSnd(kind,dur){if(!SET.sound)return;const a=ac();if(!a)return;const t
  else if(kind==='boom'){nz(1,'lowpass',1000,.7,.9);os(110,32,.7,'sine',.75);nz(.25,'highpass',2200,.5,.2)}
  else if(kind==='bigboom'){nz(1.6,'lowpass',750,.7,1);os(85,24,1.2,'sine',.85);nz(.4,'highpass',2400,.5,.25);nz(1,'lowpass',400,1,.5,.01,.25)}
  else if(kind==='plop'){nz(.5,'lowpass',380,1,.6);os(70,35,.35,'sine',.45);nz(.55,'bandpass',1300,.8,.45,.02,.05);os(380,900,.12,'sine',.12,.005,.35);os(420,1100,.1,'sine',.08,.005,.55)}
- else if(kind==='click')tone(660,0,.05,'square',.03)}
+ else if(kind==='click'){if(SET.clicks!==false)tone(660,0,.05,'square',.03)}}
 
 /* --- полёт ядра: мой выстрел — от «камеры» в поле, выстрел соперника — сверху из-за экрана --- */
 const SEA_FX={seen:new Set(),pend:null};
@@ -3261,5 +3261,74 @@ AVATARS.push(['🀄',p=>!!(p.mj&&Object.keys(p.mj.lv||{}).length>=5),()=>t('h_mj
 /* очередь быстрых нажатий: ни одно нажатие не теряется, пока летит плитка */
 function mjDrain(){const q=MJ.q||[];while(q.length&&!MJ.busy&&!MJ.ov&&!MJ.over){const n=q.shift(),x=MJ.tiles.find(y=>y.id===+n);if(x&&x.on){ACT.mjTap(n);return}}}
 (function(){const st=document.createElement('style');st.textContent='#mjwrap,#mjwrap *{touch-action:manipulation}#mjwrap .mjt{-webkit-tap-highlight-color:transparent}';document.head.appendChild(st)})();
+/* ============ ЗВУК 2.0: ЗВУК НА ТЕЛЕФОНАХ, ВЫКЛЮЧЕНИЕ ЗВУКОВ НАЖАТИЙ, ВОСТОЧНАЯ МУЗЫКА В МАДЖОНГЕ ============ */
+Object.assign(S,{
+ clkOn:['Звуки нажатий: вкл','Tap sounds: on','Басу дыбысы: қосулы','Sonido de toques: sí','Tippgeräusche: an','Sons des touches : oui'],
+ clkOff:['Звуки нажатий: выкл','Tap sounds: off','Басу дыбысы: өшірулі','Sonido de toques: no','Tippgeräusche: aus','Sons des touches : non'],
+ mjMusT:['Восточная музыка','Oriental music','Шығыс әуені','Música oriental','Fernöstliche Musik','Musique orientale'],
+});
+/* --- звук на смартфонах: iPhone глушит звук игр кнопкой «Без звука», а браузеры не дают играть до первого касания --- */
+function audUnlock(){try{if(navigator.audioSession&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback'}catch(e){}
+ const a=ac();if(!a)return;if(a.state!=='running'){try{a.resume().catch(()=>{})}catch(e){}}
+ if(!AU.unl){try{const b=a.createBuffer(1,1,22050),s=a.createBufferSource();s.buffer=b;s.connect(a.destination);s.start(0);AU.unl=true}catch(e){}}}
+['pointerdown','touchend','mousedown','keydown'].forEach(ev=>document.addEventListener(ev,audUnlock,{capture:true,passive:true}));
+document.addEventListener('visibilitychange',()=>{if(document.hidden||!AC||AC.state==='running')return;if(typeof yaMutedNow==='function'&&yaMutedNow())return;try{AC.resume().catch(()=>{})}catch(e){}});
+/* --- кнопка «звуки нажатий» во всех играх --- */
+const clkIco=()=>SET.clicks===false?'🔕':'🔔',clkTxt=()=>t(SET.clicks===false?'clkOff':'clkOn');
+const clkBtn=cls=>`<button class="${cls||'btn sm'} clkbtn" data-act="clicksT" title="${esc(clkTxt())}" aria-label="${esc(clkTxt())}">${clkIco()}</button>`;
+ACT.clicksT=function(){SET.clicks=SET.clicks===false;saveSettings();if(SET.clicks)tone(880,0,.03,'square',.02);
+ document.querySelectorAll('.clkbtn').forEach(b=>{b.textContent=clkIco();b.title=clkTxt();b.setAttribute('aria-label',clkTxt())});document.querySelectorAll('.clkbtn2').forEach(b=>b.textContent=clkIco()+' '+clkTxt())};
+const _startGameS=startGame;startGame=function(m){_startGameS(m);const h=document.querySelector('#game .gtop [data-act="audioPanel"]');if(h&&!document.querySelector('#game .clkbtn'))h.insertAdjacentHTML('afterend',clkBtn('icon'))};
+const _mgShellS=mgShell;mgShell=function(...a){const w=_mgShellS.apply(this,a),x=w&&w.querySelector('.mjbar [data-act="mgExit"]');if(x&&!w.querySelector('.clkbtn'))x.insertAdjacentHTML('beforebegin',clkBtn());return w};
+const _renderKidsS=renderKids;renderKids=function(){_renderKidsS();const h=document.querySelector('#app header.top .sp');if(h&&!document.querySelector('#app .clkbtn'))h.insertAdjacentHTML('afterend',clkBtn('icon'))};
+const _audioPanelS=ACT.audioPanel;ACT.audioPanel=function(){_audioPanelS.call(ACT);const m=document.querySelector('.overlay .modal');if(m&&!m.querySelector('.clkbtn2'))m.insertAdjacentHTML('beforeend',`<div class="row" style="margin:10px 0 0"><button class="btn sm clkbtn2" data-act="clicksT">${clkIco()} ${esc(clkTxt())}</button></div>`)};
+/* --- восточная расслабляющая музыка для маджонга (пентатоника, гучжэн, бамбуковая флейта, колокольчики, бурдон) --- */
+const MJM={on:false};
+const MJM_N=[57,60,62,64,67,69,72,74,76,79,81];
+function mjmIR(a){const len=Math.floor(a.sampleRate*2.8),b=a.createBuffer(2,len,a.sampleRate);for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6)}return b}
+function mjmStart(){if(MJM.on||SET.mjMusic===false)return;const a=buses();if(!a)return;
+ MJM.resumeMain=!!MS;if(MS)stopMusic();
+ const out=a.createGain(),t=a.currentTime;out.gain.setValueAtTime(0,t);out.gain.linearRampToValueAtTime(.9,t+2.5);out.connect(AU.mBus);
+ const rev=a.createConvolver();rev.buffer=AU.mjIR||(AU.mjIR=mjmIR(a));const wet=a.createGain();wet.gain.value=.5;rev.connect(wet).connect(out);
+ const dry=a.createGain();dry.gain.value=.75;dry.connect(out);
+ Object.assign(MJM,{a,out,rev,dry,on:true,step:0,next:t+.25,ph:null,mi:5});
+ MJM.drone=[45,52,57].map((m,i)=>{const o=a.createOscillator(),g=a.createGain(),f=a.createBiquadFilter(),l=a.createOscillator(),lg=a.createGain(),v=[.04,.022,.012][i];
+  o.type=i?'sine':'triangle';o.frequency.value=mtof(m);f.type='lowpass';f.frequency.value=650;g.gain.value=v;l.frequency.value=.06+i*.035;lg.gain.value=v*.55;
+  o.connect(f).connect(g);g.connect(dry);g.connect(rev);l.connect(lg).connect(g.gain);o.start();l.start();return{o,l}});
+ MJM.id=setInterval(mjmSched,60)}
+function mjmStop(){if(!MJM.on)return;MJM.on=false;clearInterval(MJM.id);const a=MJM.a,t=a.currentTime,o=MJM.out,d=MJM.drone;
+ try{o.gain.cancelScheduledValues(t);o.gain.setValueAtTime(o.gain.value,t);o.gain.linearRampToValueAtTime(0,t+1.2)}catch(e){}
+ setTimeout(()=>{d.forEach(x=>{try{x.o.stop();x.l.stop()}catch(e){}});try{o.disconnect()}catch(e){}},1500);
+ if(MJM.resumeMain&&SET.music)startMusic();MJM.resumeMain=false}
+function mjmSched(){if(!MJM.on)return;const a=MJM.a,spb=60/66/2;if(MJM.next<a.currentTime-1)MJM.next=a.currentTime+.05;while(MJM.next<a.currentTime+.35){mjmStep(MJM.step,MJM.next,spb);MJM.next+=spb;MJM.step++}}
+function mjmStep(st,t,spb){
+ if(st%32===0){const D=(Math.floor(st/32)%2)?[38,45,50]:[45,52,57];MJM.drone.forEach((x,i)=>x.o.frequency.setTargetAtTime(mtof(D[i]),t,1.6))}
+ if(!MJM.ph||MJM.ph.left<=0)MJM.ph=Math.random()<.35?{left:rnd(2,4),rest:true}:{left:rnd(4,9),rest:false};
+ MJM.ph.left--;
+ if(!MJM.ph.rest&&Math.random()<.72){let i=MJM.mi;i=Math.max(0,Math.min(MJM_N.length-1,i+pick([-2,-1,-1,0,1,1,2])));MJM.mi=i;mjmPluck(t,MJM_N[i],.1);
+  if(Math.random()<.12)mjmPluck(t+spb*.5,MJM_N[Math.min(MJM_N.length-1,i+1)],.06)}
+ if(st%16===8&&Math.random()<.5)mjmFlute(t,pick([69,72,74,76]),spb*6);
+ if(Math.random()<.05)mjmBell(t,pick([81,84,86,88,91]));
+ if(st%8===0)mjmPluck(t,Math.floor(st/32)%2?50:45,.06,true)}
+function mjmPluck(t,m,vol,low){const a=MJM.a,f=mtof(m),o=a.createOscillator(),o2=a.createOscillator(),g=a.createGain(),g2=a.createGain(),lp=a.createBiquadFilter(),end=t+(low?2.2:1.8);
+ o.type='triangle';o2.type='sine';o.frequency.setValueAtTime(f*1.012,t);o.frequency.exponentialRampToValueAtTime(f,t+.08);o2.frequency.value=f*2;g2.gain.value=.25;
+ lp.type='lowpass';lp.frequency.setValueAtTime(low?900:4200,t);lp.frequency.exponentialRampToValueAtTime(low?300:900,t+.9);
+ g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.006);g.gain.exponentialRampToValueAtTime(.0005,end);
+ o.connect(lp);o2.connect(g2).connect(lp);lp.connect(g);g.connect(MJM.dry);g.connect(MJM.rev);o.start(t);o2.start(t);o.stop(end+.1);o2.stop(end+.1)}
+function mjmFlute(t,m,d){const a=MJM.a,f=mtof(m),o=a.createOscillator(),g=a.createGain(),vib=a.createOscillator(),vg=a.createGain(),n=a.createBufferSource(),bp=a.createBiquadFilter(),ng=a.createGain();
+ o.type='sine';o.frequency.setValueAtTime(f*.97,t);o.frequency.linearRampToValueAtTime(f,t+.25);vib.frequency.value=5;vg.gain.setValueAtTime(0,t);vg.gain.linearRampToValueAtTime(f*.006,t+d*.6);vib.connect(vg).connect(o.frequency);
+ g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.045,t+.35);g.gain.setValueAtTime(.045,t+d*.7);g.gain.linearRampToValueAtTime(0,t+d);
+ n.buffer=noiseBuf();bp.type='bandpass';bp.frequency.value=f*2;bp.Q.value=3;ng.gain.setValueAtTime(0,t);ng.gain.linearRampToValueAtTime(.012,t+.2);ng.gain.linearRampToValueAtTime(0,t+d);
+ n.connect(bp).connect(ng);ng.connect(MJM.dry);ng.connect(MJM.rev);o.connect(g);g.connect(MJM.dry);g.connect(MJM.rev);
+ o.start(t);vib.start(t);n.start(t,Math.random());o.stop(t+d+.1);vib.stop(t+d+.1);n.stop(t+d+.1)}
+function mjmBell(t,m){const a=MJM.a,f=mtof(m);[1,2.76,5.4].forEach((r,i)=>{const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=f*r;
+ g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime([.03,.012,.006][i],t+.004);g.gain.exponentialRampToValueAtTime(.0003,t+3.2-i);o.connect(g);g.connect(MJM.rev);g.connect(MJM.dry);o.start(t);o.stop(t+3.3)})}
+const _openMjS=openMahjong;openMahjong=function(){_openMjS();mjmStart()};
+const _mjCloseS=mjClose;mjClose=function(){mjmStop();_mjCloseS()};
+const mjMusBtn=()=>`<button class="btn sm mjmusbtn ${SET.mjMusic===false?'':'pri'}" data-act="mjMus" title="${esc(t('mjMusT'))}" aria-label="${esc(t('mjMusT'))}">${SET.mjMusic===false?'🔇':'🎶'}</button>`;
+ACT.mjMus=function(){SET.mjMusic=SET.mjMusic===false;saveSettings();SET.mjMusic?mjmStart():mjmStop();document.querySelectorAll('.mjmusbtn').forEach(b=>b.outerHTML=mjMusBtn())};
+function mjTopBtns(){const s=document.querySelector('#mjwrap .mjtopbtns');if(s&&!s.querySelector('.mjmusbtn'))s.insertAdjacentHTML('afterbegin',mjMusBtn()+clkBtn())}
+const _mjRenderS=mjRender;mjRender=function(msg){_mjRenderS(msg);mjTopBtns()};
+const _mjMapS=mjMap;mjMap=function(){_mjMapS();mjTopBtns()};
 </script>
 </body></html>
