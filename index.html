@@ -3969,7 +3969,6 @@ document.addEventListener('keydown',e=>{const st=SD.st;if(MG.type!=='sd'||!st||s
 const _mgStartSD=ACT.mgStart;ACT.mgStart=function(k){if(k==='sd')return ACT.sdOpen();return _mgStartSD.call(this,k)};
 const _mgCloseSD=mgClose;mgClose=function(){if(MG.type==='sd'){clearInterval(SD.tm);SD.st=null}_mgCloseSD()};
 mgPickHtml=function(){return `<div class="mgpick">${[['sd','🧩','gSd'],['maze','🐱','gMaze'],['mem','🃏','gMem'],['pz','🔢','gPz'],['mj','🀄','gMj'],['sea','🚢','g_sea'],['bc','🪖','gBC']].map(([k,i,n])=>`<button class="btn" data-act="mgStart" data-arg="${k}"><span>${i}</span>${t(n)}</button>`).join('')}</div>`};
-const _renderMenuSD=renderMenu;renderMenu=function(){_renderMenuSD();const b=document.querySelector('#app [data-act="mgMenu"]');if(b&&!document.querySelector('#app [data-act="sdOpen"]'))b.insertAdjacentHTML('beforebegin',`<button class="btn pri" data-act="sdOpen">🧩 ${t('gSd')}</button>`)};
 document.head.insertAdjacentHTML('beforeend',`<style>
 #mgwrap>*{flex-shrink:0}
 .sdhome{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;max-width:600px}
@@ -4010,6 +4009,157 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 @keyframes sdErr{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
 @keyframes sdFlash{30%{background:#bff2a0}}
 @keyframes sdPop{from{transform:scale(.3)}to{transform:scale(1)}}
+</style>`);
+/* ============ СУДОКУ ВДВОЁМ: одно поле на двоих, у каждого своя половина ============ */
+/* Только фигуры. У обеих половин одинаковое число пустых клеток (зеркально), каждую половину можно решить
+   независимо от соседа. Итог = время + 5 секунд за каждую ошибку; меньше — победа. */
+(()=>{const L=(...a)=>a;Object.assign(S,{
+ g_sdd:L('Судоку вдвоём','Sudoku duel','Екеулеп судоку','Sudoku a dúo','Sudoku-Duell','Sudoku en duel'),
+ h_sdd:L('Одно поле, у каждого своя половина — кто быстрее и без ошибок?','One board, each has a half — who is faster and makes fewer mistakes?','Бір алаң, әркімнің өз жартысы — кім жылдам әрі қатесіз?','Un tablero, cada uno su mitad: ¿quién es más rápido?','Ein Feld, jeder seine Hälfte – wer ist schneller?','Une grille, chacun sa moitié : qui est le plus rapide ?'),
+ sddLocal:L('👥 Вдвоём на одном экране','👥 Two players, one screen','👥 Бір экранда екеуі','👥 Dos en una pantalla','👥 Zu zweit an einem Gerät','👥 À deux sur un écran'),
+ sddOnline:L('🌐 Вдвоём по сети с другом','🌐 Online with a friend','🌐 Доспен желіде','🌐 En línea con un amigo','🌐 Online mit Freund','🌐 En ligne avec un ami'),
+ sddRules:L('Заполни свою половину быстрее соперника! Каждая ошибка — плюс 5 секунд.','Fill your half faster than your rival! Each mistake adds 5 seconds.','Өз жартыңды қарсыласыңнан жылдам толтыр! Әр қате +5 секунд.','¡Llena tu mitad antes que tu rival! Cada error suma 5 segundos.','Fülle deine Hälfte schneller! Jeder Fehler = +5 Sekunden.','Remplis ta moitié plus vite ! Chaque erreur = +5 secondes.'),
+ sddP1:L('Игрок 1','Player 1','1-ойыншы','Jugador 1','Spieler 1','Joueur 1'),sddP2:L('Игрок 2','Player 2','2-ойыншы','Jugador 2','Spieler 2','Joueur 2'),
+ sddWin:L('Победа!','Victory!','Жеңіс!','¡Victoria!','Sieg!','Victoire !'),sddLose:L('В следующий раз получится!','You’ll get it next time!','Келесі жолы шығады!','¡La próxima vez saldrá!','Nächstes Mal klappt’s!','Ce sera pour la prochaine fois !'),
+ sddDraw:L('Ничья!','Draw!','Тең!','¡Empate!','Unentschieden!','Égalité !'),sddWait:L('Готово! Ждём соперника…','Done! Waiting for your rival…','Дайын! Қарсыласты күтеміз…','¡Listo! Esperando al rival…','Fertig! Warte auf den Gegner…','Fini ! On attend l’adversaire…'),
+ sddSize:L('Размер поля:','Board size:','Алаң өлшемі:','Tamaño:','Feldgröße:','Taille :'),sddS4:L('Малыши 4×4','Little ones 4×4','Бөбектер 4×4','Peques 4×4','Kleine 4×4','Petits 4×4'),sddS6:L('Знатоки 6×6','Experts 6×6','Білгірлер 6×6','Expertos 6×6','Profis 6×6','Experts 6×6'),
+ sddChat:L('🧩 Позвать в судоку вдвоём','🧩 Invite to sudoku duel','🧩 Екеулеп судокуға шақыру','🧩 Invitar a sudoku a dúo','🧩 Zum Sudoku-Duell einladen','🧩 Inviter au sudoku en duel'),
+ sddMe:L('Ты','You','Сен','Tú','Du','Toi'),sddGo:L('Старт!','Go!','Бастау!','¡Ya!','Los!','Partez !'),
+ sddAgain:L('🔁 Ещё раз','🔁 Again','🔁 Тағы','🔁 Otra vez','🔁 Nochmal','🔁 Encore'),
+});})();
+MPG.sdd={i:'🧩',max:2};
+const SDD={d:null,tm:null};
+const sddSide=(i,n)=>(i%n)<n/2?0:1;
+/* поле: у каждой половины одинаковое число дырок (зеркально), и каждая решается сама, даже если у соседа пусто */
+function sddSideOk(g,G,mine){g=g.slice();const n=G.n;const isMine=i=>mine.has(i);
+ for(let guard=0;guard<200;guard++){let moved=false;
+  for(const i of mine){if(g[i])continue;const m=sdCand(g,G,i);if(sdBits(m)===1){g[i]=Math.log2(m);moved=true}}
+  if(!moved)for(const u of G.units){for(let v=1;v<=n;v++){if(u.some(j=>g[j]===v))continue;const pl=u.filter(j=>!g[j]&&(sdCand(g,G,j)&(1<<v)));if(pl.length===1&&isMine(pl[0])){g[pl[0]]=v;moved=true}}}
+  if(!moved)break}
+ return [...mine].every(i=>g[i])}
+function sddMake(n,seed){const bw=n===4?2:3,bh=2,G=sdGeom(n,bw,bh),R=srand(seed),k=n===4?4:8;
+ for(let kk=k;kk>=2;kk--)for(let att=0;att<120;att++){const sol=sdFull(n,bw,bh,R),left=[];for(let i=0;i<n*n;i++)if(sddSide(i,n)===0)left.push(i);
+  const A=sdShuf(left.slice(),R).slice(0,kk),B=A.map(i=>n*n-1-i),g=sol.slice();A.concat(B).forEach(i=>g[i]=0);
+  if(sddSideOk(g,G,new Set(A))&&sddSideOk(g,G,new Set(B)))return{n,G,sol,giv:g,holes:[A,B]}}
+ return null}
+/* --- общее для обоих режимов --- */
+function sddNew(mode,n,seed,players,meSide){const pz=sddMake(n,seed);if(!pz)return null;const now=Date.now();
+ return SDD.d=Object.assign(pz,{mode,cur:pz.giv.slice(),pl:players.map(p=>Object.assign({mist:0,sel:-1,brush:0,done:0,ms:0,sc:0},p)),me:meSide,t0:now,start:mode==='local'?now+3200:now,over:false,res:null})}
+const sddLeft=(d,s)=>d.holes[s].filter(i=>!d.cur[i]).length;
+const sddLive=(d,s)=>{const p=d.pl[s];return p.done?p.sc:Math.max(0,Date.now()-d.start)+5000*p.mist};
+function sddBoardHtml(d){const n=d.n,cs=Math.max(36,Math.min(n===4?96:72,Math.floor((Math.min(innerWidth,620)-24)/n)));d.cs=cs;
+ return `<div class="sddwrap" id="sddWrap" style="width:${cs*n+8}px"><div class="sdgrid sddgrid shape sz${n}" id="sddGrid" style="grid-template-columns:repeat(${n},${cs}px);--cs:${cs}px">${d.cur.map((_,i)=>`<div class="sdc" data-act="sddCell" data-arg="${i}" style="width:${cs}px;height:${cs}px"></div>`).join('')}</div>
+  <div class="sddov" id="sddOv0"></div><div class="sddov r" id="sddOv1"></div><div class="sddcount" id="sddCnt"></div></div>`}
+function sddHead(d,s){const p=d.pl[s];return `<div class="sddhead s${s} ${d.mode==='online'&&s===d.me?'me':''}" id="sddH${s}">${p.ava?ava(p.ava,p.frame,'s'):''}<b>${esc(p.name)}</b><span>🧩 <i id="sddL${s}">${sddLeft(d,s)}</i></span><span>❌ <i id="sddM${s}">${p.mist}</i></span><span>⏱ <i id="sddT${s}">0:00</i></span></div>`}
+function sddPal(d,s){return `<div class="sddpal s${s}" id="sddPal${s}">${[...Array(d.n)].map((_,k)=>`<button class="sdsym shape" data-act="sddSym" data-arg="${s}:${k+1}" style="--ps:${Math.max(38,Math.min(56,d.cs-6))}px">${sdShape(k+1)}</button>`).join('')}</div>`}
+function sddRefresh(){const d=SDD.d,g=document.getElementById('sddGrid');if(!d||!g)return;const n=d.n;
+ [...g.children].forEach((el,i)=>{const r=Math.floor(i/n),c=i%n,s=sddSide(i,n),v=d.cur[i],p=d.pl[s];let cl='sdc sd'+s;
+  if(n===4){if(c===1)cl+=' dv';if(r===1)cl+=' bB'}else{if(c===2)cl+=' dv';if(r===1||r===3)cl+=' bB'}
+  if(d.giv[i])cl+=' g';if(p.sel===i)cl+=' sel';if(p.brush&&v===p.brush&&s===sddSide(i,n))cl+=' same';
+  if(el.dataset.c!==cl)el.className=el.dataset.c=cl;const key=v?'v'+v:'e';if(el.dataset.k!==key&&el.dataset.k!=='h'){el.dataset.k=key;el.innerHTML=v?sdShape(v):''}});
+ [0,1].forEach(s=>{const e=document.getElementById('sddL'+s);if(e)e.textContent=sddLeft(d,s);const m=document.getElementById('sddM'+s);if(m)m.textContent=d.pl[s].mist;
+  const pal=document.getElementById('sddPal'+s);if(pal)[...pal.children].forEach((b,k)=>b.classList.toggle('on',d.pl[s].brush===k+1))})}
+function sddTick(){const d=SDD.d;if(!d){clearInterval(SDD.tm);return}if(!document.getElementById('sddGrid')){clearInterval(SDD.tm);SDD.d=null;return}
+ const now=Date.now(),cnt=document.getElementById('sddCnt');
+ if(now<d.start){const k=Math.ceil((d.start-now)/1000);if(cnt){cnt.textContent=k;cnt.style.display='flex'}if(cnt&&cnt.dataset.k!==String(k)){cnt.dataset.k=k;tone(660,0,.12,'square',.05)}return}
+ if(cnt&&cnt.style.display!=='none'){cnt.textContent=t('sddGo');if(!cnt.dataset.go){cnt.dataset.go=1;tone(990,0,.25,'square',.06);setTimeout(()=>{cnt.style.display='none'},600)}}
+ [0,1].forEach(s=>{const e=document.getElementById('sddT'+s);if(e){const p=d.pl[s];e.textContent=sdFmt(Math.floor((p.done?p.ms:Math.max(0,now-d.start))/1000))}});
+ if(d.mode==='local')sddJudge();else sddOnlineCheck()}
+/* ход игрока s в клетку i фигурой v */
+function sddPlace(s,i,v){const d=SDD.d;if(!d||d.over||Date.now()<d.start)return;const n=d.n,p=d.pl[s];if(p.done||sddSide(i,n)!==s||d.giv[i]||d.cur[i])return;
+ const el=document.getElementById('sddGrid').children[i];
+ if(v!==d.sol[i]){p.mist++;sndWrong();if(el){el.classList.remove('err');void el.offsetWidth;el.classList.add('err')}
+  d.G.peers[i].filter(j=>d.cur[j]===v).forEach(j=>{const e=document.getElementById('sddGrid').children[j];if(e){e.classList.add('bad');setTimeout(()=>e.classList.remove('bad'),800)}});sddRefresh();if(d.mode==='online')sddPush();return}
+ d.cur[i]=v;p.sel=-1;tone(523.25*Math.pow(2,[0,4,7,12,9,5][v-1]/12),0,.09,'square',.035);
+ if(el){el.dataset.k='h';el.innerHTML=sdFr(5+v,'sdspr pop');setTimeout(()=>{if(el.dataset.k==='h'){el.dataset.k='';sddRefresh()}},900)}
+ if(!sddLeft(d,s)){p.done=1;p.ms=Date.now()-d.start;p.sc=p.ms+5000*p.mist;fanfareShort(s)}
+ sddRefresh();if(d.mode==='online')sddPush();else sddJudge()}
+function fanfareShort(){[0,4,7].forEach((x,k)=>tone(659.25*Math.pow(2,x/12),k*.08,.15,'square',.05))}
+/* кто победил: оба закончили — меньше итог; один закончил, а у второго уже больше — тоже конец */
+function sddWinner(d){const a=d.pl[0],b=d.pl[1];
+ if(a.done&&b.done)return a.sc<b.sc?0:b.sc<a.sc?1:2;
+ if(a.done&&sddLive(d,1)>a.sc)return 0;if(b.done&&sddLive(d,0)>b.sc)return 1;return -1}
+function sddJudge(){const d=SDD.d;if(!d||d.over)return;const w=sddWinner(d);if(w>=0)sddFinish(w)}
+function sddFinish(w){const d=SDD.d;if(!d||d.over)return;d.over=true;d.res=w;clearInterval(SDD.tm);SDD.tm=setInterval(sddTick,500);
+ [0,1].forEach(s=>{const ov=document.getElementById('sddOv'+s);if(!ov)return;const p=d.pl[s],win=w===s,draw=w===2,sc=p.done?p.sc:sddLive(d,s);
+  ov.className='sddov'+(s?' r':'')+' show '+(draw?'draw':win?'win':'lose');
+  ov.innerHTML=`<div class="mascot ${draw?'m-happy':win?'m-joy':'m-sad'}">${MASCOT_SVG}</div>${win?'<div class="sddcup">🏆</div>':''}<b>${esc(draw?t('sddDraw'):win?t('sddWin'):t('sddLose'))}</b><small>⏱ ${sdFmt(Math.floor(sc/1000))} · ❌ ${p.mist}</small>`});
+ const g=document.getElementById('sddGrid');
+ if(w<2&&g){const r=g.getBoundingClientRect(),x=r.left+r.width*(w?0.75:0.25);sndFanfare();rain(120);
+  for(let k=0;k<5;k++)setTimeout(()=>{if(typeof pwFx==='function'&&pwFx())PW.fxs.firework(x+(Math.random()-.5)*r.width*.4,r.top+Math.random()*r.height*.5);else burst(x,r.top+r.height/3,40,9)},k*320)}
+ else{sndFanfare();rain(60)}
+ const e=document.getElementById('sddEnd');if(e)e.innerHTML=d.mode==='local'?`<div class="row"><button class="btn" data-act="sdBack">${t('sdMap')}</button><button class="btn pri big" data-act="sddLocal" data-arg="${d.n}">${t('sddAgain')}</button></div>`:'';
+ if(d.mode==='online'&&RM.id&&RM.room){const key=RM.id+':'+(RM.room.st||{}).r,mine=w===d.me?'win':w===2?'':'lose';
+  if(mine)setTimeout(()=>{if(SCREEN==='mp')mpResult(key,mine)},2600);
+  setTimeout(()=>{const e2=document.getElementById('sddEnd');if(e2&&RM.room)e2.innerHTML=mpEnd(RM.room,esc(w===2?t('sddDraw'):w===d.me?t('mpYouWin'):t('mpWin',{n:d.pl[w].name})))},1200)}}
+/* --- на одном экране --- */
+function sddLocalStart(n){const p=cur();clearInterval(SDD.tm);
+ const d=sddNew('local',n,sdHash('sddl'+Date.now()+Math.random()),[{name:p?p.name:t('sddP1'),ava:p?p.avatar:'🐱',frame:p?p.frame:'none'},{name:t('sddP2'),ava:'🦊',frame:'none'}],-1);
+ if(!d)return toast('⚠️');
+ sdShell(`🧩 ${t('g_sdd')}`,esc(t('sddRules')),`<div class="sddheads">${sddHead(d,0)}${sddHead(d,1)}</div>${sddBoardHtml(d)}<div class="sddpals">${sddPal(d,0)}${sddPal(d,1)}</div><div id="sddEnd"></div>`,`<button class="btn sm" data-act="sdBack">🗺</button>`);
+ sddRefresh();SDD.tm=setInterval(sddTick,250);sddTick()}
+/* --- по сети: состояние в комнате (st.p[игрок] = {f: заполненные клетки, m: ошибки, d: готов, sc: итог}) --- */
+const _mpInitSDD=mpInitState;mpInitState=function(r,prevR){if(r.game!=='sdd')return _mpInitSDD(r,prevR);const P=shufA(active(r)).slice(0,2);return{r:(prevR||0)+1,seed:rnd(1,1e9),n:r.opt===4?4:6,a:P[0],b:P[1],p:{},win:''}};
+function sddPush(){const d=SDD.d;if(!d||d.mode!=='online'||!RM.id)return;const p=d.pl[d.me],f=d.holes[d.me].filter(i=>d.cur[i]);
+ const rec={f,m:p.mist,d:p.done,sc:p.done?p.sc:0};rref(RM.id).update({['st.p.'+SESSION]:rec,t:Date.now()}).catch(()=>{})}
+function sddOnlineCheck(){const d=SDD.d;if(!d||d.over)return;const op=d.pl[1-d.me],me=d.pl[d.me];
+ /* соперник закончил, а у меня итог уже хуже — сдаюсь сам */
+ if(op.done&&!me.done&&sddLive(d,d.me)>op.sc){me.done=2;me.ms=Date.now()-d.start;me.sc=me.ms+5000*me.mist;sddPush()}
+ if(me.done&&op.done)sddFinish(me.sc<op.sc?d.me:op.sc<me.sc?1-d.me:2);
+ else if(me.done&&!op.done){const e=document.getElementById('sddEnd');if(e&&!e.dataset.w){e.dataset.w=1;e.innerHTML=`<p class="status">${t('sddWait')}</p>`}}}
+function sddOnlineSync(r){const d=SDD.d,s=r.st,opId=d.me?s.a:s.b,rec=(s.p||{})[opId];
+ if(rec){const op=d.pl[1-d.me];(rec.f||[]).forEach(i=>{if(!d.cur[i]){d.cur[i]=d.sol[i]}});op.mist=+rec.m||0;if(rec.d&&!op.done){op.done=rec.d;op.sc=+rec.sc||0;op.ms=Math.max(0,op.sc-5000*op.mist)}}
+ if((r.left||[]).includes(opId)&&!d.over)sddFinish(d.me);
+ sddRefresh();sddOnlineCheck()}
+function sddOnlineRender(r){const s=r.st,key=RM.id+':'+s.r,p=cur();
+ if(SDD.d&&SDD.key===key&&document.getElementById('sddGrid')){sddOnlineSync(r);const c=document.getElementById('mpChat'),sec=c&&c.closest('section');if(sec)sec.outerHTML=mpChat(r);mpChatScroll();return}
+ clearInterval(SDD.tm);SDD.key=key;const meSide=s.a===SESSION?0:1,info=id=>{const q=DB.players[id]||{};return{name:id===SESSION?t('sddMe'):(q.name||'?'),ava:q.avatar||'🐱',frame:q.frame||'none',id}};
+ const d=sddNew('online',s.n||6,s.seed,[info(s.a),info(s.b)],meSide);if(!d){app.innerHTML='<p>⚠️</p>';return}
+ const head=`<header class="top blk"><button class="icon" data-act="mpLeave" aria-label="←">⬅</button><h2 style="margin:0">🧩 ${t('g_sdd')}</h2><div class="sp"></div><span class="dopa">⚡ <b id="dopaVal">${p?p.dopa:0}</b></span></header>`;
+ app.innerHTML=head+`<section class="panel blk sddsec" style="text-align:center"><p style="font-weight:800;margin:4px 0 8px">${esc(t('sddRules'))}</p><div class="sddheads">${sddHead(d,0)}${sddHead(d,1)}</div>${sddBoardHtml(d)}<div class="sddpals one">${sddPal(d,meSide)}</div><div id="sddEnd"></div></section>`+mpChat(r);
+ mpChatScroll();sddOnlineSync(r);sddRefresh();SDD.tm=setInterval(sddTick,250)}
+const _renderMpSDD=renderMp;renderMp=function(){const r=RM.room;
+ if(r&&r.game==='sdd'&&r.status==='play'&&r.st&&r.st.seed&&socialOn()&&cur()){SCREEN='mp';return sddOnlineRender(r)}
+ _renderMpSDD();
+ if(r&&r.game==='sdd'&&r.status==='lobby'){const sec=document.querySelector('#app section.panel');if(sec&&!sec.querySelector('.sddopt')){const o=r.opt===4?4:6;
+  sec.insertAdjacentHTML('beforeend',`<div class="sddopt row"><b>${t('sddSize')}</b>${[4,6].map(k=>`<button class="btn sm ${o===k?'pri':''}" ${r.host===SESSION?`data-act="sddOpt" data-arg="${k}"`:'disabled'}>${t('sddS'+k)}</button>`).join('')}</div>`)}}};
+/* --- действия --- */
+Object.assign(ACT,{
+ sddLocal(n){sddLocalStart(+n===4?4:6)},
+ sddOnline(){if(!socialOn()){toast(t('onlineOnly'));return}mgClose();SCREEN='mp';ACT.mpNew('sdd')},
+ sddOpt(k){if(RM.id&&RM.room&&RM.room.host===SESSION)rref(RM.id).update({opt:+k===4?4:6,t:Date.now()}).catch(()=>{})},
+ sddCell(a){const d=SDD.d;if(!d||d.over)return;const i=+a,s=sddSide(i,d.n);if(d.mode==='online'&&s!==d.me)return;const p=d.pl[s];
+  if(p.brush&&!d.giv[i]&&!d.cur[i])return sddPlace(s,i,p.brush);p.sel=d.giv[i]||d.cur[i]?-1:i;sndTick();sddRefresh()},
+ sddSym(a){const d=SDD.d;if(!d||d.over)return;const [s,v]=String(a).split(':').map(Number);if(d.mode==='online'&&s!==d.me)return;const p=d.pl[s];
+  if(p.sel>=0&&!d.cur[p.sel])return sddPlace(s,p.sel,v);p.brush=p.brush===v?0:v;sndTick();sddRefresh()},
+ async sddInvite(pid){if(!socialOn())return;closeModal();await ACT.mpNew('sdd');if(RM.id)ACT.mpInvite(pid)},
+});
+/* кнопки: в судоку-меню и в чате с другом */
+const _sdHomeDD=sdHome;sdHome=function(){_sdHomeDD();const h=document.querySelector('#mgwrap .sdhome');if(h&&!h.querySelector('.sddentry'))
+ h.insertAdjacentHTML('afterbegin',`<div class="sddentry panel blk"><b>🧩 ${t('g_sdd')}</b><small>${esc(t('h_sdd'))}</small><div class="row">${[4,6].map(k=>`<button class="btn sm" data-act="sddLocal" data-arg="${k}">${t('sddLocal')} · ${k}×${k}</button>`).join('')}</div><div class="row"><button class="btn sm pri" data-act="sddOnline">${t('sddOnline')}</button></div></div>`)};
+const _openChatDD=openChat;openChat=function(pid){_openChatDD(pid);const m=document.querySelector('.overlay .modal.chatm');if(m&&!m.querySelector('.sddinv'))
+ (m.querySelector('.phr')||m).insertAdjacentHTML('beforebegin',`<div class="row sddinv"><button class="btn pri" data-act="sddInvite" data-arg="${esc(pid)}">${t('sddChat')}</button></div>`)};
+document.head.insertAdjacentHTML('beforeend',`<style>
+.sddheads{display:flex;gap:8px;justify-content:center;width:100%;max-width:640px;margin:0 auto 8px}
+.sddhead{flex:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;padding:6px;border:3px solid #1d1d2b;font-weight:900;font-size:13px;color:#1d1d2b}
+.sddhead.s0{background:#cfe0ff}.sddhead.s1{background:#ffd3dc}.sddhead.me{box-shadow:0 0 0 3px #ffd23f}.sddhead i{font-style:normal}
+.sddhead .frame.s{width:34px;height:34px;padding:3px}
+.sddwrap{position:relative;margin:0 auto}
+.sddgrid .sdc.sd0{background:#e6efff}.sddgrid .sdc.sd1{background:#ffe6eb}.sddgrid .sdc.g.sd0{background:#d2e0fb}.sddgrid .sdc.g.sd1{background:#f7d2da}
+.sddgrid .sdc.dv{border-right:5px solid #ffb800}.sddgrid .sdc.sel{background:#fff1a8;box-shadow:inset 0 0 0 3px #2f62e8}.sddgrid .sdc.same{background:#ffe08a}
+.sddov{position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;font-weight:900;color:#fff;text-shadow:0 2px 0 #000;pointer-events:none}
+.sddov.r{left:auto;right:4px}.sddov.show{display:flex;animation:sdPop .5s cubic-bezier(.2,1.6,.4,1)}
+.sddov.win{background:rgba(255,200,40,.55)}.sddov.lose{background:rgba(40,50,90,.65)}.sddov.draw{background:rgba(80,160,80,.5)}
+.sddov .mascot{width:90px;height:99px}.sddov b{font-size:20px}.sddov small{font-size:13px}
+.sddcup{font-size:54px;line-height:1;animation:sddCup 1s ease-in-out infinite alternate}
+@keyframes sddCup{from{transform:translateY(0) rotate(-6deg)}to{transform:translateY(-8px) rotate(6deg)}}
+.sddcount{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-family:var(--font-px);font-size:72px;color:#fff;text-shadow:0 4px 0 #000;background:rgba(0,0,0,.35);pointer-events:none}
+.sddpals{display:flex;gap:12px;justify-content:space-between;width:100%;max-width:640px;margin:10px auto 0}.sddpals.one{justify-content:center}
+.sddpal{display:grid;grid-template-columns:repeat(3,auto);gap:6px;padding:6px;border:3px solid #1d1d2b}.sddpal.s0{background:#cfe0ff}.sddpal.s1{background:#ffd3dc}
+.sddpals.one .sddpal{grid-template-columns:repeat(6,auto)}
+.sddentry{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;max-width:520px;text-align:center}.sddentry small{font-weight:800}
+.sddopt{align-items:center;gap:8px}
+.sddinv{margin:6px 0}
 </style>`);
 /* ============ ЖИВОЙ МИР НА PHASER: блочный мир-фон, деревня из решённых примеров, стройка дома, эффекты ============ */
 /* Каждый верный ответ кладёт блок в дом. 10 блоков = дом, дом уходит в деревню на холмах.
