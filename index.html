@@ -3396,7 +3396,7 @@ function bcMove(S,o,dir,dist){if(o.dir!==dir){o.dir=dir;if(dir==='u'||dir==='d')
  let step=dist;while(step>.5){step/=2;const ax=o.x+dx*step,ay=o.y+dy*step;if(bcFree(S,o,ax,ay)){o.x=ax;o.y=ay}}return false}
 function bcFire(S,o){const own=S.B.filter(b=>b.o===o).length,max=o.pl&&o.star>=2?2:1;if(own>=max||o.cd>0)return false;
  const [dx,dy]=BC_DIR[o.dir],bs=o.pl?(o.star>=1?220:150):BC_ET[o.t].bs;
- S.B.push({o,pl:!!o.pl,x:o.x+8-2+dx*8,y:o.y+8-2+dy*8,dir:o.dir,sp:bs,steel:o.pl&&o.star>=3});o.cd=o.pl?(o.star>=2?.18:.3):.25;if(o.pl)S.fx.push({k:'s'});return true}
+ S.B.push({o,pl:!!o.pl,x:o.x+8-2+dx*8,y:o.y+8-2+dy*8,dir:o.dir,sp:bs,steel:o.pl&&o.star>=3});o.cd=o.pl?(o.star>=2?.18:.3):.25;if(o.pl)S.fx.push({k:'s',x:o.x+8+dx*9,y:o.y+8+dy*9});return true}
 /* --- шаг симуляции --- */
 function bcStep(S,dt){if(S.over||S.win)return;S.t+=dt;
  if(S.frz>0)S.frz-=dt;if(S.bfl>0)S.bfl-=dt;if(S.shov>0){S.shov-=dt;if(S.shov<=0){bcWalls(S.M,S.hqS?2:1);S.mv++}}
@@ -3481,9 +3481,10 @@ function bcDraw(g,S,s,me,tn){const F=BC.F*s;g.fillStyle='#0b0b0f';g.fillRect(0,0
  if(S.frz>0){g.fillStyle='rgba(127,216,255,.12)';g.fillRect(0,0,F,F)}}
 function bcBoom(g,x,y,s,f){const r=(4+f*10)*s;g.fillStyle=`rgba(255,${Math.round(220-f*150)},60,${1-f*.6})`;g.beginPath();g.arc(x,y,r,0,7);g.fill();g.fillStyle=`rgba(255,255,220,${1-f})`;g.beginPath();g.arc(x,y,r*.5,0,7);g.fill()}
 /* --- звуки и эффекты --- */
-function bcSfx(S,ui){for(const f of S.fx){if(f.k==='s')tone(520,0,.05,'square',.03);else if(f.k==='h'){if(f.pl)tone(180,0,.06,'square',.04)}else if(f.k==='w'){if(f.pl)tone(900,0,.04,'square',.02)}
- else if(f.k==='a')tone(1200,0,.05,'triangle',.05);else if(f.k==='x'){try{seaSnd('boom')}catch(e){tone(90,0,.3,'sawtooth',.06)}if(ui&&f.pts)ui.pop(f.x,f.y,'+'+f.pts)}
- else if(f.k==='P')[0,4,7].forEach((n,i)=>tone(660*Math.pow(2,n/12),i*.07,.12,'square',.04));else if(f.k==='p'){sndCorrect(6)}else if(f.k==='B'){try{seaSnd('bigboom')}catch(e){}}}
+function bcSfx(S,ui){const X=(k,x,y,z)=>{if(ui&&ui.fx)ui.fx(k,x,y,z)};
+ for(const f of S.fx){if(f.k==='s'){tone(520,0,.05,'square',.03);if(f.x)X('muzzle',f.x,f.y)}else if(f.k==='h'){if(f.pl)tone(180,0,.06,'square',.04);X('brick',f.x,f.y)}else if(f.k==='w'){if(f.pl){tone(900,0,.04,'square',.02);X('steel',f.x,f.y)}}
+ else if(f.k==='a'){tone(1200,0,.05,'triangle',.05);X('steel',f.x,f.y)}else if(f.k==='x'){try{seaSnd('boom')}catch(e){tone(90,0,.3,'sawtooth',.06)}if(ui&&f.pts)ui.pop(f.x,f.y,'+'+f.pts);X('boom',f.x,f.y,f.me?1.4:1);if(f.me&&ui&&ui.shake){ui.shake(2);tkBuzz([40,30,60])}}
+ else if(f.k==='P')[0,4,7].forEach((n,i)=>tone(660*Math.pow(2,n/12),i*.07,.12,'square',.04));else if(f.k==='p'){sndCorrect(6)}else if(f.k==='B'){try{seaSnd('bigboom')}catch(e){}X('boom',f.x||104,f.y||200,2);if(ui&&ui.shake){ui.shake(3);tkBuzz([80,40,120])}}}
  S.fx=[]}
 /* --- снимок состояния для сети (гостю) --- */
 function bcSnap(S){return {L:S.L,b:S.base?1:0,bh:S.bhp||1,o:S.over||'',w:S.win?1:0,f:+S.frz.toFixed(1),q:S.Q.length-S.qi,
@@ -3499,25 +3500,59 @@ function bcHud(S,me){const p=S.P.find(x=>x.id===me)||S.P[0],left=S.Q.length?Math
  return `<span class="now">🪖 ${t('bcLevel',{n:S.L})}</span><span>🦅${'❤️'.repeat(Math.max(0,S.base?S.bhp||1:0))||'💥'}</span><span>👾 ${left+S.E.filter(e=>e.alive).length}</span>${S.P.map(x=>`<span style="background:${x.i?'#1d7a19':'#9a7a00'}">${x.i?'🟩':'🟨'} ❤️${x.lives} ${'⭐'.repeat(x.star)} ${x.score}</span>`).join('')}`}
 /* размер поля: во всю ширину экрана (но так, чтобы влезли кнопки) */
 function bcSize(side,below){const w=Math.floor(innerWidth-side),h=Math.floor(innerHeight-below);return Math.max(220,Math.min(w,Math.max(h,Math.min(w,360)),720))}
-function bcPadHtml(){return `<div class="bcpad"><div class="bcdpad"><span></span><button class="btn" data-bc="u" aria-label="⬆">⬆</button><span></span><button class="btn" data-bc="l" aria-label="⬅">⬅</button><span></span><button class="btn" data-bc="r" aria-label="➡">➡</button><span></span><button class="btn" data-bc="d" aria-label="⬇">⬇</button><span></span></div><button class="btn danger bcfire" data-bc="f" aria-label="🔥">🔥</button></div>`}
+function bcPadHtml(fire=true){return `<div class="bcpad ${fire?'':'nofire'}">${tkJoyHtml()}${fire?`<button class="bcfire" data-bc="f" aria-label="🔥"><i></i><b>🔥</b></button>`:''}</div>`}
+function tkJoyHtml(){return `<div class="bcjoy" data-joy><div class="bcjb"><div class="bcjk"></div><i class="u">▲</i><i class="d">▼</i><i class="l">◀</i><i class="r">▶</i></div><span class="bcjh">${t('tkJoyH')}</span></div>`}
+/* виброотклик (Android; на iPhone браузер не умеет — просто молчим) */
+function tkBuzz(p){try{if(SET.sound!==false&&navigator.vibrate)navigator.vibrate(p)}catch(e){}}
+/* плавающий джойстик: где коснулся — там центр, ведёшь пальцем — едешь */
+function tkJoy(zone,cb){if(!zone)return()=>{};const b=zone.querySelector('.bcjb'),k=zone.querySelector('.bcjk'),R=48;let id=null,cx=0,cy=0;
+ const home=()=>{b.style.left='50%';b.style.top='50%';k.style.transform='translate(-50%,-50%)';zone.classList.remove('on')};
+ const move=e=>{if(e.pointerId!==id)return;let dx=e.clientX-cx,dy=e.clientY-cy;const d=Math.hypot(dx,dy);if(d>R){dx*=R/d;dy*=R/d}k.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;cb(dx/R,dy/R)};
+ const down=e=>{if(id!==null)return;id=e.pointerId;e.preventDefault();try{zone.setPointerCapture(id)}catch(x){}const r=zone.getBoundingClientRect();cx=Math.max(r.left+R,Math.min(r.right-R,e.clientX));cy=Math.max(r.top+R,Math.min(r.bottom-R,e.clientY));
+  b.style.left=(cx-r.left)+'px';b.style.top=(cy-r.top)+'px';zone.classList.add('on');tkBuzz(8);move(e)};
+ const up=e=>{if(e.pointerId!==id)return;id=null;home();cb(0,0)};
+ zone.addEventListener('pointerdown',down);zone.addEventListener('pointermove',move);zone.addEventListener('pointerup',up);zone.addEventListener('pointercancel',up);zone.addEventListener('contextmenu',e=>e.preventDefault());home();
+ return ()=>{zone.removeEventListener('pointerdown',down);zone.removeEventListener('pointermove',move);zone.removeEventListener('pointerup',up);zone.removeEventListener('pointercancel',up)}}
+/* эффекты поверх поля (Phaser) + тряска экрана */
+function bcUi(cv,s,F){const P=(x,y)=>{const r=cv.getBoundingClientRect();return[r.left+x*s*r.width/F,r.top+y*s*r.height/F,s*r.width/F]};
+ return{pop:(x,y,txt)=>{const[a,b]=P(x,y);mjPop(a,b,txt,'')},
+  fx:(k,x,y,z)=>{if(typeof pwFx!=='function'||!pwFx()||x==null)return;const[a,b,u]=P(x,y),f=PW.fxs,sc=u*16/30;if(k==='boom')f.boom(a,b,sc*(z||1));else if(k==='muzzle')f.muzzle(a,b,sc);else f.hit(a,b,k)},
+  shake:n=>tkShake(cv,n)}}
+function tkShake(el,n){if(!el)return;el.classList.remove('tkshake','tkshake2','tkshake3');void el.offsetWidth;el.classList.add(n>=3?'tkshake3':n>=2?'tkshake2':'tkshake')}
 /* общий ввод: клавиатура + кнопки (зажатие) */
 function bcInput(root){const I={d:'',f:0,keys:{},touch:''},upd=()=>{const K=I.keys;I.d=I.touch||(K.u?'u':K.d?'d':K.l?'l':K.r?'r':'')};
+ I.joyOff=tkJoy(root.querySelector('.bcjoy'),(x,y)=>{const m=Math.hypot(x,y);let d='';if(m>.28){const h=Math.abs(x)>Math.abs(y),cur=I.touch,curH=cur==='l'||cur==='r';
+   const ax=cur&&Math.abs(Math.abs(x)-Math.abs(y))<.22?curH:h;d=ax?(x<0?'l':'r'):(y<0?'u':'d')}if(d!==I.touch){I.touch=d;upd()}});
  const map=k=>({arrowup:'u',w:'u','ц':'u',arrowdown:'d',s:'d','ы':'d',arrowleft:'l',a:'l','ф':'l',arrowright:'r',d:'r','в':'r'})[k];
  I.kd=e=>{const k=e.key.toLowerCase();if(k===' '||k==='enter'){I.kf=1;e.preventDefault();return}const m=map(k);if(m){I.keys[m]=true;upd();e.preventDefault()}};
  I.ku=e=>{const k=e.key.toLowerCase();if(k===' '||k==='enter'){I.kf=0;return}const m=map(k);if(m){I.keys[m]=false;upd()}};
  addEventListener('keydown',I.kd);addEventListener('keyup',I.ku);
- const press=e=>{const b=e.target.closest('[data-bc]');if(!b)return;e.preventDefault();const v=b.dataset.bc;if(v==='f')I.tf=1;else{I.touch=v;upd()}b.classList.add('on');try{b.setPointerCapture(e.pointerId)}catch(x){}};
+ const press=e=>{const b=e.target.closest('[data-bc]');if(!b)return;e.preventDefault();const v=b.dataset.bc;if(v==='f'){I.tf=1;tkBuzz(12)}else{I.touch=v;upd()}b.classList.add('on');try{b.setPointerCapture(e.pointerId)}catch(x){}};
  const rel=e=>{const b=e.target.closest('[data-bc]');if(!b)return;const v=b.dataset.bc;if(v==='f')I.tf=0;else if(I.touch===v){I.touch='';upd()}b.classList.remove('on')};
  root.addEventListener('pointerdown',press);root.addEventListener('pointerup',rel);root.addEventListener('pointercancel',rel);root.addEventListener('pointerleave',rel,true);
  root.addEventListener('contextmenu',e=>{if(e.target.closest('[data-bc]'))e.preventDefault()});
- I.get=()=>({d:I.d,f:(I.kf||I.tf)?1:0});I.stop=()=>{removeEventListener('keydown',I.kd);removeEventListener('keyup',I.ku)};return I}
+ I.get=()=>({d:I.d,f:(I.kf||I.tf)?1:0});I.stop=()=>{removeEventListener('keydown',I.kd);removeEventListener('keyup',I.ku);if(I.joyOff)I.joyOff()};return I}
 (function(){const st=document.createElement('style');st.textContent=`
 .bccv{display:block;margin:6px auto;image-rendering:pixelated;box-shadow:0 0 0 4px #000,0 0 0 7px #555;background:#0b0b0f;touch-action:none;max-width:100%}
-.bcpad{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;max-width:420px;box-sizing:border-box;padding:0 4px;margin:10px auto 0;touch-action:none;user-select:none;-webkit-user-select:none}
+.bcpad{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;max-width:520px;box-sizing:border-box;padding:0 4px;margin:10px auto 0;touch-action:none;user-select:none;-webkit-user-select:none}
+.bcjoy{position:relative;flex:1;height:150px;max-width:300px;border:3px dashed rgba(255,255,255,.18);border-radius:22px;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.07),rgba(255,255,255,0) 70%);touch-action:none;overflow:hidden}
+.bcpad.nofire .bcjoy{max-width:none;height:140px}
+.bcjb{position:absolute;left:50%;top:50%;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;background:rgba(10,14,40,.45);border:3px solid rgba(255,255,255,.55);box-shadow:0 0 0 3px rgba(0,0,0,.35),inset 0 0 18px rgba(127,216,255,.25);transition:left .12s,top .12s;pointer-events:none}
+.bcjoy.on .bcjb{transition:none;border-color:#7fd8ff}
+.bcjk{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#9fd3ff 45%,#3d7bff);border:3px solid #10183a;box-shadow:0 4px 0 rgba(0,0,0,.4)}
+.bcjoy.on .bcjk{background:radial-gradient(circle at 35% 30%,#fff,#ffe08a 45%,#ff9a1f)}
+.bcjb i{position:absolute;font-style:normal;font-size:11px;color:rgba(255,255,255,.6);line-height:1}.bcjb i.u{left:50%;top:5px;transform:translateX(-50%)}.bcjb i.d{left:50%;bottom:5px;transform:translateX(-50%)}.bcjb i.l{left:6px;top:50%;transform:translateY(-50%)}.bcjb i.r{right:6px;top:50%;transform:translateY(-50%)}
+.bcjh{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:11px;font-weight:900;color:rgba(255,255,255,.55);pointer-events:none}.bcjoy.on .bcjh{opacity:0}
+.tkshake{animation:tkSh .25s}.tkshake2{animation:tkSh .4s}.tkshake3{animation:tkSh .6s}
+@keyframes tkSh{0%,100%{transform:none}20%{transform:translate(-5px,3px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-3px,-2px)}80%{transform:translate(3px,2px)}}
 .bcdpad{display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(3,56px);gap:4px}
 .bcdpad .btn,.bcfire{padding:0;font-size:24px;touch-action:none}
-.bcdpad .btn.on,.bcfire.on{filter:brightness(1.4);transform:translateY(2px)}
-.bcfire{width:92px;height:92px;flex:0 0 92px;font-size:40px;border-radius:50%}
+.bcdpad .btn.on{filter:brightness(1.4);transform:translateY(2px)}
+.bcfire{position:relative;width:108px;height:108px;flex:0 0 108px;border-radius:50%;padding:0;border:4px solid #3a0b0b;background:radial-gradient(circle at 35% 30%,#ffb3a0,#ff4d4d 45%,#a81c1c);box-shadow:0 7px 0 #5a0f0f,0 0 0 4px rgba(255,255,255,.25);cursor:pointer;touch-action:none}
+.bcfire b{font-size:44px;line-height:1;filter:drop-shadow(0 2px 0 rgba(0,0,0,.4))}
+.bcfire i{position:absolute;inset:-10px;border-radius:50%;border:3px solid rgba(255,200,120,.0);pointer-events:none}
+.bcfire.on{transform:translateY(5px) scale(.96);box-shadow:0 2px 0 #5a0f0f,0 0 0 6px rgba(255,210,63,.55)}.bcfire.on i{border-color:rgba(255,200,120,.8);animation:tkRing .35s ease-out infinite}
+@keyframes tkRing{from{transform:scale(.85);opacity:1}to{transform:scale(1.15);opacity:0}}
 .bcmsg{min-height:30px;font-weight:900;color:#ffd23f;text-shadow:2px 2px 0 #000;font-size:16px;text-align:center}
 @media (pointer:fine) and (min-width:800px){.bcpad{opacity:.85}}`;document.head.appendChild(st)})();
 /* --- одиночная игра (мини-игра) --- */
@@ -3527,7 +3562,7 @@ function bcSolo(L,keep){cancelAnimationFrame(BCO.raf);if(BCO.I)BCO.I.stop();
  const sz=bcSize(20,300),s=Math.max(1,Math.ceil(sz/BC.F)),F=BC.F*s;
  const w=mgShell('🪖 '+t('gBC'),t('bcRules'),`<div class="mpsc" id="bcTop"></div><div class="bcmsg" id="bcMsg"></div><canvas id="bcCv" class="bccv" width="${F}" height="${F}" style="width:${sz}px;height:${sz}px"></canvas>${bcPadHtml()}<p class="on-sky" style="font-size:11px;font-weight:800;margin:6px 0 0">${t('bcCtl')}</p>`,'');
  const cv=document.getElementById('bcCv'),g=cv.getContext('2d');g.imageSmoothingEnabled=false;BCO.I=bcInput(w);
- const ui={pop:(x,y,txt)=>{const r=cv.getBoundingClientRect();mjPop(r.left+x*s*r.width/F,r.top+y*s*r.height/F,txt,'')}};
+ const ui=bcUi(cv,s,F);
  BCO.last=performance.now();sndFanfare();
  const loop=tn=>{if(!document.getElementById('bcCv')||BCO.S!==S){if(BCO.I)BCO.I.stop();return}BCO.raf=requestAnimationFrame(loop);
   const dt=Math.min(.05,(tn-BCO.last)/1000);BCO.last=tn;S.P[0].in=BCO.I.get();bcStep(S,dt);bcSfx(S,ui);bcDraw(g,S,s,me,tn);
@@ -3546,13 +3581,18 @@ Object.assign(ACT,{bcNext(){bcSolo((BCO.S?BCO.S.L:0)+1,BCO.keep)},bcRetry(){BCO.
 mgPickHtml=function(){return `<div class="mgpick">${[['maze','🐱','gMaze'],['mem','🃏','gMem'],['pz','🔢','gPz'],['mj','🀄','gMj'],['sea','🚢','g_sea'],['bc','🪖','gBC']].map(([k,i,n])=>`<button class="btn" data-act="mgStart" data-arg="${k}"><span>${i}</span>${t(n)}</button>`).join('')}</div>`};
 const _mgStartBC=ACT.mgStart;ACT.mgStart=function(k){if(k==='bc'){closeModal();MG.type='bc';BCO.keep=null;return bcSolo(1)}return _mgStartBC.call(this,k)};
 const _mgCloseBC=mgClose;mgClose=function(){cancelAnimationFrame(BCO.raf);if(BCO.I)BCO.I.stop();BCO.S=null;_mgCloseBC()};
+/* подписи к новому пульту */
+Object.assign(S,{
+ tkJoyH:['Коснись и веди пальцем','Touch and drag','Тиіп, саусақпен жүргіз','Toca y desliza','Tippen und ziehen','Touche et glisse'],
+ bcCtl:['Слева — джойстик: коснись и веди пальцем. Справа — огонь (держи — стреляет очередью). Стрелки/WASD и пробел тоже работают.','Left: joystick — touch and drag. Right: fire (hold for rapid fire). Arrows/WASD and Space work too.','Сол жақта — джойстик: тиіп, саусақпен жүргіз. Оң жақта — ату. Бағыттауыштар/WASD және бос орын да істейді.','Izquierda: joystick, toca y desliza. Derecha: disparo (mantén para ráfaga). Flechas/WASD y espacio también.','Links: Joystick – tippen und ziehen. Rechts: Feuer (halten = Dauerfeuer). Pfeile/WASD und Leertaste gehen auch.','À gauche : joystick, touche et glisse. À droite : tir (maintiens pour rafale). Flèches/WASD et espace aussi.'],
+});
 /* ============ ТАНЧИКИ: КОМАНДНЫЙ БОЙ 2.0 (баланс как в мобильных MOBA) ============ */
 /* Башни на дорожках, база неуязвима пока стоят обе свои башни, базы и башни бьют дальше танков, лечение у своей базы,
    боты добивают команды до 2×2, возрождение дольше к концу матча, матч 6 минут. */
 Object.assign(S,{
  tkBot:['🤖 Бот','🤖 Bot','🤖 Бот','🤖 Bot','🤖 Bot','🤖 Bot'],
  tkShield:['Базу защищает щит, пока стоят обе её башни','The base is shielded while both its towers stand','Екі мұнарасы тұрғанда базаны қалқан қорғайды','La base tiene escudo mientras sus dos torres sigan en pie','Die Basis hat einen Schild, solange beide Türme stehen','La base est protégée tant que ses deux tours tiennent'],
- tankCtl:['Стрелки/WASD или держи палец там, куда ехать. Танк стреляет сам. Сначала сломай башню на дорожке — тогда с базы спадёт щит. У своей базы танк чинится.','Arrows/WASD or hold where to go. The tank fires by itself. Break a lane tower first to drop the base shield. Your tank repairs at your base.','Бағыттауыштар/WASD немесе саусақты бару керек жерде ұста. Алдымен жолдағы мұнараны құлат — сонда база қалқаны түседі.','Flechas/WASD o mantén el dedo donde ir. Primero rompe una torre para quitar el escudo de la base.','Pfeile/WASD oder halte den Finger hin. Zerstöre zuerst einen Turm, dann fällt der Basis-Schild.','Flèches/WASD ou garde le doigt où aller. Casse d’abord une tour pour retirer le bouclier de la base.'],
+ tankCtl:['Джойстик под полем, палец на поле или стрелки/WASD — ехать. Танк стреляет сам. Сначала сломай башню на дорожке — тогда с базы спадёт щит. У своей базы танк чинится.','Joystick below, finger on the field or arrows/WASD to move. The tank fires by itself. Break a lane tower first to drop the base shield. Your tank repairs at your base.','Бағыттауыштар/WASD немесе саусақты бару керек жерде ұста. Алдымен жолдағы мұнараны құлат — сонда база қалқаны түседі.','Flechas/WASD o mantén el dedo donde ir. Primero rompe una torre para quitar el escudo de la base.','Pfeile/WASD oder halte den Finger hin. Zerstöre zuerst einen Turm, dann fällt der Basis-Schild.','Flèches/WASD ou garde le doigt où aller. Casse d’abord une tour pour retirer le bouclier de la base.'],
  tkDraw:['Ничья! Время вышло','Draw! Time is up','Тең! Уақыт бітті','¡Empate! Se acabó el tiempo','Unentschieden! Zeit vorbei','Égalité ! Temps écoulé'],
 });
 TK.towers=[[150,610,0,0],[450,610,0,1],[150,290,1,0],[450,290,1,1]];
@@ -3619,10 +3659,11 @@ const _mpInitTK=mpInitState;mpInitState=function(r,prevR){if(r.game!=='tank')ret
 /* отрисовка командного боя 2.0: башни, щит базы, зона ремонта, боты, таймер */
 tankStart=async function(r){const s=r.st,rid=RM.id,key=rid+':'+s.r;rtStop();
  rtShell(r,`🪖 ${t('g_tank')}`,t('tankCtl')+' '+t('myTeam'));const cv=document.getElementById('rtCv'),g=cv.getContext('2d');
- const W=Math.max(240,Math.min(innerWidth-12,Math.floor(Math.max(innerHeight-170,560)/1.5),720)),H=Math.round(W*1.5);cv.width=W;cv.height=H;const k=W/TK.W;
+ const W=Math.max(240,Math.min(innerWidth-12,Math.floor(Math.max(innerHeight-330,480)/1.5),720)),H=Math.round(W*1.5);cv.width=W;cv.height=H;const k=W/TK.W;
+ cv.insertAdjacentHTML('afterend',bcPadHtml(false));
  g.fillStyle='#000';g.fillRect(0,0,W,H);g.fillStyle='#fff';g.font='14px monospace';g.fillText(t('rtLoad'),10,30);
  let db;try{db=await rtdb()}catch(e){document.getElementById('rtEnd').innerHTML=`<p class="status">${t('rtFail')}</p>`;return}
- const R={alive:true,kind:'tank',key,ints:[],offs:[]};RT.run=R;rtKeys(R);const base=db.ref(`g/${rid}/r${s.r}`),meRef=base.child('p/'+SESSION);meRef.onDisconnect().remove();
+ const R={alive:true,kind:'tank',key,ints:[],offs:[],joy:{x:0,y:0}};RT.run=R;rtKeys(R);R.offs.push(tkJoy(document.querySelector('#app .bcjoy'),(x,y)=>{R.joy.x=x;R.joy.y=y}));const base=db.ref(`g/${rid}/r${s.r}`),meRef=base.child('p/'+SESSION);meRef.onDisconnect().remove();
  const tm=s.tm,myT=tm[SESSION]||0,flip=myT===1,host=s.host===SESSION||(!active(RM.room||r).includes(s.host)&&active(RM.room||r)[0]===SESSION);
  const V=(x,y)=>flip?[(TK.W-x)*k,(TK.H-y)*k]:[x*k,y*k],A=a=>flip?a+Math.PI:a;
  const home=()=>{const [bx,by]=TK.base[myT];return {x:bx+(Object.keys(tm).filter(p=>tm[p]===myT).indexOf(SESSION)?40:-40),y:by+(myT?80:-80)}};
@@ -3642,8 +3683,9 @@ tankStart=async function(r){const s=r.st,rid=RM.id,key=rid+':'+s.r;rtStop();
  let last=performance.now(),endShown=false;const fx=[],trail=[],cAng={};
  const loop=()=>{if(!R.alive||!document.getElementById('rtCv'))return rtStop();R.raf=requestAnimationFrame(loop);const tn=performance.now(),dt=Math.min(.05,(tn-last)/1000);last=tn;
   const mySt=snap&&snap.pl&&snap.pl[SESSION],dead=mySt&&mySt[1]>0;
-  if(dead){if(!R.wasDead){R.wasDead=true;sndWrong()}}else if(R.wasDead){R.wasDead=false;Object.assign(me,home())}
+  if(dead){if(!R.wasDead){R.wasDead=true;sndWrong();tkShake(cv,2);tkBuzz([60,40,90]);if(typeof pwFx==='function'&&pwFx()){const rc=cv.getBoundingClientRect(),[vx,vy]=V(me.x,me.y);PW.fxs.boom(rc.left+vx*rc.width/W,rc.top+vy*rc.height/H,1.3*k*rc.width/W+.4)}}}else if(R.wasDead){R.wasDead=false;Object.assign(me,home())}
   if(!dead&&!(snap&&snap.w>=0)){let dx=0,dy=0;const K=R.keys;if(kL(K))dx-=1;if(kR(K))dx+=1;if(kU(K))dy-=1;if(kD(K))dy+=1;if(flip){dx=-dx;dy=-dy}
+   if(!dx&&!dy&&Math.hypot(R.joy.x,R.joy.y)>.25){dx=flip?-R.joy.x:R.joy.x;dy=flip?-R.joy.y:R.joy.y;target=null}
    if(target&&!dx&&!dy){const ex=target.x-me.x,ey=target.y-me.y,d=Math.hypot(ex,ey);if(d>8){dx=ex/d;dy=ey/d}}
    const d=Math.hypot(dx,dy);if(d){dx/=d;dy/=d;const ta=Math.atan2(dy,dx);let da=ta-me.a;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;me.a+=da*Math.min(1,dt*10);
     const nx=me.x+dx*140*dt,ny=me.y+dy*140*dt;if(!inRock(nx,me.y,14))me.x=Math.max(16,Math.min(TK.W-16,nx));if(!inRock(me.x,ny,14))me.y=Math.max(16,Math.min(TK.H-16,ny));
@@ -3685,7 +3727,10 @@ tankStart=async function(r){const s=r.st,rid=RM.id,key=rid+':'+s.r;rtStop();
     spr(g,'tanks',my2?'tankBody_blue':'tankBody_red',x,y,26*k+6,26*k+6,A(ang)-Math.PI/2)||(g.fillStyle=colT(c[1]),g.fillRect(x-8,y-8,16,16));
     const en=enemyNear(x0,y0,c[1]),aim=en?Math.atan2(en[1]-y0,en[0]-x0):ang;spr(g,'tanks',my2?'tankBlue_barrel1':'tankRed_barrel1',x+Math.cos(A(aim))*6*k,y+Math.sin(A(aim))*6*k,8*k+2,18*k+4,A(aim)-Math.PI/2);
     g.fillStyle='#000';g.fillRect(x-12,y-18*k-8,24,4);g.fillStyle=c[5]?'#ff8a1f':'#46e83f';g.fillRect(x-12,y-18*k-8,24*Math.min(1,c[4]/(TKB.cHP*(c[5]?2:1))),4);if(c[5]){g.font=`${Math.round(10+4*k)}px sans-serif`;g.textAlign='center';g.fillText('🔥',x+14,y-18*k-4)}});
-   if(snap.n!==R.lastN){R.lastN=snap.n;(snap.sh||[]).forEach(s2=>fx.push(['s',...s2,tn]));(snap.bm||[]).forEach(b=>fx.push(['b',b[0],b[1],0,0,tn]))}}
+   if(snap.n!==R.lastN){R.lastN=snap.n;(snap.sh||[]).forEach(s2=>fx.push(['s',...s2,tn]));(snap.bm||[]).forEach(b=>fx.push(['b',b[0],b[1],0,0,tn]));
+    if(typeof pwFx==='function'&&pwFx()){const rc=cv.getBoundingClientRect(),cx=(x,y)=>{const[vx,vy]=V(x,y);return[rc.left+vx*rc.width/W,rc.top+vy*rc.height/H]},u=k*rc.width/W;
+     (snap.sh||[]).slice(0,MOBILE?4:8).forEach(s2=>{const[a,b]=cx(s2[0],s2[1]);PW.fxs.muzzle(a,b,u*1.2+.3);const[c,d]=cx(s2[2],s2[3]);setTimeout(()=>{if(R.alive&&pwFx())PW.fxs.hit(c,d,'steel')},200)});
+     (snap.bm||[]).forEach(b=>{const[a,c]=cx(b[0],b[1]);PW.fxs.boom(a,c,u*1.6+.4);if(Math.hypot(b[0]-me.x,b[1]-me.y)<140)tkShake(cv,1)})}}}
   // игроки
   const drawTank=(x0,y0,a,tt,name,hp,isMe)=>{const [x,y]=V(x0,y0),sz=38*k+10,my2=tt===myT;
    if(isMe){g.strokeStyle='#ffd23f';g.lineWidth=2;g.beginPath();g.arc(x,y,sz*.7,0,7);g.stroke()}
@@ -3719,7 +3764,7 @@ async function bcNetStart(r){const s=r.st,rid=RM.id,key=rid+':'+s.r;rtStop();
  const R={alive:true,kind:'bc',key,ints:[],offs:[],acc:[]};RT.run=R;const I=bcInput(document.getElementById('app'));R.offs.push(()=>I.stop());
  const base=db.ref(`g/${rid}/r${s.r}`),meRef=base.child('p/'+SESSION);meRef.onDisconnect().remove();
  const order=s.order||[],act0=active(RM.room||r),host=s.host===SESSION||(!act0.includes(s.host)&&act0[0]===SESSION);
- const ui={pop:(x,y,txt)=>{const rc=cv.getBoundingClientRect();mjPop(rc.left+x*sc*rc.width/F,rc.top+y*sc*rc.height/F,txt,'')}};
+ const ui=bcUi(cv,sc,F);
  let inputs={},view=null,prev=null,map=null,lastFx=-1;
  R.ints.push(setInterval(()=>{const v=I.get();meRef.set({d:v.d,f:v.f})},70));
  const pcb=base.child('p').on('value',x=>{inputs=x.val()||{}});R.offs.push(()=>base.child('p').off('value',pcb));
@@ -4543,9 +4588,33 @@ class Fx extends Phaser.Scene{
   this.cub=this.add.particles(0,0,'pwcubes',{frame:this.fr,lifespan:{min:700,max:1300},speed:{min:140,max:460},angle:{min:0,max:360},gravityY:1100,rotate:{min:0,max:360},scale:{start:1.5,end:.5},alpha:{start:1,end:0,ease:'Quad.easeIn'},emitting:false});
   this.smk=this.add.particles(0,0,'pwpuff',{lifespan:{min:500,max:900},speed:{min:20,max:90},angle:{min:200,max:340},gravityY:-90,scale:{start:2,end:5},alpha:{start:.75,end:0},emitting:false});
   this.spk=this.add.particles(0,0,'pwcubes',{frame:this.fr,lifespan:{min:800,max:1400},speed:{min:120,max:360},angle:{min:0,max:360},gravityY:260,scale:{start:.8,end:.25},alpha:{start:1,end:0},emitting:false});
+  /* --- эффекты танков: огонь, дым, обломки, искры (готовые цветные кадры: Canvas-режим Phaser не умеет tint) --- */
+  {const FR=[['g','255,255,215'],['g','255,196,64'],['g','255,96,24'],['g','150,40,10'],['s','70,70,74'],['s','110,110,116'],['s','160,160,166'],['q','255,255,255'],['q','255,210,63'],['q','255,130,40'],['q','224,122,74'],['q','181,83,42'],['q','90,32,16'],['q','43,43,43']];
+   const cc=document.createElement('canvas');cc.width=FR.length*32;cc.height=32;const x=cc.getContext('2d');
+   FR.forEach(([k,c],i)=>{const ox=i*32;if(k==='q'){x.fillStyle=`rgb(${c})`;x.fillRect(ox+13,13,6,6);return}
+    const g=x.createRadialGradient(ox+16,16,0,ox+16,16,16);g.addColorStop(0,`rgba(${c},1)`);g.addColorStop(k==='g'?.35:.55,`rgba(${c},${k==='g'?.8:.7})`);g.addColorStop(1,`rgba(${c},0)`);x.fillStyle=g;x.fillRect(ox,0,32,32)});
+   const tx=this.textures.addCanvas('pwtk',cc);FR.forEach((_,i)=>tx.add(i,0,i*32,0,32,32))}
+  T('pwring',64,64,x=>{x.strokeStyle='rgba(255,226,160,1)';x.lineWidth=5;x.beginPath();x.arc(32,32,28,0,7);x.stroke()});
+  const AD=Phaser.BlendModes.ADD;
+  this.tfire=this.add.particles(0,0,'pwtk',{frame:[0,1,1,2,2,3],lifespan:{min:260,max:560},speed:{min:40,max:230},angle:{min:0,max:360},scale:{start:.9,end:.15},alpha:{start:1,end:0},blendMode:AD,emitting:false});
+  this.tsmk=this.add.particles(0,0,'pwtk',{frame:[4,5,6],lifespan:{min:700,max:1300},speed:{min:12,max:70},angle:{min:0,max:360},gravityY:-50,scale:{start:.7,end:1.8},alpha:{start:.75,end:0},emitting:false});
+  this.tdeb=this.add.particles(0,0,'pwtk',{frame:[13,12],lifespan:{min:450,max:850},speed:{min:110,max:320},angle:{min:0,max:360},gravityY:700,rotate:{min:0,max:360},scale:{start:1.2,end:.8},alpha:{start:1,end:0},emitting:false});
+  this.tspk=this.add.particles(0,0,'pwtk',{frame:[7,8,8,9],lifespan:{min:140,max:340},speed:{min:90,max:300},angle:{min:0,max:360},scale:{start:.8,end:.25},alpha:{start:1,end:0},blendMode:AD,emitting:false});
+  this.tdust=this.add.particles(0,0,'pwtk',{frame:[10,11,12],lifespan:{min:250,max:500},speed:{min:40,max:160},angle:{min:0,max:360},gravityY:300,scale:{start:1,end:.5},alpha:{start:1,end:0},emitting:false});
+  this.nBase=this.children.list.length;
   this.idle=0;this.ready=true;PW.fxs=this;this.game.loop.sleep()}
+ /* взрыв танка: вспышка, ударная волна, огонь, дым и обломки */
+ boom(x,y,sz){sz=Math.max(.4,Math.min(2.2,sz||1));this.wake(1700);const m=MOBILE?.6:1,AD=Phaser.BlendModes.ADD;
+  const fl=this.add.image(x,y,'pwtk',0).setBlendMode(AD).setScale(2.4*sz);this.tweens.add({targets:fl,scale:5*sz,alpha:0,duration:240,ease:'Quad.easeOut',onComplete:()=>fl.destroy()});
+  const rg=this.add.image(x,y,'pwring').setScale(.15*sz).setAlpha(.85);this.tweens.add({targets:rg,scale:1.3*sz,alpha:0,duration:420,ease:'Quad.easeOut',onComplete:()=>rg.destroy()});
+  this.tfire.explode(Math.ceil(24*sz*m),x,y);this.tsmk.explode(Math.ceil(7*sz*m),x,y);this.tdeb.explode(Math.ceil(9*sz*m),x,y)}
+ /* вспышка выстрела */
+ muzzle(x,y,sz){sz=sz||1;this.wake(400);const fl=this.add.image(x,y,'pwtk',1).setBlendMode(Phaser.BlendModes.ADD).setScale(.9*sz);
+  this.tweens.add({targets:fl,scale:1.7*sz,alpha:0,duration:110,onComplete:()=>fl.destroy()});this.tspk.explode(MOBILE?2:4,x,y)}
+ /* попадание: искры по броне/бетону, крошка по кирпичу */
+ hit(x,y,kind){this.wake(600);if(kind==='brick')this.tdust.explode(MOBILE?4:7,x,y);else this.tspk.explode(MOBILE?4:7,x,y)}
  wake(ms){this.until=Math.max(this.until||0,performance.now()+ms);const L=this.game.loop;if(!L.running){try{L.wake()}catch(e){}}}
- update(){const busy=performance.now()<(this.until||0)||this.cub.getAliveParticleCount()||this.smk.getAliveParticleCount()||this.spk.getAliveParticleCount()||this.tweens.getTweens().length||this.children.list.length>3;
+ update(){const busy=performance.now()<(this.until||0)||this.cub.getAliveParticleCount()||this.smk.getAliveParticleCount()||this.spk.getAliveParticleCount()||this.tweens.getTweens().length||this.children.list.length>(this.nBase||3);
   if(busy){this.idle=0;return}if(++this.idle>2){this.idle=0;this.game.loop.sleep()}}
  cubes(x,y,n){this.wake(1500);this.cub.explode(Math.max(1,Math.ceil(n*(MOBILE?.6:1))),x,y)}
  smoke(x,y){this.wake(1000);this.smk.explode(MOBILE?6:10,x,y)}
@@ -4598,7 +4667,7 @@ ACT.pwT=function(){SET.pw=SET.pw===false;saveSettings();if(SET.pw)pwLoad();else 
 const _audioPanelPW=ACT.audioPanel;ACT.audioPanel=function(){_audioPanelPW.call(ACT);const m=document.querySelector('.overlay .modal');if(m&&!m.querySelector('.pwbtn'))m.insertAdjacentHTML('beforeend',`<div class="row" style="margin:8px 0 0"><button class="btn sm pwbtn" data-act="pwT">${t(SET.pw===false?'pwOff':'pwOn')}</button></div>`)};
 document.head.insertAdjacentHTML('beforeend',`<style>
 #pworld{position:fixed;inset:0;bottom:auto;height:100vh;height:100lvh;z-index:0;pointer-events:none}#pworld canvas{display:block;image-rendering:pixelated}
-#pwfx{position:fixed;inset:0;bottom:auto;height:100vh;height:100lvh;z-index:51;pointer-events:none}#pwfx canvas{display:block;image-rendering:pixelated}
+#pwfx{position:fixed;inset:0;bottom:auto;height:100vh;height:100lvh;z-index:88;pointer-events:none}#pwfx canvas{display:block;image-rendering:pixelated}
 #app.pwin>*{animation:pwIn .42s cubic-bezier(.2,1.5,.4,1) both;animation-delay:calc(var(--pi,0)*45ms)}
 #app.pwin .modes>.mode,#app.pwin .players>.pcard{animation:pwIn .4s cubic-bezier(.2,1.5,.4,1) both}
 ${[...Array(12)].map((_,i)=>`#app.pwin .modes>.mode:nth-child(${i+1}),#app.pwin .players>.pcard:nth-child(${i+1}){animation-delay:${120+i*45}ms}`).join('')}
