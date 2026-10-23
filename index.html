@@ -3746,5 +3746,330 @@ const _renderMpBC=renderMp;renderMp=function(){const r=RM.room;
   if(document.getElementById('rtCv')&&document.getElementById('rtEnd')&&document.getElementById('rtEnd').innerHTML&&!RT.run&&RT.lastKey===key){const c=document.getElementById('rtChat');if(c){c.innerHTML=mpChat(r);mpChatScroll()}return}
   RT.lastKey=key;bcNetStart(r);return}
  _renderMpBC()};
+/* ============ ЖИВОЙ МИР НА PHASER: блочный мир-фон, деревня из решённых примеров, стройка дома, эффекты ============ */
+/* Каждый верный ответ кладёт блок в дом. 10 блоков = дом, дом уходит в деревню на холмах.
+   Phaser грузится с CDN (или из файла рядом в версии для Яндекса); если не загрузился — работает старый фон. */
+Object.assign(S,{
+ pwOn:['🌄 Живой мир: вкл','🌄 Living world: on','🌄 Тірі әлем: қосулы','🌄 Mundo vivo: sí','🌄 Lebendige Welt: an','🌄 Monde vivant : oui'],
+ pwOff:['🌄 Живой мир: выкл','🌄 Living world: off','🌄 Тірі әлем: өшірулі','🌄 Mundo vivo: no','🌄 Lebendige Welt: aus','🌄 Monde vivant : non'],
+ pwHouse:['🏠 Дом построен! Домов в деревне: {n}','🏠 House built! Houses in your village: {n}','🏠 Үй салынды! Ауылдағы үйлер: {n}','🏠 ¡Casa construida! Casas en tu aldea: {n}','🏠 Haus gebaut! Häuser im Dorf: {n}','🏠 Maison construite ! Maisons au village : {n}'],
+ pwFirst:['Каждый верный ответ — блок для домика внизу. 10 блоков — дом в твоей деревне!','Every correct answer adds a block to the house below. 10 blocks build a house for your village!','Әр дұрыс жауап — төмендегі үйге бір блок. 10 блок — ауылыңа жаңа үй!','Cada respuesta correcta añade un bloque a la casa. ¡10 bloques = una casa para tu aldea!','Jede richtige Antwort ist ein Block für das Haus unten. 10 Blöcke = ein Haus für dein Dorf!','Chaque bonne réponse ajoute un bloc à la maison. 10 blocs = une maison pour ton village !'],
+});
+const PW={on:false,ready:false,loading:false,g:null,fx:null,scene:null,fxs:null,mode:'login',lastScr:''};
+const PW_SRC=window.PHASER_SRC||['https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js','https://unpkg.com/phaser@3.90.0/dist/phaser.min.js'];
+const pwWanted=()=>SET.pw!==false&&!SC.reduce;
+const pwFx=()=>PW.on&&PW.fxs&&PW.fxs.ready;
+function pwLoad(){if(PW.on||PW.loading||!pwWanted())return;if(window.Phaser)return pwStart();PW.loading=true;let i=0;
+ const next=()=>{if(i>=PW_SRC.length){PW.loading=false;return}const s=document.createElement('script');s.src=PW_SRC[i++];s.async=true;
+  const to=setTimeout(()=>{s.onerror&&s.onerror()},15000);
+  s.onload=()=>{clearTimeout(to);PW.loading=false;if(window.Phaser&&pwWanted())pwStart()};s.onerror=()=>{clearTimeout(to);s.onload=s.onerror=null;s.remove();next()};document.head.appendChild(s)};next()}
+function pwStop(){if(!PW.on)return;PW.on=PW.ready=false;try{PW.g.destroy(true)}catch(e){}try{PW.fx.destroy(true)}catch(e){}
+ ['pworld','pwfx'].forEach(id=>{const e=document.getElementById(id);if(e)e.remove()});PW.g=PW.fx=PW.scene=PW.fxs=null;
+ document.getElementById('bg').style.display='';buildScene()}
+
+/* --- пиксельные текстуры блоков 16×16 (сетка 8×8 «пикселей» по 2 px) --- */
+function pwBlock(kind,seed){const c=document.createElement('canvas');c.width=c.height=16;const x=c.getContext('2d'),R=srand(seed);
+ const P=(i,j,col)=>{x.fillStyle=col;x.fillRect(i*2,j*2,2,2)},N=(base,amp,j0=0,j1=8)=>{for(let i=0;i<8;i++)for(let j=j0;j<j1;j++){const r=R();P(i,j,r<.25?shade(base,1-amp):r<.5?shade(base,1+amp):base)}};
+ const edge=(i,j)=>i===0||j===0||i===7||j===7;
+ switch(kind){
+  case 'grass':N('#8a5a32',.12);for(let i=0;i<8;i++){const d=2+(R()<.45?1:0);for(let j=0;j<d;j++){const r=R();P(i,j,r<.3?'#4f9a2c':r<.55?'#7cc94a':'#62b33a')}}break;
+  case 'dirt':N('#8a5a32',.12);break;
+  case 'stone':N('#8d8d8d',.1);for(let k=0;k<4;k++)P(Math.floor(R()*8),Math.floor(R()*8),'#6a6a6a');break;
+  case 'cobble':for(let i=0;i<8;i++)for(let j=0;j<8;j++){const r=R();P(i,j,r<.22?'#545454':r<.55?'#a3a3a3':'#7d7d7d')}break;
+  case 'log':for(let i=0;i<8;i++)for(let j=0;j<8;j++){const b=i%3===0?'#4f351e':'#6b4a2b';P(i,j,R()<.2?shade(b,1.12):b)}break;
+  case 'plank':for(let i=0;i<8;i++)for(let j=0;j<8;j++){const seam=j===3||j===7||(j<3&&i===2)||(j>3&&j<7&&i===6);P(i,j,seam?'#7a5530':R()<.2?'#c99a62':'#b98a52')}break;
+  case 'leaves':for(let i=0;i<8;i++)for(let j=0;j<8;j++){const r=R();P(i,j,r<.25?'#2a6b1d':r<.5?'#4fa83a':'#3c8f2a')}break;
+  case 'glass':for(let i=0;i<8;i++)for(let j=0;j<8;j++)P(i,j,edge(i,j)?'#e8f6ff':(i===j+1||i===j)&&i>1&&i<6?'#ffffff':'#9fd3f0');break;
+  case 'lit':for(let i=0;i<8;i++)for(let j=0;j<8;j++)P(i,j,edge(i,j)||i===4||j===4?'#5a3a1a':R()<.3?'#fff2a8':'#ffd75a');break;
+  case 'doorT':for(let i=0;i<8;i++)for(let j=0;j<8;j++)P(i,j,edge(i,j)||i===4?'#5a3a1a':(j>1&&j<4&&i>0&&i<7)?'#9fd3f0':R()<.2?'#9a6a3a':'#8a5a2a');break;
+  case 'doorB':for(let i=0;i<8;i++)for(let j=0;j<8;j++)P(i,j,edge(i,j)||i===4?'#5a3a1a':R()<.2?'#9a6a3a':'#8a5a2a');P(5,1,'#ffd23f');break;
+  case 'brick':for(let i=0;i<8;i++)for(let j=0;j<8;j++){const m=j===3||j===7||(j<3&&i===3)||(j>3&&j<7&&i===7);P(i,j,m?'#d6c2ad':R()<.25?'#c25a48':'#b04a3a')}break;
+  case 'roof':for(let i=0;i<8;i++)for(let j=0;j<8;j++)P(i,j,j===3||j===7?'#6e2219':j===0||j===4?'#c95a45':R()<.2?'#b5473a':'#a33b2b');break;
+  case 'roofB':for(let i=0;i<8;i++)for(let j=0;j<8;j++)P(i,j,j===3||j===7?'#24407a':j===0||j===4?'#5a82cc':R()<.2?'#4a70ba':'#3a5fa8');break;
+  case 'gold':for(let i=0;i<8;i++)for(let j=0;j<8;j++){const r=R();P(i,j,(i+j)%5===0?'#fff2a8':r<.25?'#c99a1a':'#ffd23f')}break;
+  case 'snow':N('#eef4ff',.05);break;
+ }
+ return c}
+const PW_KINDS=['grass','dirt','stone','cobble','log','plank','leaves','glass','lit','doorT','doorB','brick','roof','roofB','gold','snow'];
+/* чертёж дома для стройки: 10 шагов (снизу вверх), [столбец, ряд, деталь] */
+const PW_PLAN=[
+ [[0,0,'C'],[1,0,'C'],[2,0,'C'],[3,0,'C'],[4,0,'C']],
+ [[0,1,'L'],[4,1,'L']],
+ [[1,1,'Db'],[2,1,'P'],[3,1,'P']],
+ [[0,2,'L'],[4,2,'L']],
+ [[1,2,'Dt'],[2,2,'P'],[3,2,'P']],
+ [[0,3,'L'],[4,3,'L']],
+ [[1,3,'P'],[2,3,'W'],[3,3,'P']],
+ [[0,4,'R'],[1,4,'R'],[2,4,'R'],[3,4,'R'],[4,4,'R']],
+ [[1,5,'R'],[2,5,'R'],[3,5,'R'],[4,5,'H']],
+ [[2,6,'R'],[4,6,'H']]];
+/* дома деревни (сверху вниз) */
+const PW_DES=[
+ ['..R.H','.RRRH','RRRRR','LPWPL','LDPPL','LdPPL','CCCCC'],
+ ['R.R','RRR','SWS','SSS','SWS','SDS','SdS','CCC'],
+ ['..RRR..','.RRRRR.','RRRRRRR','PWPPPWP','PPPDPPP','CCCdCCC'],
+ ['.H..','RRRR','PWPP','PDPP','PdPP','CCCC']];
+/* материалы растут вместе с деревней: дерево → камень → кирпич → золото */
+const PW_MAT=[
+ {C:'cobble',L:'log',P:'plank',R:'roof',S:'stone',H:'brick'},
+ {C:'stone',L:'cobble',P:'stone',R:'roofB',S:'cobble',H:'stone'},
+ {C:'stone',L:'brick',P:'brick',R:'roof',S:'brick',H:'brick'},
+ {C:'brick',L:'gold',P:'brick',R:'gold',S:'stone',H:'gold'}];
+const pwKind=(ch,lv,night)=>{const m=PW_MAT[Math.min(lv,3)];return ch==='W'?(night?'lit':'glass'):ch==='D'||ch==='Dt'?'doorT':ch==='d'||ch==='Db'?'doorB':m[ch]||null};
+const pwPlayer=()=>SCREEN==='login'?null:cur();
+
+function pwStart(){if(PW.on)return;PW.on=true;
+ const host=document.createElement('div');host.id='pworld';host.setAttribute('aria-hidden','true');document.body.insertBefore(host,document.getElementById('bg'));
+ const fxh=document.createElement('div');fxh.id='pwfx';fxh.setAttribute('aria-hidden','true');document.body.insertBefore(fxh,document.getElementById('toasts'));
+ const {World,Fx}=pwClasses();
+ const base={width:innerWidth,height:innerHeight,pixelArt:true,banner:false,audio:{noAudio:true},input:{keyboard:false,mouse:false,touch:false,gamepad:false},
+  scale:{mode:Phaser.Scale.RESIZE,width:innerWidth,height:innerHeight},disableContextMenu:false};
+ try{
+  PW.g=new Phaser.Game(Object.assign({},base,{type:Phaser.CANVAS,parent:host,transparent:true,fps:{target:MOBILE?30:60,limit:MOBILE?30:0},render:{antialias:false,powerPreference:'low-power'},scene:[World]}));
+  PW.fx=new Phaser.Game(Object.assign({},base,{type:Phaser.CANVAS,parent:fxh,transparent:true,fps:{target:60},scene:[Fx]}));
+ }catch(e){PW.on=false;host.remove();fxh.remove()}}
+
+function pwClasses(){
+class World extends Phaser.Scene{
+ constructor(){super('pww')}
+ create(){this.blockCv={};PW_KINDS.forEach((k,i)=>{const c=this.blockCv[k]=pwBlock(k,101+i*17);this.textures.addCanvas('b_'+k,c);const n=document.createElement('canvas');n.width=n.height=16;const x=n.getContext('2d');x.drawImage(c,0,0);if(k!=='lit'){x.fillStyle='rgba(10,16,48,.45)';x.fillRect(0,0,16,16)}this.textures.addCanvas('n_'+k,n)});
+  this.mkSmall();this.dofReady=false;this.loadDofik();
+  this.scale.on('resize',()=>{clearTimeout(this.rz);this.rz=setTimeout(()=>this.build(),160)});
+  this.build();PW.scene=this;PW.ready=true;document.getElementById('bg').style.display='none';pwSync(true)}
+ /* мелкие текстуры: облака, солнце, луна, птицы, бабочки, цветы, листья, капли, частицы */
+ mkSmall(){const T=(key,w,h,fn)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');fn(x);this.textures.addCanvas(key,c);return c};
+  const px=(x,col,a)=>{x.fillStyle=col;a.forEach(([i,j,w=1,h=1])=>x.fillRect(i,j,w,h))};
+  T('px',2,2,x=>px(x,'#fff',[[0,0,2,2]]));
+  [[0,[[2,0,8,1],[0,1,14,2],[1,3,11,1]]],[1,[[3,0,5,1],[1,1,10,1],[0,2,16,2],[2,4,10,1]]],[2,[[1,0,4,1],[6,0,4,1],[0,1,12,2]]]].forEach(([k,a])=>['cloud','cloudn'].forEach(nm=>T(nm+k,16,5,x=>{px(x,nm==='cloud'?'#ffffff':'#4a5585',a);x.globalAlpha=.25;px(x,'#9fb3d6',a.filter(r=>r[1]+(r[3]||1)>=a.reduce((m,q)=>Math.max(m,q[1]+(q[3]||1)),0)).map(r=>[r[0],r[1]+(r[3]||1)-1,r[2],1]))})));
+  T('pxg',2,2,x=>px(x,'#bfff78',[[0,0,2,2]]));T('pxw',2,2,x=>px(x,'#fffbe0',[[0,0,2,2]]));
+  T('sun',16,16,x=>{px(x,'#fff6a0',[[0,0,16,16]]);px(x,'#fffbd8',[[2,2,6,6]]);px(x,'#ffe36a',[[12,10,3,4],[9,13,4,2]])});
+  T('glow',16,16,x=>{x.fillStyle='rgba(255,250,200,.35)';x.fillRect(0,0,16,16);x.fillStyle='rgba(255,250,210,.35)';x.fillRect(3,3,10,10)});
+  T('moon',16,16,x=>{px(x,'#e8e8f2',[[0,0,16,16]]);px(x,'#c9c9d8',[[3,4,3,3],[10,9,4,3],[8,2,2,2],[4,11,2,2]])});
+  T('bird0',7,3,x=>px(x,'#2b2b3a',[[0,0],[1,1],[2,1],[3,2],[4,1],[5,1],[6,0]]));
+  T('bird1',7,3,x=>px(x,'#2b2b3a',[[0,2],[1,1],[2,1],[3,1],[4,1],[5,1],[6,2]]));
+  [['bf0','#ff7bd5'],['bf1','#ffe63b'],['bf2','#7ad4ff']].forEach(([k,c])=>{T(k+'a',5,4,x=>{px(x,c,[[0,0,2,3],[3,0,2,3]]);px(x,'#3a2a2a',[[2,1,1,3]])});T(k+'b',5,4,x=>{px(x,c,[[1,1,1,2],[3,1,1,2]]);px(x,'#3a2a2a',[[2,1,1,3]])})});
+  ['#ff3b3b','#ffe63b','#ff7bd5','#ffffff','#9a7bff'].forEach((c,i)=>T('fl'+i,5,9,x=>{px(x,'#2f7a1f',[[2,4,1,5],[3,6,1,1]]);px(x,c,[[1,0,3,1],[0,1,5,2],[1,3,3,1]]);px(x,'#ffd23f',[[2,1,1,2]])}));
+  T('leaf',3,3,x=>px(x,'#3c8f2a',[[0,0,2,2],[1,1,2,2]]));
+  T('drop',1,3,x=>px(x,'#7ab8ff',[[0,0,1,3]]));
+  T('rcloud',16,5,x=>{px(x,'#7d8596',[[2,0,9,1],[0,1,15,3],[1,4,12,1]]);px(x,'#9aa2b3',[[3,1,6,1]])});
+  T('dust',4,4,x=>px(x,'#d8c8a8',[[0,0,4,4]]));
+  T('signb',12,6,x=>{px(x,'#b98a52',[[0,0,12,6]]);px(x,'#7a5530',[[0,0,12,1],[0,5,12,1],[0,0,1,6],[11,0,1,6]])});
+  T('post',2,6,x=>px(x,'#6b4a2b',[[0,0,2,6]]))}
+ /* Дофик из того же SVG, что и в игре: делаем кадры «обычный», «рад», «моргнул» */
+ loadDofik(){const mk=(key,keep)=>new Promise(res=>{const d=document.createElement('div');d.innerHTML=MASCOT_SVG;const svg=d.querySelector('svg');
+   ['eyesOpen','eyesHappy','brows','mIdle','mHappy','mJoy','mSad','tear'].forEach(c=>{if(!keep.includes(c))svg.querySelectorAll('.'+c).forEach(e=>e.remove())});
+   const c=document.createElement('canvas');c.width=20;c.height=22;const x=c.getContext('2d');
+   svg.querySelectorAll('rect').forEach(r=>{const g=r.closest('[fill]');x.fillStyle=r.getAttribute('fill')||(g&&g.getAttribute('fill'))||'#000';x.fillRect(+r.getAttribute('x'),+r.getAttribute('y'),+(r.getAttribute('width')||1),+(r.getAttribute('height')||1))});
+   if(!this.textures.exists(key))this.textures.addCanvas(key,c);res()});
+  Promise.all([mk('dofI',['eyesOpen','mIdle']),mk('dofH',['eyesHappy','mJoy']),mk('dofB',['eyesHappy','mIdle'])]).then(()=>{this.dofReady=true;if(this.Lgr)this.addDofik()})}
+ /* полный пересбор мира (старт, поворот экрана, смена темы) */
+ build(){this.tweens.killAll();this.time.removeAllEvents();this.children.removeAll(true);
+  ['l_sky','l_mt','l_hl','l_gr'].forEach(k=>{if(this.textures.exists(k))this.textures.remove(k)});
+  const W=this.scale.width,H=this.scale.height,M=SC.M,LW=W+2*M,LH=H+2*M,night=SET.theme==='dark',R=srand(1337);
+  Object.assign(this,{W,H,M,LW,LH,night,B:MOBILE?28:32,vb:MOBILE?10:12,shownN:-1,siteKey:'',sitePlaced:0});
+  const pal=night?{s1:'#0b1030',s2:'#2a3570',mt:'#1c2550',snow:'#5a6797',grass:'#2f6b2a',dirt:'#4a3220',leaf:'#1f4f1f',trunk:'#3d2a17'}
+   :{s1:'#5d8ef0',s2:'#c4e0ff',mt:'#8aa9d6',snow:'#f1f6ff',grass:'#62b33a',dirt:'#8a5a32',leaf:'#3c8f2a',trunk:'#6b4a2b'};
+  this.pal=pal;const cv=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.imageSmoothingEnabled=false;return[c,x]};
+  const mix=(a,b,k)=>{const A=parseInt(a.slice(1),16),Bb=parseInt(b.slice(1),16),c=i=>Math.round(((A>>i)&255)*(1-k)+((Bb>>i)&255)*k);return`rgb(${c(16)},${c(8)},${c(0)})`};
+  /* небо */
+  /* небо — CSS-градиент под прозрачным холстом (меньше работы видеокарте) */
+  const host=document.getElementById('pworld');if(host)host.style.background=`linear-gradient(${pal.s1},${pal.s2} 80%)`;
+  const crop=(c,y0)=>{y0=Math.max(0,Math.min(c.height-2,Math.floor(y0)));const o=document.createElement('canvas');o.width=c.width;o.height=c.height-y0;o.getContext('2d').drawImage(c,0,-y0);return[o,y0]};
+  this.Lsky=this.add.container(0,0);
+  const sx=W*.8,sy=H*.12,sz=MOBILE?48:64;
+  if(night){this.stars=[];for(let i=0;i<(MOBILE?60:110);i++){const st=this.add.image(R()*W,R()*H*.6,'px').setScale(R()<.15?2:1);st.ph=R()*6.28;st.sp=.6+R()*2;this.stars.push(st);this.Lsky.add(st)}
+   this.Lsky.add(this.add.image(sx,sy,'moon').setScale(sz/16))}
+  else{this.stars=null;const gl=this.add.image(sx,sy,'glow').setScale(sz/16*1.7);this.Lsky.add(gl);this.tweens.add({targets:gl,scale:sz/16*2,alpha:.6,yoyo:true,repeat:-1,duration:2600,ease:'Sine.easeInOut'});
+   const sun=this.add.image(sx,sy,'sun').setScale(sz/16);this.Lsky.add(sun);this.tweens.add({targets:sun,angle:6,yoyo:true,repeat:-1,duration:3200,ease:'Sine.easeInOut'})}
+  /* облака */
+  this.Lcl=this.add.container(0,0);this.clouds=[];
+  for(let i=0;i<(MOBILE?5:8);i++){const c=this.add.image(R()*LW-M,H*(.05+R()*.3),(night?'cloudn':'cloud')+(i%3)).setOrigin(0).setScale((MOBILE?6:8)*(.8+R()*.6)).setAlpha(night?.35:.92);c.v=4+R()*10;this.clouds.push(c);this.Lcl.add(c)}
+  /* горы */
+  const [mt,m]=cv(LW,LH),bm=12,ph=[R()*9,R()*9,R()*9];
+  let mtTop=LH;const range=(col,base,a1,a2,pp)=>{for(let X=0;X<LW;X+=bm){const h=base+Math.sin(X/190+pp)*a1+Math.sin(X/71+pp*2)*a2+Math.sin(X/29+pp*3)*7,top=Math.round((LH-h-LH*.06)/bm)*bm;mtTop=Math.min(mtTop,top);
+   m.fillStyle=col;m.fillRect(X,top,bm,LH-top);if(h>base+a1*.5){m.fillStyle=pal.snow;m.fillRect(X,top,bm,bm*2);m.fillStyle=col;if((X/bm)%3===0)m.fillRect(X,top+bm*2,bm,bm)}}};
+  range(night?'#28336a':'#adc4e6',LH*.42,70,26,ph[0]);range(pal.mt,LH*.32,50,20,ph[2]);
+  {const [c2,y0]=crop(mt,mtTop);this.textures.addCanvas('l_mt',c2);this.Lmt=this.add.container(0,0);this.Lmt.add(this.add.image(-M,y0-M,'l_mt').setOrigin(0))}
+  /* холмы: сначала места под дома деревни, потом рельеф с ровными площадками и деревья */
+  const b2=16,base=LH*.70,cols=Math.ceil(LW/b2),top=[];for(let i=0;i<cols;i++)top[i]=Math.round((base+Math.sin(i*b2/160+ph[1])*40+Math.sin(i*b2/47)*12)/b2)*b2;
+  const vb=this.vb,sp=Math.max(96,vb*11),slots=[];for(let X=M*.6;X<LW-M*.6-sp;X+=sp){const c0=Math.floor(X/b2),c1=Math.floor((X+vb*7)/b2);let t0=0;for(let c=c0;c<=c1;c++)t0=Math.max(t0,top[c]||0);for(let c=c0;c<=c1;c++)top[c]=t0;slots.push({x:X,y:t0})}
+  const RS=srand(77);for(let i=slots.length-1;i>0;i--){const j=Math.floor(RS()*(i+1));[slots[i],slots[j]]=[slots[j],slots[i]]}this.slots=slots;
+  const [hl,hh]=cv(LW,LH);this.trees=[];const free=X=>!slots.some(s=>X>s.x-b2*1.2&&X<s.x+vb*7+b2*.6);
+  for(let i=0;i<cols;i++){const X=i*b2,tp=top[i];texBlock(hh,X,tp,b2,pal.grass,R,.15);for(let Y=tp+b2;Y<LH;Y+=b2)texBlock(hh,X,Y,b2,pal.dirt,R,.12);
+   if(X>b2*3&&free(X)&&R()<.3&&!this.trees.some(q=>Math.abs(q.x+M-X)<b2*4)){const th=b2*(3+Math.floor(R()*2));for(let Y=tp-th;Y<tp;Y+=b2)texBlock(hh,X,Y,b2,pal.trunk,R,.15);
+    for(let a=-2;a<=2;a++)for(let j=-3;j<=-1;j++){if(Math.abs(a)===2&&j===-3)continue;texBlock(hh,X+a*b2,tp-th+j*b2+b2,b2,pal.leaf,R,.18)}this.trees.push({x:X+b2/2-M,y:tp-th-b2-M})}}
+  {const [c2,y0]=crop(hl,Math.min(...top)-b2*9);this.textures.addCanvas('l_hl',c2);this.Lhl=this.add.container(0,0);this.Lhl.add(this.add.image(-M,y0-M,'l_hl').setOrigin(0))}this.village=this.add.container(0,0);this.Lhl.add(this.village);
+  /* передний план: ровная земля из крупных блоков */
+  const B=this.B,gy=Math.round(H-B*2.2);this.gy=gy;const [gr,gg]=cv(LW,LH),g0=gy+M;
+  for(let X=0;X<LW;X+=B){gg.drawImage(this.blockCv.grass,0,0,16,16,X,g0,B,B);for(let Y=g0+B;Y<LH;Y+=B)gg.drawImage(this.blockCv.dirt,0,0,16,16,X,Y,B,B)}
+  if(night){gg.fillStyle='rgba(10,16,48,.55)';gg.fillRect(0,g0,LW,LH-g0)}
+  {const [c2,y0]=crop(gr,g0);this.textures.addCanvas('l_gr',c2);this.Lgr=this.add.container(0,0);this.Lgr.add(this.add.image(-M,y0-M,'l_gr').setOrigin(0))}
+  this.flowers=[];for(let X=-M;X<W+M;X+=B*(1.2+R()*2.5)){const f=this.add.image(X,gy+2,'fl'+Math.floor(R()*5)).setOrigin(.5,1).setScale(B/12);if(night)f.setAlpha(.7);f.ph=R()*6.28;this.flowers.push(f);this.Lgr.add(f)}
+  this.site=this.add.container(0,gy);this.Lgr.add(this.site);this.sign=this.add.container(0,gy);this.Lgr.add(this.sign);
+  /* светлячки ночью / пыльца днём */
+  this.motes=[];for(let i=0;i<(MOBILE?12:24);i++){const mo=this.add.image(R()*W,H*(.45+R()*.5),night?'pxg':'pxw').setScale(night?2:1.5).setAlpha(.6);mo.ph=R()*6.28;mo.sp=.3+R()*.7;mo.bx=mo.x;mo.by=mo.y;this.motes.push(mo);this.Lgr.add(mo)}
+  this.fxL=this.add.container(0,0);this.Lgr.add(this.fxL);
+  this.dof=null;if(this.dofReady)this.addDofik();
+  /* живность по таймерам */
+  if(!night)this.time.addEvent({delay:9000,loop:true,callback:()=>this.flock()});else this.time.addEvent({delay:7000,loop:true,callback:()=>this.shoot()});
+  this.time.addEvent({delay:1400,loop:true,callback:()=>this.leaf()});
+  if(!night){this.bfs=[];for(let i=0;i<(MOBILE?2:4);i++){const k='bf'+(i%3),b=this.add.image(R()*W,gy-B*(1+R()*2),k+'a').setScale(B/10);b.k=k;b.ph=R()*6;b.tx=b.x;b.ty=b.y;this.bfs.push(b);this.Lgr.add(b)}}else this.bfs=[];
+  this.time.delayedCall(1500,()=>this.flock());
+  this.applyMode(true)}
+ addDofik(){if(this.dof)return;const B=this.B,d=this.add.image(this.W*.18,this.gy,'dofI').setOrigin(.5,1).setScale(B/11);
+  this.dof={s:d,dir:1,v:MOBILE?26:36,state:'walk',t:0,jump:0};this.Lgr.add(d);this.applyMode()}
+ /* текущий режим: вход / меню / урок */
+ applyMode(force){const p=pwPlayer(),N=p?Math.floor((+p.correct||0)/10):0,prog=p?(+p.correct||0)%10:0;
+  if(force||N!==this.shownN)this.drawVillage(N);
+  const pos=this.sitePos(),key=(p?p.id:'')+'|'+pos.x+'|'+pos.bs+'|'+PW.mode;
+  if(force||key!==this.siteKey||prog!==this.sitePlaced){this.siteKey=key;this.drawSite(p,N,prog,pos)}
+  if(this.dof){const show=PW.mode!=='game';this.dof.s.setVisible(show)}}
+ sitePos(){const W=this.W,B=this.B;let x,bs=B;
+  if(PW.mode==='game'){const el=document.querySelector('#game .pad')||document.querySelector('#game .work')||document.getElementById('game');const bot=el?el.getBoundingClientRect().bottom:this.H*.6;
+   bs=Math.max(12,Math.min(B,Math.floor((this.gy-bot-14)/7)));x=Math.round(W/2)}
+  else{const mg=(W-940)/2;if(mg>=90){bs=Math.max(12,Math.min(B,Math.floor((mg-24)/5)));x=Math.round(W-mg/2)}else x=Math.round(W*.82)}
+  return {x,bs}}
+ /* деревня на холмах: каждые 10 верных ответов = дом */
+ drawVillage(N,popLast){this.shownN=N;this.village.removeAll(true);const n=Math.min(N,this.slots.length),L=this.slots.length;
+  for(let i=0;i<n;i++){const s=this.slots[i],lv=Math.floor(N/L)+(i<N%L?1:0),des=PW_DES[(i*7+3)%PW_DES.length],key=`h${i%4}_${(i*7+3)%PW_DES.length}_${Math.min(lv,3)}_${this.night?1:0}`;
+   if(!this.textures.exists(key))this.houseTex(key,des,Math.min(lv,3));
+   const w=des[0].length*this.vb,img=this.add.image(s.x-this.M+(7*this.vb-w)/2,s.y-this.M,key).setOrigin(0,1);this.village.add(img);
+   if(popLast&&i===n-1){img.setScale(0);this.tweens.add({targets:img,scale:1,duration:600,ease:'Back.easeOut'})}}}
+ houseTex(key,des,lv){const vb=this.vb,w=des[0].length,h=des.length,c=document.createElement('canvas');c.width=w*vb;c.height=h*vb;const x=c.getContext('2d');x.imageSmoothingEnabled=false;
+  des.forEach((row,j)=>[...row].forEach((ch,i)=>{const k=pwKind(ch,lv,this.night);if(!k)return;x.drawImage(this.blockCv[k],0,0,16,16,i*vb,j*vb,vb,vb);
+   if(this.night&&k!=='lit'){x.fillStyle='rgba(10,16,48,.5)';x.fillRect(i*vb,j*vb,vb,vb)}}));
+  this.textures.addCanvas(key,c)}
+ /* стройка: призрачный чертёж + уже поставленные блоки */
+ drawSite(p,N,prog,pos){this.site.removeAll(true);this.sign.removeAll(true);this.sitePlaced=prog;this.siteBlocks=[];if(!p)return;
+  const bs=pos.bs,x0=pos.x-2.5*bs;this.site.setPosition(x0,this.gy);this.siteBs=bs;this.siteLv=Math.floor(N/Math.max(1,this.slots.length));
+  PW_PLAN.forEach((step,si)=>step.forEach(([c,r,ch])=>{const k=pwKind(ch,this.siteLv,this.night),img=this.add.image(c*bs,-(r+1)*bs,'b_'+k).setOrigin(0).setScale(bs/16);img.k=k;
+   if(si<prog){if(this.night&&k!=='lit')img.setTexture('n_'+k)}else img.setAlpha(.2);img.si=si;this.site.add(img);this.siteBlocks.push(img)}));
+  /* табличка над домом: домов в деревне и блоков в текущем доме */
+  const fs=Math.max(8,Math.round(bs*.34)),cy=-7*bs-fs*1.6;this.sign.setPosition(x0+2.5*bs,this.gy);
+  const bd=this.add.image(0,cy,'signb').setOrigin(.5,.5);this.sign.add(bd);
+  this.signTx=this.add.text(0,cy,`🏠${N}  🧱${prog}/10`,{fontFamily:'"Press Start 2P",monospace',fontSize:fs+'px',color:'#3a2410'}).setOrigin(.5,.5);this.sign.add(this.signTx);
+  bd.setScale((this.signTx.width+fs*1.6)/12,(fs*2.2)/6)}
+ /* +1 блок за верный ответ */
+ addBlock(correct){const p=pwPlayer();if(!p||!this.siteBlocks||!this.siteBlocks.length){this.applyMode();return}
+  const prog=correct%10,step=prog===0?9:prog-1,N=Math.floor(correct/10);this.sitePlaced=prog===0?10:prog;
+  const blocks=this.siteBlocks.filter(b=>b.si===step);const bs=this.siteBs;
+  blocks.forEach((b,i)=>{const fy=b.y;b.setAlpha(1);if(this.night&&b.k!=='lit')b.setTexture('n_'+b.k);b.y=-this.gy-bs*2-i*bs;
+   this.tweens.add({targets:b,y:fy,duration:380,delay:i*70,ease:'Quad.easeIn',onComplete:()=>{this.dust(this.site.x+b.x+bs/2,this.gy+fy+bs);
+    this.tweens.add({targets:b,scaleY:{from:bs/16*.82,to:bs/16},duration:160,ease:'Back.easeOut'});if(i===blocks.length-1){tone(150,0,.07,'square',.06);tone(95,.03,.12,'triangle',.08)}}})});
+  if(this.signTx)this.signTx.setText(`🏠${prog===0?N-1:N}  🧱${prog===0?10:prog}/10`);
+  if(prog===0)this.time.delayedCall(700,()=>this.houseDone(N))}
+ houseDone(N){const bs=this.siteBs,r={x:this.site.x,y:this.gy-7*bs,width:5*bs,height:7*bs};const cx=r.x+r.width/2,cy=r.y+r.height/2;
+  const fl=this.add.rectangle(r.x,r.y,r.width,r.height,0xffffff,0).setOrigin(0);this.fxL.add(fl);this.tweens.add({targets:fl,fillAlpha:.8,duration:120,yoyo:true,onComplete:()=>fl.destroy()});
+  if(pwFx()){PW.fxs.firework(cx+this.Lgr.x,cy-60+this.Lgr.y);setTimeout(()=>pwFx()&&PW.fxs.firework(cx-60+this.Lgr.x,cy-30+this.Lgr.y),250);setTimeout(()=>pwFx()&&PW.fxs.firework(cx+60+this.Lgr.x,cy-40+this.Lgr.y),500)}
+  sndFanfare();toast(`<big>🏠</big><span>${esc(t('pwHouse',{n:N}))}</span>`,4000);
+  this.time.delayedCall(1300,()=>{const sx=this.site.x,sy=this.site.y;
+   this.tweens.add({targets:[this.site,this.sign],alpha:0,y:'-='+Math.round(this.H*.2),duration:700,ease:'Quad.easeIn',onComplete:()=>{this.site.setAlpha(1).setPosition(sx,sy);this.sign.setAlpha(1);this.drawVillage(N,true);this.siteKey='';this.applyMode()}})})}
+ /* неверно: тучка над стройкой */
+ oops(){if(!this.siteBlocks||!this.siteBlocks.length)return;const bs=this.siteBs,cx=this.site.x+2.5*bs,cy=this.gy-8*bs;
+  const c=this.add.image(cx,cy,'rcloud').setScale(bs/5).setAlpha(0);this.fxL.add(c);this.tweens.add({targets:c,alpha:.95,duration:200});
+  const ev=this.time.addEvent({delay:40,repeat:30,callback:()=>{const d=this.add.image(cx+(Math.random()-.5)*bs*5,cy+bs,'drop').setScale(bs/8);this.fxL.add(d);
+   this.tweens.add({targets:d,y:this.gy-bs*.2,duration:420,ease:'Quad.easeIn',onComplete:()=>d.destroy()})}});
+  this.tweens.add({targets:this.siteBlocks.filter(b=>b.alpha<.5),x:'+=2',yoyo:true,repeat:5,duration:50});
+  this.time.delayedCall(1500,()=>this.tweens.add({targets:c,alpha:0,x:cx+60,duration:500,onComplete:()=>c.destroy()}))}
+ dust(x,y){for(let i=0;i<6;i++){const d=this.add.image(x,y,'dust').setScale(this.siteBs/8).setAlpha(.9);this.fxL.add(d);const a=Math.PI+Math.random()*Math.PI;
+   this.tweens.add({targets:d,x:x+Math.cos(a)*this.siteBs*1.2,y:y+Math.sin(a)*this.siteBs*.6-4,alpha:0,scale:this.siteBs/5,duration:450,ease:'Quad.easeOut',onComplete:()=>d.destroy()})}}
+ flock(){if(this.night||document.hidden)return;const n=3+Math.floor(Math.random()*3),y=this.H*(.12+Math.random()*.2),dir=Math.random()<.5?1:-1,x0=dir>0?-60:this.W+60,sc=MOBILE?3:4;
+  for(let i=0;i<n;i++){const b=this.add.image(x0-dir*i*18,y+(i%2)*10+i*4,'bird0').setScale(sc).setFlipX(dir<0);b.fr=0;this.Lcl.add(b);
+   const fl=this.time.addEvent({delay:180,loop:true,callback:()=>{b.fr^=1;b.setTexture('bird'+b.fr)}});
+   this.tweens.add({targets:b,x:dir>0?this.W+80+i*18:-80-i*18,y:'-=30',duration:12000+Math.random()*3000,onComplete:()=>{fl.remove();b.destroy()}})}}
+ shoot(){if(!this.night||Math.random()<.4)return;const x=this.W*(.2+Math.random()*.6),y=this.H*(.05+Math.random()*.2),s=this.add.rectangle(x,y,26,2,0xffffff).setAngle(25);this.Lsky.add(s);
+  this.tweens.add({targets:s,x:x+260,y:y+120,alpha:0,duration:900,ease:'Quad.easeIn',onComplete:()=>s.destroy()})}
+ leaf(){if(!this.trees.length)return;const tr=this.trees[Math.floor(Math.random()*this.trees.length)],l=this.add.image(tr.x+(Math.random()-.5)*48,tr.y+20,'leaf').setScale(3);this.Lhl.add(l);
+  this.tweens.add({targets:l,y:'+=90',x:'+='+(Math.random()*60-30),angle:360,alpha:0,duration:3200,ease:'Sine.easeIn',onComplete:()=>l.destroy()})}
+ update(time,dt){if(!this.Lgr)return;const t=time/1000,M=this.M,par=(c,d,dv=.3)=>{c.x=Math.round(-SC.tx*M*.95*d);c.y=Math.round(-SC.ty*M*dv*d)};
+  par(this.Lsky,.06);par(this.Lcl,.2);par(this.Lmt,.38);par(this.Lhl,.68);par(this.Lgr,1);
+  for(const c of this.clouds){c.x+=c.v*dt/1000;if(c.x>this.W+M)c.x=-M-c.displayWidth}
+  if(this.stars)for(const s of this.stars)s.alpha=.45+.55*Math.abs(Math.sin(t*s.sp+s.ph));
+  for(const f of this.flowers)f.rotation=Math.sin(t*1.6+f.ph)*.12;
+  for(const m of this.motes){m.x=m.bx+Math.sin(t*m.sp+m.ph)*30;m.y=m.by+Math.cos(t*m.sp*.7+m.ph)*18;m.alpha=this.night?.3+.7*Math.abs(Math.sin(t*2*m.sp+m.ph)):.5}
+  for(const b of this.bfs){b.ph+=dt/1000;if(Math.abs(b.x-b.tx)<4&&Math.abs(b.y-b.ty)<4){b.tx=Math.random()*this.W;b.ty=this.gy-this.B*(.6+Math.random()*2.4)}
+   b.x+=(b.tx-b.x)*.01;b.y+=(b.ty-b.y)*.01+Math.sin(b.ph*9)*.6;b.setTexture(b.k+(Math.floor(b.ph*8)%2?'a':'b'));b.setFlipX(b.tx<b.x)}
+  const d=this.dof;if(d&&d.s.visible){const s=d.s;if(d.jump>0){d.jump-=dt/1000}else{d.t+=dt/1000;
+    if(d.state==='walk'){s.x+=d.dir*d.v*dt/1000;s.y=this.gy-Math.abs(Math.sin(d.t*8))*3;if(s.x<30){d.dir=1}if(s.x>this.W-30)d.dir=-1;s.setFlipX(d.dir<0);if(Math.random()<.003){d.state='rest';d.t=0}}
+    else{s.y=this.gy;if(d.t>2.5){d.state='walk';d.t=0;if(Math.random()<.5)d.dir*=-1;if(Math.random()<.4)this.dofJump()}}
+    if(Math.random()<.004&&s.texture.key==='dofI'){s.setTexture('dofB');this.time.delayedCall(140,()=>{if(s.texture.key==='dofB')s.setTexture('dofI')})}}}}
+ dofJump(){const d=this.dof;if(!d||d.jump>0)return;const s=d.s;d.jump=.9;s.setTexture('dofH');
+  this.tweens.add({targets:s,y:this.gy-this.B*1.6,duration:300,yoyo:true,ease:'Quad.easeOut',onComplete:()=>{s.y=this.gy;s.setTexture('dofI')}});
+  this.tweens.add({targets:s,angle:d.dir*360,duration:600,onComplete:()=>s.angle=0})}
+ dofHit(x,y){const d=this.dof;if(!d||!d.s.visible)return false;const b=d.s.getBounds();x-=this.Lgr.x;y-=this.Lgr.y;
+  if(x>=b.x-10&&x<=b.right+10&&y>=b.y-10&&y<=b.bottom+6){this.dofJump();tone(660,0,.08,'square',.04);tone(990,.08,.12,'square',.04);if(pwFx())PW.fxs.cubes(x+this.Lgr.x,b.y+this.Lgr.y,10,5);return true}return false}
+}
+class Fx extends Phaser.Scene{
+ constructor(){super('pwf')}
+ create(){const cols=['#62d13a','#ffd23f','#5ee6ff','#ff5a5a','#b07bff','#ff9a1f'],c=document.createElement('canvas');c.width=cols.length*8;c.height=8;const x=c.getContext('2d');
+  cols.forEach((col,i)=>{x.fillStyle=col;x.fillRect(i*8,0,8,8);x.fillStyle='rgba(255,255,255,.55)';x.fillRect(i*8,0,8,2);x.fillRect(i*8,0,2,8);x.fillStyle='rgba(0,0,0,.28)';x.fillRect(i*8,6,8,2);x.fillRect(i*8+6,0,2,8)});
+  const tx=this.textures.addCanvas('pwcubes',c);cols.forEach((_,i)=>tx.add(i,0,i*8,0,8,8));this.fr=cols.map((_,i)=>i);
+  const T=(k,w,h,fn)=>{const cc=document.createElement('canvas');cc.width=w;cc.height=h;fn(cc.getContext('2d'));this.textures.addCanvas(k,cc)};
+  T('pworb',6,6,x=>{x.fillStyle='#5aa81e';x.fillRect(0,1,6,4);x.fillRect(1,0,4,6);x.fillStyle='#c8ff6a';x.fillRect(1,1,4,4);x.fillStyle='#fff';x.fillRect(2,2,2,2)});
+  T('pwpuff',8,8,x=>{x.fillStyle='#c9c9c9';x.fillRect(1,0,6,8);x.fillRect(0,1,8,6);x.fillStyle='#e6e6e6';x.fillRect(2,1,3,3)});
+  T('pwsq',2,2,x=>{x.fillStyle='#fff';x.fillRect(0,0,2,2)});
+  this.cub=this.add.particles(0,0,'pwcubes',{frame:this.fr,lifespan:{min:700,max:1300},speed:{min:140,max:460},angle:{min:0,max:360},gravityY:1100,rotate:{min:0,max:360},scale:{start:1.5,end:.5},alpha:{start:1,end:0,ease:'Quad.easeIn'},emitting:false});
+  this.smk=this.add.particles(0,0,'pwpuff',{lifespan:{min:500,max:900},speed:{min:20,max:90},angle:{min:200,max:340},gravityY:-90,scale:{start:2,end:5},alpha:{start:.75,end:0},emitting:false});
+  this.spk=this.add.particles(0,0,'pwcubes',{frame:this.fr,lifespan:{min:800,max:1400},speed:{min:120,max:360},angle:{min:0,max:360},gravityY:260,scale:{start:.8,end:.25},alpha:{start:1,end:0},emitting:false});
+  this.idle=0;this.ready=true;PW.fxs=this;this.game.loop.sleep()}
+ wake(ms){this.until=Math.max(this.until||0,performance.now()+ms);const L=this.game.loop;if(!L.running){try{L.wake()}catch(e){}}}
+ update(){const busy=performance.now()<(this.until||0)||this.cub.getAliveParticleCount()||this.smk.getAliveParticleCount()||this.spk.getAliveParticleCount()||this.tweens.getTweens().length||this.children.list.length>3;
+  if(busy){this.idle=0;return}if(++this.idle>2){this.idle=0;this.game.loop.sleep()}}
+ cubes(x,y,n){this.wake(1500);this.cub.explode(Math.max(1,Math.ceil(n*(MOBILE?.6:1))),x,y)}
+ smoke(x,y){this.wake(1000);this.smk.explode(MOBILE?6:10,x,y)}
+ orbs(x,y,el,n,done){if(!el)return;this.wake(1600);const r=el.getBoundingClientRect(),tx=r.left+r.width/2,ty=r.top+r.height/2;
+  for(let i=0;i<n;i++){const o=this.add.image(x,y,'pworb').setScale(2.6).setBlendMode(Phaser.BlendModes.ADD),a=Math.random()*6.283,dd=40+Math.random()*70;
+   const cu=new Phaser.Curves.QuadraticBezier(new Phaser.Math.Vector2(x,y),new Phaser.Math.Vector2(x+Math.cos(a)*dd,y+Math.sin(a)*dd-90),new Phaser.Math.Vector2(tx,ty)),c={t:0};
+   this.tweens.add({targets:c,t:1,duration:600+Math.random()*250,delay:i*55,ease:'Sine.easeIn',onUpdate:()=>{const p=cu.getPoint(c.t);o.setPosition(p.x,p.y).setScale(2.6-c.t*1.2)},
+    onComplete:()=>{o.destroy();if(i%2===0)tone(1300+i*70,0,.04,'square',.015);if(i===n-1&&done)done()}})}}
+ firework(x,y){this.wake(2200);const H=this.scale.height,r=this.add.image(x,H+10,'pwcubes',1).setScale(.6);
+  const tr=this.time.addEvent({delay:30,loop:true,callback:()=>this.spk.emitParticleAt(r.x,r.y+4,1)});
+  this.tweens.add({targets:r,y,duration:650,ease:'Quad.easeOut',onComplete:()=>{tr.remove();r.destroy();this.spk.explode(MOBILE?40:70,x,y);this.cub.explode(MOBILE?6:12,x,y)}})}
+ confetti(n){this.wake(4500);const W=this.scale.width;n=Math.ceil(n*(MOBILE?.5:1));
+  for(let i=0;i<n;i++){const f=Phaser.Utils.Array.GetRandom(this.fr),o=this.add.image(Math.random()*W,-20-Math.random()*240,'pwcubes',f).setScale(1+Math.random()*.8).setAngle(Math.random()*360);
+   this.tweens.add({targets:o,y:this.scale.height+30,x:'+='+(Math.random()*120-60),angle:'+=540',duration:2600+Math.random()*1800,ease:'Sine.easeIn',onComplete:()=>o.destroy()})}}
+}
+return {World,Fx}}
+
+/* --- связь с игрой --- */
+function pwSync(force){if(!PW.on||!PW.scene)return;const sc=PW.scene;
+ const foreign=document.querySelector('#app canvas:not(.pwkeep),#mjwrap,#seawrap');
+ try{const L=PW.g.loop;if(foreign&&!document.getElementById('game')){if(L.running&&!document.hidden)L.sleep();PW.slept=true;return}if(PW.slept){PW.slept=false;if(!L.running)L.wake()}}catch(e){}
+ const mode=SCREEN==='login'?'login':(SCREEN==='game'||SCREEN==='summary')?'game':'menu';
+ if(mode!==PW.mode||force){PW.mode=mode;sc.siteKey=''}sc.applyMode()}
+let pwRaf=0;const pwKick=()=>{if(pwRaf)return;pwRaf=requestAnimationFrame(()=>{pwRaf=0;pwSync()})};
+/* переходы экранов: блоки «выпрыгивают» по очереди */
+new MutationObserver(()=>{if(pwWanted()&&SCREEN!==PW.lastScr){PW.lastScr=SCREEN;app.classList.remove('pwin');void app.offsetWidth;app.classList.add('pwin');
+  [...app.children].forEach((c,i)=>c.style.setProperty('--pi',Math.min(i,8)))}pwKick()}).observe(app,{childList:true});
+addEventListener('resize',pwKick);
+/* верный / неверный ответ */
+const _answerPW=answer;answer=function(ok){const p=cur(),before=p?+p.correct||0:0,slot=document.getElementById('slot'),r=slot?slot.getBoundingClientRect():null;_answerPW(ok);
+ if(!PW.on||!p)return;
+ if(ok&&(+p.correct||0)>before){if(PW.scene)PW.scene.addBlock(+p.correct);if(pwFx()&&r&&!G.pwHint){G.pwHint=1;if((+p.correct||0)<=12)mascot('happy',t('pwFirst'))}}
+ else if(!ok){if(PW.scene)PW.scene.oops();if(pwFx()&&r)PW.fxs.smoke(r.left+r.width/2,r.top+r.height/2)}};
+const _celebratePW=celebrate;celebrate=function(streak,gain){_celebratePW(streak,gain);if(!pwFx())return;const s=document.getElementById('slot'),dv=document.getElementById('dopaVal');
+ if(s&&dv){const r=s.getBoundingClientRect();PW.fxs.orbs(r.left+r.width/2,r.top+r.height/2,dv,Math.min(12,3+gain*2),()=>restartAnim(dv.parentElement,'pop'))}};
+const _burstPW=burst;burst=function(x,y,n,pow=8,emojis=null){if(!emojis&&pwFx())return PW.fxs.cubes(x,y,n,pow);return _burstPW(x,y,n,pow,emojis)};
+const _rainPW=rain;rain=function(n){if(pwFx())return PW.fxs.confetti(n);return _rainPW(n)};
+const _fwPW=fireworks;fireworks=function(k){if(!pwFx())return _fwPW(k);for(let i=0;i<k;i++)setTimeout(()=>{if(!pwFx())return;PW.fxs.firework(rnd(60,innerWidth-60),rnd(80,Math.round(innerHeight*.45)));tone(rnd(600,1100),0,.15,'square',.03)},i*260)};
+/* старый фон не рисуем, пока работает Phaser */
+const _drawScenePW=drawScene;drawScene=function(){if(PW.ready)return;_drawScenePW()};
+const _buildScenePW=buildScene;buildScene=function(){if(PW.ready){if(PW.scene)PW.scene.build();return}_buildScenePW()};
+try{document.fonts&&document.fonts.ready.then(()=>{if(PW.scene){PW.scene.siteKey='';pwSync()}})}catch(e){}
+/* тап по Дофику в меню */
+document.addEventListener('pointerdown',e=>{if(!PW.ready||!PW.scene||PW.mode==='game')return;if(e.target.closest&&e.target.closest('button,input,select,a,label,.modal,.overlay,.blk'))return;PW.scene.dofHit(e.clientX,e.clientY)},{passive:true});
+/* переключатель в панели звука */
+ACT.pwT=function(){SET.pw=SET.pw===false;saveSettings();if(SET.pw)pwLoad();else pwStop();document.querySelectorAll('.pwbtn').forEach(b=>b.textContent=t(SET.pw===false?'pwOff':'pwOn'))};
+const _audioPanelPW=ACT.audioPanel;ACT.audioPanel=function(){_audioPanelPW.call(ACT);const m=document.querySelector('.overlay .modal');if(m&&!m.querySelector('.pwbtn'))m.insertAdjacentHTML('beforeend',`<div class="row" style="margin:8px 0 0"><button class="btn sm pwbtn" data-act="pwT">${t(SET.pw===false?'pwOff':'pwOn')}</button></div>`)};
+document.head.insertAdjacentHTML('beforeend',`<style>
+#pworld{position:fixed;inset:0;z-index:0;pointer-events:none}#pworld canvas{display:block;image-rendering:pixelated}
+#pwfx{position:fixed;inset:0;z-index:51;pointer-events:none}#pwfx canvas{display:block;image-rendering:pixelated}
+#app.pwin>*{animation:pwIn .42s cubic-bezier(.2,1.5,.4,1) both;animation-delay:calc(var(--pi,0)*45ms)}
+#app.pwin .modes>.mode,#app.pwin .players>.pcard{animation:pwIn .4s cubic-bezier(.2,1.5,.4,1) both}
+${[...Array(12)].map((_,i)=>`#app.pwin .modes>.mode:nth-child(${i+1}),#app.pwin .players>.pcard:nth-child(${i+1}){animation-delay:${120+i*45}ms}`).join('')}
+@keyframes pwIn{from{opacity:0;transform:translateY(22px) scale(.94)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#app.pwin>*,#app.pwin .modes>.mode{animation:none}}
+</style>`);
+setTimeout(pwLoad,MOBILE?600:200);
 </script>
 </body></html>
