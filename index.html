@@ -1067,7 +1067,7 @@ function announce(list){list.forEach((u,i)=>setTimeout(()=>{
  sndFanfare();burst(innerWidth/2,60,40,8)},i*700))}
 const langSelect=id=>`<select class="sel" id="${id}" data-change="lang" aria-label="${esc(t('language'))}">${LANGS.map(([c,n,f])=>`<option value="${c}" ${c===LANG?'selected':''}>${f} ${n}</option>`).join('')}</select>`;
 const logoHTML=()=>esc(t('logo')).replace(/(ДОФА|DOPA)/,'<span>$1</span>');
-const pname=p=>`<span class="flag">${flagOf(p.country)}</span> ${esc(p.name)}`;
+let pname=p=>`<span class="flag">${flagOf(p.country)}</span> ${esc(p.name)}`;
 
 /* ============ ВХОД ============ */
 function renderLogin(){
@@ -3746,6 +3746,265 @@ const _renderMpBC=renderMp;renderMp=function(){const r=RM.room;
   if(document.getElementById('rtCv')&&document.getElementById('rtEnd')&&document.getElementById('rtEnd').innerHTML&&!RT.run&&RT.lastKey===key){const c=document.getElementById('rtChat');if(c){c.innerHTML=mpChat(r);mpChatScroll()}return}
   RT.lastKey=key;bcNetStart(r);return}
  _renderMpBC()};
+/* ============ СУДОКУ: путь от Малыша до Гроссмейстера ============ */
+/* Малыш — фигуры (3×3 без квадратов, потом 4×4), Ученик — 6×6 (фигуры, потом цветные цифры), Мастер — 9×9 цифры.
+   Ошибочный ход не ставится (считается ошибкой), подсказка объясняет логику хода, звёзды за чистоту решения. */
+(()=>{const L=(...a)=>a;Object.assign(S,{
+ gSd:L('Судоку','Sudoku','Судоку','Sudoku','Sudoku','Sudoku'),
+ sdR0:L('Малыш','Little one','Бөбек','Peque','Knirps','Petit'),
+ sdR1:L('Ученик','Pupil','Оқушы','Alumno','Schüler','Élève'),
+ sdR2:L('Мастер','Master','Шебер','Maestro','Meister','Maître'),
+ sdRuleL:L('Поставь фигуры так, чтобы в каждой строке и в каждом столбце все были разные.','Place shapes so every row and column has all different ones.','Әр жолда және әр бағанда фигуралар әртүрлі болсын.','Coloca las figuras: en cada fila y columna, todas distintas.','Jede Zeile und Spalte: alle Formen verschieden.','Chaque ligne et colonne : toutes les formes différentes.'),
+ sdRuleK:L('В каждой строке, столбце и квадрате все фигуры разные.','Every row, column and box has all different shapes.','Әр жолда, бағанда және шаршыда фигуралар әртүрлі.','En cada fila, columna y cuadro, todas las figuras distintas.','Jede Zeile, Spalte und jedes Kästchen: alle Formen verschieden.','Chaque ligne, colonne et carré : formes toutes différentes.'),
+ sdRuleD:L('В каждой строке, столбце и квадрате все цифры разные.','Every row, column and box has all different digits.','Әр жолда, бағанда және шаршыда цифрлар әртүрлі.','En cada fila, columna y cuadro, todos los números distintos.','Jede Zeile, Spalte und jedes Kästchen: alle Ziffern verschieden.','Chaque ligne, colonne et carré : chiffres tous différents.'),
+ sdLv:L('Уровень {n}','Level {n}','{n}-деңгей','Nivel {n}','Level {n}','Niveau {n}'),
+ sdDaily:L('Судоку дня','Daily sudoku','Күн судокуы','Sudoku del día','Sudoku des Tages','Sudoku du jour'),
+ sdDailyOk:L('Сегодня решено ✓ Серия дней: {n}','Solved today ✓ Streak: {n}','Бүгін шешілді ✓ Қатар: {n}','Resuelto hoy ✓ Racha: {n}','Heute gelöst ✓ Serie: {n}','Résolu aujourd’hui ✓ Série : {n}'),
+ sdDailyGo:L('📅 Судоку дня — двойная дофа!','📅 Daily sudoku — double dopa!','📅 Күн судокуы — екі есе дофа!','📅 Sudoku del día — ¡dopa doble!','📅 Sudoku des Tages — doppeltes Dopa!','📅 Sudoku du jour — dopa double !'),
+ sdLocked:L('Пройди все уровни «{r}», чтобы открыть','Finish all “{r}” levels to unlock','Ашу үшін «{r}» деңгейлерін өт','Completa los niveles «{r}» para abrir','Schließe alle „{r}“-Level ab','Termine les niveaux « {r} » pour ouvrir'),
+ sdExam:L('Экзамен на «{r}»','Exam for “{r}”','«{r}» емтиханы','Examen de «{r}»','Prüfung „{r}“','Examen « {r} »'),
+ sdExamHint:L('Уже умеешь? Реши без подсказок и максимум с 2 ошибками — и сразу станешь «{r}»!','Already good? Solve with no hints and at most 2 mistakes to become “{r}” right away!','Білесің бе? Кеңессіз, ең көбі 2 қатемен шеш — бірден «{r}» боласың!','¿Ya sabes? Resuelve sin pistas y con 2 errores como máximo para ser «{r}».','Kannst du es schon? Ohne Tipps und höchstens 2 Fehler – und du bist „{r}“!','Déjà fort ? Sans indice et 2 erreurs max pour devenir « {r} » !'),
+ sdExamOk:L('Экзамен сдан! Ты — {r}!','Exam passed! You are a {r}!','Емтихан тапсырылды! Сен — {r}!','¡Examen aprobado! ¡Eres {r}!','Prüfung bestanden! Du bist {r}!','Examen réussi ! Tu es {r} !'),
+ sdExamNo:L('Почти! Для экзамена нужно без подсказок и не больше 2 ошибок. Попробуй ещё!','Almost! The exam needs no hints and at most 2 mistakes. Try again!','Сәл қалды! Кеңессіз және ең көбі 2 қате керек. Тағы байқап көр!','¡Casi! Sin pistas y máximo 2 errores. ¡Otra vez!','Fast! Ohne Tipps und max. 2 Fehler. Nochmal!','Presque ! Sans indice et 2 erreurs max. Réessaie !'),
+ sdFree:L('Свободная игра','Free play','Еркін ойын','Juego libre','Freies Spiel','Jeu libre'),
+ sdD_e:L('Лёгкий','Easy','Жеңіл','Fácil','Leicht','Facile'),sdD_m:L('Средний','Medium','Орташа','Medio','Mittel','Moyen'),sdD_h:L('Сложный','Hard','Қиын','Difícil','Schwer','Difficile'),
+ sdNotes:L('Заметки','Notes','Белгілер','Notas','Notizen','Notes'),sdAuto:L('Авто-заметки','Auto notes','Авто-белгі','Notas auto','Auto-Notizen','Notes auto'),
+ sdHint:L('Подсказка','Hint','Кеңес','Pista','Tipp','Indice'),sdUndo:L('Отменить','Undo','Болдырмау','Deshacer','Zurück','Annuler'),sdErase:L('Стереть','Erase','Өшіру','Borrar','Löschen','Effacer'),
+ sdH1:L('Сюда подходит только это — всё остальное уже есть в этой строке, столбце или квадрате.','Only this fits here — everything else is already in this row, column or box.','Мұнда тек осы сыяды — қалғаны жолда, бағанда немесе шаршыда бар.','Aquí solo cabe esto: lo demás ya está en la fila, columna o cuadro.','Nur das passt hier – alles andere steht schon in Zeile, Spalte oder Kästchen.','Seul ceci va ici : le reste est déjà dans la ligne, colonne ou carré.'),
+ sdH2r:L('В этой строке это может стоять только здесь.','In this row it can only go here.','Бұл жолда тек осында тұра алады.','En esta fila solo puede ir aquí.','In dieser Zeile passt es nur hierhin.','Dans cette ligne, il ne peut aller qu’ici.'),
+ sdH2c:L('В этом столбце это может стоять только здесь.','In this column it can only go here.','Бұл бағанда тек осында тұра алады.','En esta columna solo puede ir aquí.','In dieser Spalte passt es nur hierhin.','Dans cette colonne, il ne peut aller qu’ici.'),
+ sdH2b:L('В этом квадрате это может стоять только здесь.','In this box it can only go here.','Бұл шаршыда тек осында тұра алады.','En este cuadro solo puede ir aquí.','In diesem Kästchen passt es nur hierhin.','Dans ce carré, il ne peut aller qu’ici.'),
+ sdH3:L('Тут хитро — подсмотрим ответ для этой клетки.','Tricky one — let’s peek at this cell’s answer.','Қиын екен — жауабын қарайық.','Difícil: miremos la respuesta de esta casilla.','Knifflig – wir schauen die Lösung an.','Difficile : regardons la réponse de cette case.'),
+ sdPut:L('Поставить','Place it','Қою','Poner','Setzen','Placer'),
+ sdTut:L('Нажми на пустую клетку, а потом на фигуру внизу. Ищи, какой фигуры не хватает в строке!','Tap an empty cell, then a shape below. Find which shape is missing in the row!','Бос ұяшықты, сосын төмендегі фигураны бас. Жолда қай фигура жоқ?','Toca una casilla vacía y luego una figura. ¿Cuál falta en la fila?','Tippe ein leeres Feld, dann eine Form. Welche fehlt in der Zeile?','Touche une case vide puis une forme. Laquelle manque dans la ligne ?'),
+ sdWrong:L('Не подходит — такая уже есть рядом!','Doesn’t fit — that one is already nearby!','Сыймайды — мұндайы жанында бар!','No cabe: ¡ya hay una igual cerca!','Passt nicht – die gibt es schon!','Ça ne va pas : il y en a déjà un !'),
+ sdWrong2:L('Не сюда — подумай ещё. Тут подойдёт другая.','Not here — think again. Another one fits.','Мұнда емес — басқасы сыяды.','Aquí no: piensa otra vez.','Nicht hier – überleg nochmal.','Pas ici : réfléchis encore.'),
+ sdWin:L('Судоку решено!','Sudoku solved!','Судоку шешілді!','¡Sudoku resuelto!','Sudoku gelöst!','Sudoku résolu !'),
+ sdNext:L('Дальше ▶','Next ▶','Келесі ▶','Siguiente ▶','Weiter ▶','Suivant ▶'),sdAgain:L('🔁 Ещё раз','🔁 Again','🔁 Тағы','🔁 Otra vez','🔁 Nochmal','🔁 Encore'),sdMap:L('🗺 К уровням','🗺 Levels','🗺 Деңгейлер','🗺 Niveles','🗺 Level','🗺 Niveaux'),
+ sdRankUp:L('Новый ранг: {r}!','New rank: {r}!','Жаңа дәреже: {r}!','¡Nuevo rango: {r}!','Neuer Rang: {r}!','Nouveau rang : {r} !'),
+ sdGrandUp:L('Ты — Гроссмейстер судоку! 👑','You are a Sudoku Grandmaster! 👑','Сен — судоку гроссмейстерісің! 👑','¡Eres Gran Maestro del sudoku! 👑','Du bist Sudoku-Großmeister! 👑','Tu es Grand Maître du sudoku ! 👑'),
+ sdStatus:L('Статус у ника:','Status next to your name:','Ник жанындағы мәртебе:','Estado junto al nombre:','Status am Namen:','Statut près du pseudo :'),
+ sdStNone:L('Без статуса','No status','Мәртебесіз','Sin estado','Kein Status','Sans statut'),
+ sdStM:L('Мастер судоку','Sudoku master','Судоку шебері','Maestro del sudoku','Sudoku-Meister','Maître du sudoku'),
+ sdStG:L('Гроссмейстер судоку','Sudoku grandmaster','Судоку гроссмейстері','Gran maestro del sudoku','Sudoku-Großmeister','Grand maître du sudoku'),
+ sdStHint:L('Стань Мастером — и сможешь поставить статус к нику 🧠','Become a Master to show a status next to your name 🧠','Шебер бол — ник жанына мәртебе қоя аласың 🧠','Hazte Maestro y pon un estado junto a tu nombre 🧠','Werde Meister für einen Status am Namen 🧠','Deviens Maître pour afficher un statut 🧠'),
+ sdStats:L('Решено: {n} · Без ошибок: {p}','Solved: {n} · Perfect: {p}','Шешілді: {n} · Қатесіз: {p}','Resueltos: {n} · Perfectos: {p}','Gelöst: {n} · Perfekt: {p}','Résolus : {n} · Parfaits : {p}'),
+ sdBest:L('Рекорд','Best','Рекорд','Récord','Rekord','Record'),
+ sdGen:L('Готовлю судоку…','Preparing sudoku…','Судоку дайындалуда…','Preparando sudoku…','Sudoku wird erstellt…','Préparation du sudoku…'),
+ sdNoHint:L('Без подсказок!','No hints!','Кеңессіз!','¡Sin pistas!','Ohne Tipps!','Sans indice !'),
+ h_sd1:L('Пройди «Малыш» в судоку','Finish “Little one” in sudoku','Судокуда «Бөбекті» өт','Completa «Peque» en sudoku','Schaffe „Knirps“ im Sudoku','Termine « Petit » au sudoku'),
+ h_sd2:L('Стань Мастером судоку','Become a Sudoku master','Судоку шебері бол','Hazte maestro del sudoku','Werde Sudoku-Meister','Deviens maître du sudoku'),
+ h_sd10:L('Реши 10 судоку без ошибок','Solve 10 sudoku perfectly','10 судокуды қатесіз шеш','Resuelve 10 sudokus perfectos','Löse 10 Sudoku perfekt','Résous 10 sudokus parfaits'),
+ h_sdg:L('Стань Гроссмейстером судоку','Become a Sudoku grandmaster','Судоку гроссмейстері бол','Hazte gran maestro del sudoku','Werde Sudoku-Großmeister','Deviens grand maître du sudoku'),
+});})();
+/* --- геометрия и генератор с единственным решением --- */
+const SD={geo:{},st:null,tm:null,view:null,sprOk:false};
+const SD_LV=[12,12,30],SD_ICO=['🐣','🦊','🧠'],SD_GAIN=[3,6,10];
+const sdBits=m=>{let c=0;while(m){m&=m-1;c++}return c};
+const sdHash=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
+const sdShuf=(a,R)=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+function sdGeom(n,bw,bh){const key=n+'_'+bw+'_'+bh;if(SD.geo[key])return SD.geo[key];const units=[],kind=[];
+ for(let r=0;r<n;r++){units.push([...Array(n)].map((_,c)=>r*n+c));kind.push('r')}for(let c=0;c<n;c++){units.push([...Array(n)].map((_,r)=>r*n+c));kind.push('c')}
+ if(bw)for(let br=0;br<n/bh;br++)for(let bc=0;bc<n/bw;bc++){const u=[];for(let r=0;r<bh;r++)for(let c=0;c<bw;c++)u.push((br*bh+r)*n+bc*bw+c);units.push(u);kind.push('b')}
+ const cu=[...Array(n*n)].map((_,i)=>units.map((u,k)=>u.includes(i)?k:-1).filter(k=>k>=0));
+ const peers=[...Array(n*n)].map((_,i)=>{const s=new Set();cu[i].forEach(k=>units[k].forEach(j=>{if(j!==i)s.add(j)}));return[...s]});
+ return SD.geo[key]={n,bw,bh,units,kind,cu,peers,full:(1<<(n+1))-2}}
+const sdCand=(g,G,i)=>{let m=G.full;for(const j of G.peers[i])if(g[j])m&=~(1<<g[j]);return m};
+function sdCount(g,G,limit){let cnt=0;const rec=()=>{let best=-1,bm=0,bc=99;
+  for(let i=0;i<g.length;i++){if(g[i])continue;const m=sdCand(g,G,i),c=sdBits(m);if(!c)return;if(c<bc){bc=c;best=i;bm=m;if(c===1)break}}
+  if(best<0){cnt++;return}for(let v=1;v<=G.n;v++)if(bm&(1<<v)){g[best]=v;rec();g[best]=0;if(cnt>=limit)return}};rec();return cnt}
+/* следующий «логичный» ход: одиночка в клетке или единственное место в строке/столбце/квадрате */
+function sdLogic(g,G){
+ for(let i=0;i<g.length;i++){if(g[i])continue;const m=sdCand(g,G,i);if(sdBits(m)===1)return{i,v:Math.log2(m),k:'n'}}
+ for(let k=0;k<G.units.length;k++){const u=G.units[k];for(let v=1;v<=G.n;v++){if(u.some(j=>g[j]===v))continue;const pl=u.filter(j=>!g[j]&&(sdCand(g,G,j)&(1<<v)));if(pl.length===1)return{i:pl[0],v,k:'h',u:k}}}
+ return null}
+function sdSingles(g,G){g=g.slice();for(;;){const h=sdLogic(g,G);if(!h)break;g[h.i]=h.v}return g.every(v=>v)}
+function sdFull(n,bw,bh,R){const g=[];for(let r=0;r<n;r++)for(let c=0;c<n;c++)g.push((bw?(bw*(r%bh)+Math.floor(r/bh)+c):(r+c))%n+1);
+ const perm=sdShuf([...Array(n)].map((_,i)=>i+1),R);
+ const ord=(sz,grp)=>{if(!grp)return sdShuf([...Array(sz)].map((_,i)=>i),R);const out=[];sdShuf([...Array(sz/grp)].map((_,i)=>i),R).forEach(b=>sdShuf([...Array(grp)].map((_,i)=>i),R).forEach(x=>out.push(b*grp+x)));return out};
+ const ro=ord(n,bh),co=ord(n,bw),out=[];for(let r=0;r<n;r++)for(let c=0;c<n;c++)out.push(perm[g[ro[r]*n+co[c]]-1]);return out}
+function sdMake(cfg,seed){const R=srand(seed),G=sdGeom(cfg.n,cfg.bw,cfg.bh),N=cfg.n*cfg.n;let last=null;
+ for(let att=0;att<(cfg.hard?24:10);att++){const sol=sdFull(cfg.n,cfg.bw,cfg.bh,R),g=sol.slice();let holes=0;
+  for(const i of sdShuf([...Array(N)].map((_,i)=>i),R)){if(holes>=cfg.holes)break;const v=g[i];g[i]=0;if(sdCount(g.slice(),G,2)!==1)g[i]=v;else holes++}
+  last={sol,giv:g};const easy=sdSingles(g,G);if(cfg.hard?!easy:easy)return last}
+ return last}
+function sdCfg(r,lv){if(r===0)return lv<=3?{n:3,bw:0,bh:0,holes:[3,4,5][lv-1],sym:'shape'}:{n:4,bw:2,bh:2,holes:Math.min(10,4+Math.round((lv-4)*6/8)),sym:'shape'};
+ if(r===1)return{n:6,bw:3,bh:2,holes:12+Math.round((lv-1)*10/11),sym:lv<=6?'shape':'cdigit'};
+ return{n:9,bw:3,bh:3,holes:81-Math.round(40-(lv-1)*15/29),sym:'digit',hard:lv>=22}}
+const SD_FREE={e:{n:9,bw:3,bh:3,holes:43,sym:'digit'},m:{n:9,bw:3,bh:3,holes:50,sym:'digit'},h:{n:9,bw:3,bh:3,holes:55,sym:'digit',hard:true}};
+const sdToday=(o=0)=>{const d=new Date(Date.now()-o*864e5);return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()};
+/* --- фигуры для малышей (рисунок SVG; если рядом лежит spr_sudoku.png — берём картинки из него) --- */
+const SD_COL=['#ff4d4d','#3d8bff','#33b54a','#ffc21a','#a64dff','#ff8a1f'];
+const SD_SHP=['<circle cx="20" cy="20" r="15.5"/>','<rect x="5.5" y="5.5" width="29" height="29" rx="5"/>','<path d="M20 4 L37 34.5 H3 Z" stroke-linejoin="round"/>',
+ '<path d="M20 2.5 L25.2 14.6 L38.2 15.6 L28.3 24.2 L31.4 37 L20 30 L8.6 37 L11.7 24.2 L1.8 15.6 L14.8 14.6 Z" stroke-linejoin="round"/>',
+ '<path d="M20 36 C7 27 2.5 19.5 5.5 12 C8.5 4.8 17 5.5 20 12 C23 5.5 31.5 4.8 34.5 12 C37.5 19.5 33 27 20 36 Z"/>','<path d="M20 2.5 L37.5 20 L20 37.5 L2.5 20 Z" stroke-linejoin="round"/>'];
+const SD_EY=[19,19,24,21,17,19];
+function sdShape(v){const k=v-1;if(SD.sprOk)return `<i class="sdspr" style="background-position:${k*20}% 0"></i>`;const y=SD_EY[k];
+ return `<svg viewBox="0 0 40 40" aria-hidden="true"><g fill="${SD_COL[k]}" stroke="#1d1d2b" stroke-width="2.4">${SD_SHP[k]}</g><g fill="#fff"><circle cx="15.5" cy="${y}" r="3.3"/><circle cx="24.5" cy="${y}" r="3.3"/></g><g fill="#1d1d2b"><circle cx="16.2" cy="${y+.6}" r="1.7"/><circle cx="25.2" cy="${y+.6}" r="1.7"/></g><path d="M17 ${y+5} Q20 ${y+7.5} 23 ${y+5}" stroke="#1d1d2b" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`}
+const sdSym=(v,sym)=>sym==='shape'?sdShape(v):sym==='cdigit'?`<b style="color:${SD_COL[(v-1)%6]}">${v}</b>`:`<b>${v}</b>`;
+try{if(/^https?:/.test(location.protocol)){const im=new Image();im.onload=()=>{SD.sprOk=im.naturalWidth>=im.naturalHeight*5};im.src='spr_sudoku.png'}}catch(e){}
+/* --- данные игрока --- */
+function sdP(p){const s=p.sd=p.sd&&typeof p.sd==='object'?p.sd:{};s.r=Math.min(2,+s.r||0);s.lv=s.lv&&typeof s.lv==='object'?s.lv:{};
+ [0,1,2].forEach(k=>{if(!Array.isArray(s.lv[k]))s.lv[k]=[]});s.n=+s.n||0;s.pf=+s.pf||0;s.best=s.best||{};s.d=s.d||{};return s}
+const sdRank=p=>p&&p.sd?+p.sd.r||0:0,sdGrand=p=>!!(p&&p.sd&&p.sd.g);
+AVATARS.push(['🐣',p=>sdRank(p)>=1,()=>t('h_sd1')],['🦉',p=>sdRank(p)>=2,()=>t('h_sd2')],['🧩',p=>!!(p.sd&&(+p.sd.pf||0)>=10),()=>t('h_sd10')],['🧙',p=>sdGrand(p),()=>t('h_sdg')]);
+FRAMES.push(['sudoku',p=>sdRank(p)>=2,()=>t('h_sd2')],['sdgold',p=>sdGrand(p),()=>t('h_sdg')]);
+Object.assign(FRAME_TX,{sudoku:['Судоку','Sudoku','Судоку','Sudoku','Sudoku','Sudoku'],sdgold:['Гроссмейстерская','Grandmaster','Гроссмейстер','Gran maestro','Großmeister','Grand maître']});
+/* статус у ника: 🧠 Мастер судоку / 👑 Гроссмейстер */
+const _pnameSD=pname;pname=p=>{let h=_pnameSD(p);try{const s=p&&p.sd,tt=s&&s.title;
+ if((tt==='m'&&+s.r>=2)||(tt==='g'&&s.g))h+=` <span class="sdtitle">${tt==='m'?'🧠':'👑'} ${esc(t(tt==='m'?'sdStM':'sdStG'))}</span>`}catch(e){}return h};
+/* --- экраны --- */
+function sdShell(title,rules,inner,bar){const w=mgShell(title,rules,inner,bar);if(w)w.querySelectorAll('p').forEach(p=>{if(p.textContent===t('mgFree'))p.remove()});return w}
+function sdHome(){const p=cur();if(!p)return mgClose();const s=sdP(p);MG.type='sd';clearInterval(SD.tm);SD.st=null;if(SD.view==null)SD.view=s.r;const r=SD.view;
+ const tabs=`<div class="sdtabs">${[0,1,2].map(k=>`<button class="btn sm ${r===k?'pri':''}" data-act="sdTab" data-arg="${k}">${SD_ICO[k]} ${t('sdR'+k)}${k>s.r?' 🔒':''}</button>`).join('')}</div>`;
+ let body='';
+ if(r>s.r){body=`<div class="sdlock panel blk">🔒 ${esc(t('sdLocked',{r:t('sdR'+(r-1))}))}${r===s.r+1?`<p class="sdsmall">${esc(t('sdExamHint',{r:t('sdR'+r)}))}</p><button class="btn pri big" data-act="sdExam" data-arg="${r}">🎓 ${esc(t('sdExam',{r:t('sdR'+r)}))}</button>`:''}</div>`}
+ else{const st=s.lv[r];body=`<div class="sdlevels">${[...Array(SD_LV[r])].map((_,i)=>{const sv=st[i]||0,open=i===0||(st[i-1]||0)>0;
+   return `<button class="btn sdlv ${sv?'done':''} ${open?'':'locked'}" ${open?`data-act="sdPlay" data-arg="${r}:${i+1}"`:'disabled'}><b>${open?i+1:'🔒'}</b><small>${sv?'⭐'.repeat(sv):'&nbsp;'}</small></button>`}).join('')}</div>`;
+  if(r<2&&s.r===r)body+=`<button class="btn sm" data-act="sdExam" data-arg="${r+1}">🎓 ${esc(t('sdExam',{r:t('sdR'+(r+1))}))}</button>`;
+  if(r===2)body+=`<div class="sdfree"><b class="on-sky">${t('sdFree')}:</b>${['e','m','h'].map(d=>`<button class="btn sm" data-act="sdFree" data-arg="${d}">${t('sdD_'+d)}${s.best[d]?` · ⏱${sdFmt(s.best[d])}`:''}</button>`).join('')}</div>`}
+ const dk=sdToday(),dd=s.d.k===dk;
+ const daily=`<button class="btn ${dd?'':'pri'} big sddaily" data-act="sdDailyGo">${dd?esc(t('sdDailyOk',{n:s.d.streak||1})):esc(t('sdDailyGo'))}</button>`;
+ const ttl=s.r>=2?`<div class="sdstat"><span class="on-sky">${t('sdStatus')}</span>${[['',t('sdStNone')],['m','🧠 '+t('sdStM')],...(s.g?[['g','👑 '+t('sdStG')]]:[])].map(([k,n])=>`<button class="btn sm ${(s.title||'')===k?'pri':''}" data-act="sdTitle" data-arg="${k}">${esc(n)}</button>`).join('')}</div>`:`<p class="on-sky sdsmall">${esc(t('sdStHint'))}</p>`;
+ sdShell(`🧩 ${t('gSd')}`,esc(t(r===0?'sdRuleK':r===1?'sdRuleK':'sdRuleD')),`<div class="sdhome">${daily}${tabs}${body}${ttl}<p class="on-sky sdsmall">${esc(t('sdStats',{n:s.n,p:s.pf}))}</p></div>`,'')}
+const sdFmt=sec=>Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+function sdStart(mode,rank,lv,diff){const p=cur();if(!p)return;const s=sdP(p);clearInterval(SD.tm);
+ const cfg=mode==='free'?SD_FREE[diff]:mode==='daily'?(rank===2?SD_FREE.m:sdCfg(rank,9)):mode==='exam'?(rank===2?sdCfg(2,8):sdCfg(rank,5)):sdCfg(rank,lv);
+ const seed=mode==='lv'?sdHash('sd'+rank+'_'+lv):mode==='daily'?sdHash('sdd'+sdToday()+'_'+rank):sdHash('sdx'+Date.now()+'_'+Math.random());
+ sdShell(`🧩 ${t('gSd')}`,'',`<div class="sdload on-sky">${t('sdGen')}</div>`,'');
+ setTimeout(()=>{if(MG.type!=='sd')return;const pz=sdMake(cfg,seed);
+  SD.st={mode,rank,lv,diff,cfg,G:sdGeom(cfg.n,cfg.bw,cfg.bh),sol:pz.sol,giv:pz.giv,cur:pz.giv.slice(),notes:new Array(cfg.n*cfg.n).fill(0),sel:-1,brush:0,nm:false,mist:0,hints:0,el:0,t0:Date.now(),undo:[],done:false,hint:null};
+  sdBuild();if(mode==='lv'&&rank===0&&lv===1&&!s.tut)sdHintShow(false,t('sdTut'))},40)}
+function sdTitleTxt(st){return st.mode==='free'?`${t('sdFree')}: ${t('sdD_'+st.diff)}`:st.mode==='daily'?t('sdDaily'):st.mode==='exam'?'🎓 '+t('sdExam',{r:t('sdR'+st.rank)}):`${SD_ICO[st.rank]} ${t('sdR'+st.rank)} · ${t('sdLv',{n:st.lv})}`}
+function sdBuild(){const st=SD.st,n=st.cfg.n;const avW=Math.min(innerWidth-20,560),avH=innerHeight-(MOBILE?300:320);const cs=Math.min(n<=4?130:90,Math.max(30,Math.floor(Math.min(avW,Math.max(240,avH))/n)));st.cs=cs;st.ps=Math.max(30,Math.min(64,Math.floor((Math.min(innerWidth,600)-24)/n)-6));
+ const rule=st.cfg.bw?(st.cfg.sym==='shape'?t('sdRuleK'):t('sdRuleD')):t('sdRuleL');
+ const tools=`<div class="sdtools">${st.cfg.n>=6?`<button class="btn sm" data-act="sdNotes" id="sdNm">✏️ ${t('sdNotes')}</button><button class="btn sm" data-act="sdErase">🧽</button>`:''}${st.cfg.n===9?`<button class="btn sm" data-act="sdAuto">🪄 ${t('sdAuto')}</button>`:''}<button class="btn sm" data-act="sdUndo">↩</button><button class="btn sm pri" data-act="sdHint">💡 ${t('sdHint')}</button></div>`;
+ sdShell(`🧩 ${esc(sdTitleTxt(st))}`,esc(rule),`<div class="sdinfo on-sky"><span>⏱ <b id="sdTime">0:00</b></span><span>❌ <b id="sdMist">0</b></span><span>💡 <b id="sdHn">0</b></span></div>
+  <div class="sdgrid sz${n} ${st.cfg.sym}" id="sdGrid" style="grid-template-columns:repeat(${n},${cs}px);--cs:${cs}px">${st.cur.map((_,i)=>`<div class="sdc" data-act="sdCell" data-arg="${i}" role="button" style="width:${cs}px;height:${cs}px"></div>`).join('')}</div>
+  <div class="sdtip on-sky" id="sdTip" aria-live="polite"></div><div class="sdpal" id="sdPal"></div>${tools}`,`<button class="btn sm" data-act="sdBack" title="${esc(t('sdMap'))}">🗺</button>`);
+ sdRefresh();SD.tm=setInterval(sdTick,500)}
+const sdTime=st=>Math.floor((st.el+(st.t0?Date.now()-st.t0:0))/1000);
+function sdTick(){const st=SD.st;if(!st||st.done)return;const e=document.getElementById('sdTime');if(!e){clearInterval(SD.tm);return}
+ if(document.hidden){if(st.t0){st.el+=Date.now()-st.t0;st.t0=0}}else if(!st.t0)st.t0=Date.now();e.textContent=sdFmt(sdTime(st))}
+function sdRefresh(){const st=SD.st;if(!st)return;const G=st.G,n=G.n,grid=document.getElementById('sdGrid');if(!grid)return;
+ const sel=st.sel,peer=sel>=0?new Set(G.peers[sel]):null,focus=sel>=0&&st.cur[sel]?st.cur[sel]:st.brush,hU=st.hint&&st.hint.u!=null?new Set(G.units[st.hint.u]):null;
+ [...grid.children].forEach((el,i)=>{const r=Math.floor(i/n),c=i%n,v=st.cur[i];let cl='sdc';
+  if(G.bw){if((c+1)%G.bw===0&&c<n-1)cl+=' bR';if((r+1)%G.bh===0&&r<n-1)cl+=' bB'}
+  if(st.giv[i])cl+=' g';else if(v)cl+=' u';if(i===sel)cl+=' sel';else if(peer&&peer.has(i))cl+=' hl';if(v&&focus&&v===focus)cl+=' same';
+  if(st.hint&&st.hint.i===i)cl+=' hint';else if(hU&&hU.has(i))cl+=' hintU';
+  if(el.dataset.c!==cl)el.className=el.dataset.c=cl;
+  const key=v?'v'+v:'n'+st.notes[i];if(el.dataset.k!==key){el.dataset.k=key;el.innerHTML=v?sdSym(v,st.cfg.sym):st.notes[i]?`<div class="sdn n${n}">${[...Array(n)].map((_,k)=>`<span>${st.notes[i]&(1<<(k+1))?(st.cfg.sym==='shape'?`<i style="background:${SD_COL[k]}"></i>`:k+1):''}</span>`).join('')}</div>`:''}});
+ const pal=document.getElementById('sdPal');if(pal)pal.innerHTML=[...Array(n)].map((_,k)=>{const v=k+1,left=n-st.cur.filter(x=>x===v).length;
+  return `<button class="sdsym ${st.cfg.sym} ${st.brush===v?'on':''} ${left?'':'full'}" data-act="sdSymb" data-arg="${v}" style="--ps:${st.ps}px">${sdSym(v,st.cfg.sym)}${left&&n>=6?`<i>${left}</i>`:''}</button>`}).join('');
+ const nm=document.getElementById('sdNm');if(nm)nm.classList.toggle('pri',st.nm);
+ const m=document.getElementById('sdMist');if(m)m.textContent=st.mist;const h=document.getElementById('sdHn');if(h)h.textContent=st.hints}
+function sdTip(html,cls){const e=document.getElementById('sdTip');if(e){e.className='sdtip on-sky '+(cls||'');e.innerHTML=html}}
+function sdCellEl(i){const g=document.getElementById('sdGrid');return g&&g.children[i]}
+function sdPlace(i,v){const st=SD.st,G=st.G;if(st.done||st.giv[i]||st.cur[i])return;
+ if(st.nm){st.undo.push({i,notes:[[i,st.notes[i]]]});st.notes[i]^=1<<v;sdTick2();return sdRefresh()}
+ if(v!==st.sol[i]){st.mist++;const bad=G.peers[i].filter(j=>st.cur[j]===v);sdTip(esc(t(bad.length?'sdWrong':'sdWrong2')),'bad');sndWrong();
+  const el=sdCellEl(i);if(el){el.classList.remove('err');void el.offsetWidth;el.classList.add('err')}bad.forEach(j=>{const e=sdCellEl(j);if(e){e.classList.add('bad');setTimeout(()=>e.classList.remove('bad'),900)}});
+  if(st.mode==='exam'&&st.mist===3)sdTip(esc(t('sdExamNo')),'bad');return sdRefresh()}
+ const snap=[[i,st.notes[i]]];G.peers[i].forEach(j=>{if(st.notes[j]&(1<<v)){snap.push([j,st.notes[j]]);st.notes[j]&=~(1<<v)}});
+ st.undo.push({i,val:1,notes:snap});st.cur[i]=v;st.notes[i]=0;if(st.hint&&st.hint.i===i)st.hint=null;
+ const sc=[0,2,4,5,7,9,11,12,14][Math.min(8,v-1)];tone(523.25*Math.pow(2,sc/12),0,.09,'square',.035);sdTip('');sdRefresh();
+ const el=sdCellEl(i);if(el){const b=el.firstElementChild;if(b)b.classList.add('pop')}
+ /* закрытые строки / столбцы / квадраты */
+ let done=0;G.cu[i].forEach(k=>{const u=G.units[k];if(u.every(j=>st.cur[j])){done++;u.forEach((j,q)=>{const e=sdCellEl(j);if(e)setTimeout(()=>{e.classList.remove('flash');void e.offsetWidth;e.classList.add('flash')},q*35)})}});
+ if(done){[0,4,7].forEach((s2,q)=>tone(659.25*Math.pow(2,s2/12),.05+q*.07,.12,'square',.03));const r=el&&el.getBoundingClientRect();if(r)burst(r.left+r.width/2,r.top+r.height/2,8*done,6)}
+ if(st.cur.every((x,j)=>x===st.sol[j]))setTimeout(sdWin,450)}
+function sdTick2(){}
+function sdHintShow(count,txt){const st=SD.st;if(!st||st.done)return;const h=sdLogic(st.cur,st.G);let hint;
+ if(h){hint=h;txt=txt||t(h.k==='n'?'sdH1':st.G.kind[h.u]==='r'?'sdH2r':st.G.kind[h.u]==='c'?'sdH2c':'sdH2b')}
+ else{const empt=st.cur.map((v,i)=>v?-1:i).filter(i=>i>=0);const i=st.sel>=0&&!st.cur[st.sel]?st.sel:empt[0];if(i==null)return;hint={i,v:st.sol[i],k:'x'};txt=txt||t('sdH3')}
+ if(count)st.hints++;st.hint=hint;st.sel=hint.i;if(st.cfg.sym==='shape')st.brush=0;
+ sdTip(`<span class="sdhv">${sdSym(hint.v,st.cfg.sym)}</span> ${esc(txt)} <button class="btn sm pri" data-act="sdHintPut">${t('sdPut')}</button>`,'hintt');sdRefresh()}
+function sdWin(){const st=SD.st;if(!st||st.done)return;st.done=true;clearInterval(SD.tm);const p=cur(),s=sdP(p),sec=sdTime(st);
+ const stars=st.mist===0&&st.hints===0?3:st.mist<=2&&st.hints<=1?2:1;let gain=0,extra='',next=false;
+ if(st.mode==='lv'){const prev=s.lv[st.rank][st.lv-1]||0,base=SD_GAIN[st.rank]+(st.rank===2?Math.floor(st.lv/5):0);gain=stars>prev?base+(stars===3?Math.ceil(base/2):0):1;s.lv[st.rank][st.lv-1]=Math.max(prev,stars);
+  next=st.lv<SD_LV[st.rank];if(st.rank===0&&st.lv===1)s.tut=1;
+  if(st.lv===SD_LV[st.rank]){if(st.rank<2&&s.r<st.rank+1){s.r=st.rank+1;extra=t('sdRankUp',{r:t('sdR'+s.r)})}else if(st.rank===2&&!s.g){s.g=1;extra=t('sdGrandUp')}}}
+ else if(st.mode==='free'){gain={e:8,m:12,h:18}[st.diff]+(stars===3?4:0);if(!s.best[st.diff]||sec<s.best[st.diff])s.best[st.diff]=sec}
+ else if(st.mode==='daily'){const k=sdToday();if(s.d.k!==k){s.d.streak=s.d.k===sdToday(1)?(+s.d.streak||0)+1:1;s.d.k=k;gain=2*SD_GAIN[st.rank]+Math.min(7,s.d.streak)}else gain=1}
+ else if(st.mode==='exam'){if(st.mist<=2&&st.hints===0){if(s.r<st.rank){s.r=st.rank;gain=10*st.rank}extra=t('sdExamOk',{r:t('sdR'+st.rank)})}else extra=t('sdExamNo')}
+ s.n++;if(stars===3)s.pf++;if(s.r>=2&&extra&&!s.title&&st.rank>=2)s.title='m';
+ p.dopa+=gain;save(p);announce(checkUnlocks(p));document.querySelectorAll('#dopaVal').forEach(d=>d.textContent=p.dopa);
+ sndFanfare();fireworks(stars+(extra?2:0));rain(40+stars*20);
+ const e=document.getElementById('mgEnd');if(e){e.innerHTML=`<div class="modal blk sdwin" style="max-width:440px;margin:14px auto"><div class="sdstars">${'⭐'.repeat(stars)}${'☆'.repeat(3-stars)}</div><h2>${t('sdWin')}</h2>
+  ${extra?`<p class="sdup">${esc(extra)}</p>`:''}<div class="sumgrid"><div class="slotbox">⏱<b>${sdFmt(sec)}</b></div><div class="slotbox">❌<b>${st.mist}</b></div><div class="slotbox">💡<b>${st.hints}</b></div><div class="slotbox">⚡<b>+${gain}</b></div></div>
+  <div class="row"><button class="btn" data-act="sdBack">${t('sdMap')}</button>${st.mode==='lv'?`<button class="btn" data-act="sdPlay" data-arg="${st.rank}:${st.lv}">${t('sdAgain')}</button>`:st.mode==='free'?`<button class="btn" data-act="sdFree" data-arg="${st.diff}">${t('sdAgain')}</button>`:st.mode==='exam'&&st.mist+st.hints*9>2?`<button class="btn" data-act="sdExam" data-arg="${st.rank}">${t('sdAgain')}</button>`:''}
+  ${next?`<button class="btn pri big" data-act="sdPlay" data-arg="${st.rank}:${st.lv+1}" data-enter>${t('sdNext')}</button>`:''}</div></div>`;setTimeout(()=>e.scrollIntoView({behavior:'smooth',block:'center'}),300)}}
+/* --- действия --- */
+Object.assign(ACT,{
+ sdOpen(){closeModal();MG.type='sd';MG.reward=false;MG.after=null;SD.view=null;sdHome()},
+ sdTab(a){SD.view=+a;sdHome()},
+ sdBack(){SD.st=null;clearInterval(SD.tm);const e=document.getElementById('mgEnd');if(e)e.innerHTML='';sdHome()},
+ sdPlay(a){const [r,l]=String(a).split(':').map(Number);SD.view=r;sdStart('lv',r,l)},
+ sdFree(d){sdStart('free',2,0,d)},
+ sdExam(r){sdStart('exam',+r,0)},
+ sdDailyGo(){const p=cur();sdStart('daily',sdRank(p),0)},
+ sdTitle(k){const p=cur(),s=sdP(p);if(k==='m'&&s.r<2||k==='g'&&!s.g)return;s.title=k||'';save(p);sdHome()},
+ sdCell(a){const st=SD.st;if(!st||st.done)return;const i=+a;
+  if(st.brush&&!st.giv[i]&&!st.cur[i]){st.sel=i;return sdPlace(i,st.brush)}
+  st.sel=i;if(st.sel>=0&&st.cur[st.sel])st.brush=0;sndTick();sdRefresh()},
+ sdSymb(a){const st=SD.st;if(!st||st.done)return;const v=+a;
+  if(st.sel>=0&&!st.giv[st.sel]&&!st.cur[st.sel])return sdPlace(st.sel,v);
+  st.brush=st.brush===v?0:v;st.sel=-1;sndTick();sdRefresh()},
+ sdNotes(){const st=SD.st;if(!st)return;st.nm=!st.nm;sdRefresh()},
+ sdErase(){const st=SD.st;if(!st||st.sel<0||st.giv[st.sel]||st.cur[st.sel])return;st.undo.push({i:st.sel,notes:[[st.sel,st.notes[st.sel]]]});st.notes[st.sel]=0;sdRefresh()},
+ sdAuto(){const st=SD.st;if(!st||st.done)return;const snap=[];st.cur.forEach((v,i)=>{if(!v){snap.push([i,st.notes[i]]);st.notes[i]=sdCand(st.cur,st.G,i)}});st.undo.push({i:-1,notes:snap});sdRefresh()},
+ sdUndo(){const st=SD.st;if(!st||st.done)return;const u=st.undo.pop();if(!u)return;if(u.val)st.cur[u.i]=0;u.notes.forEach(([j,m])=>st.notes[j]=m);sdRefresh()},
+ sdHint(){sdHintShow(true)},
+ sdHintPut(){const st=SD.st;if(!st||!st.hint)return;const h=st.hint;st.nm=false;sdPlace(h.i,h.v)},
+});
+document.addEventListener('keydown',e=>{const st=SD.st;if(MG.type!=='sd'||!st||st.done||document.querySelector('.overlay'))return;const n=st.cfg.n,k=e.key;
+ if(/^[1-9]$/.test(k)&&+k<=n){e.preventDefault();ACT.sdSymb(k);return}
+ if(k==='Backspace'||k==='Delete'){ACT.sdErase();return}if(k==='n'||k==='N'||k==='т'||k==='Т'){ACT.sdNotes();return}
+ const d={ArrowUp:-n,ArrowDown:n,ArrowLeft:-1,ArrowRight:1}[k];if(d){e.preventDefault();let i=st.sel<0?0:st.sel+d;if(i<0||i>=n*n)return;st.sel=i;sdRefresh()}});
+/* --- входы: мини-игры и кнопка в меню --- */
+const _mgStartSD=ACT.mgStart;ACT.mgStart=function(k){if(k==='sd')return ACT.sdOpen();return _mgStartSD.call(this,k)};
+const _mgCloseSD=mgClose;mgClose=function(){if(MG.type==='sd'){clearInterval(SD.tm);SD.st=null}_mgCloseSD()};
+mgPickHtml=function(){return `<div class="mgpick">${[['sd','🧩','gSd'],['maze','🐱','gMaze'],['mem','🃏','gMem'],['pz','🔢','gPz'],['mj','🀄','gMj'],['sea','🚢','g_sea'],['bc','🪖','gBC']].map(([k,i,n])=>`<button class="btn" data-act="mgStart" data-arg="${k}"><span>${i}</span>${t(n)}</button>`).join('')}</div>`};
+const _renderMenuSD=renderMenu;renderMenu=function(){_renderMenuSD();const b=document.querySelector('#app [data-act="mgMenu"]');if(b&&!document.querySelector('#app [data-act="sdOpen"]'))b.insertAdjacentHTML('beforebegin',`<button class="btn pri" data-act="sdOpen">🧩 ${t('gSd')}</button>`)};
+document.head.insertAdjacentHTML('beforeend',`<style>
+#mgwrap>*{flex-shrink:0}
+.sdhome{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;max-width:600px}
+.sdtabs,.sdfree,.sdstat,.sdtools,.sdinfo{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+.sdinfo{font-weight:900;gap:16px;margin:2px 0 8px}
+.sdlevels{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:8px;width:100%}
+.sdlv{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;min-height:62px}.sdlv b{font-size:18px}.sdlv small{font-size:11px;line-height:1}
+.sdlv.locked{opacity:.55}.sdlv.done{background:#cfe9b8}
+.sdlock{text-align:center;font-weight:900;max-width:520px}.sdsmall{font-size:13px;font-weight:800;text-align:center;margin:4px 0}
+.sddaily{width:100%;max-width:520px}
+.sdload{font-weight:900;font-size:20px;margin:40px}
+.sdgrid{display:grid;background:#1d1d2b;border:4px solid #1d1d2b;box-shadow:0 6px 0 rgba(0,0,0,.35);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.sdc{display:flex;align-items:center;justify-content:center;background:#f6f2e6;border-right:1px solid #b9b19c;border-bottom:1px solid #b9b19c;cursor:pointer;position:relative;font-family:var(--font-px);font-size:calc(var(--cs)*.42);transition:background .12s}
+.sdc.bR{border-right:3px solid #1d1d2b}.sdc.bB{border-bottom:3px solid #1d1d2b}
+.sdc.hl{background:#e2ebff}.sdc.hintU{background:#fff1b8}.sdc.same{background:#ffe08a}.sdc.sel{background:#b8d2ff;box-shadow:inset 0 0 0 3px #2f62e8}
+.sdc.g{background-color:#e9e3d2}.sdc.g.hl{background:#d6dcf0}.sdc.g.same{background:#f5d675}
+.sdc.g b{color:#1d1d2b}.sdc.u b{color:#2a5bd7}.digit .sdc.u b{color:#2a5bd7}
+.sdc.hint{box-shadow:inset 0 0 0 4px #ffb400;animation:sdPulse 1s ease-in-out infinite}
+.sdc.bad{background:#ff9f9f!important}
+.sdc.err{animation:sdErr .45s}.sdc.flash{animation:sdFlash .7s}
+.sdc svg,.sdc .sdspr{width:84%;height:84%}.sdc .pop{animation:sdPop .32s cubic-bezier(.2,1.6,.4,1)}
+.sdspr{display:block;background:url(spr_sudoku.png) 0 0/600% 100% no-repeat;image-rendering:pixelated}
+.sdn{display:grid;width:100%;height:100%;padding:2px;font-size:calc(var(--cs)*.2);color:#5a5a6a;line-height:1}
+.sdn.n6{grid-template-columns:repeat(3,1fr)}.sdn.n9{grid-template-columns:repeat(3,1fr)}.sdn span{display:flex;align-items:center;justify-content:center}.sdn i{width:60%;height:60%;border-radius:50%}
+.sdpal{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:8px 0}
+.sdsym{position:relative;width:var(--ps);height:var(--ps);display:flex;align-items:center;justify-content:center;background:#f6f2e6;border:3px solid #1d1d2b;box-shadow:inset -3px -3px 0 #b9b19c;cursor:pointer;font-family:var(--font-px);font-size:calc(var(--ps)*.45);padding:0}
+.sdsym svg,.sdsym .sdspr{width:86%;height:86%}.sdsym.on{background:#ffe08a;transform:translateY(-4px);box-shadow:0 4px 0 #1d1d2b}.sdsym.full{opacity:.3}
+.sdsym i{position:absolute;right:2px;bottom:1px;font-size:10px;font-style:normal;font-family:var(--font-body);font-weight:900;color:#555}
+.sdtip{min-height:46px;max-width:560px;text-align:center;font-weight:900;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.sdtip.bad{color:#ffb0b0}.sdtip.hintt{color:#ffe08a}.sdhv{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;background:#f6f2e6;border:2px solid #1d1d2b;font-family:var(--font-px);color:#1d1d2b}.sdhv svg{width:90%;height:90%}
+.sdstars{font-size:46px;letter-spacing:4px}.sdup{font-weight:900;font-size:18px;color:#3da52a}
+.sdtitle{display:inline-block;font-size:.72em;line-height:1.3;padding:0 6px;margin-left:4px;background:linear-gradient(#ffe36a,#ffb800);color:#3a2400;border:2px solid #1d1d2b;font-weight:900;white-space:nowrap;vertical-align:middle}
+.fr-sudoku::before{background-color:#f6f2e6;background-image:linear-gradient(#1d1d2b 2px,transparent 2px),linear-gradient(90deg,#1d1d2b 2px,transparent 2px);background-size:9px 9px}
+.fr-sdgold::before{background:repeating-conic-gradient(#ffd23f 0 25%,#8a4dff 0 50%) 0 0/12px 12px}.fr-sdgold{filter:drop-shadow(0 0 7px #ffd23f)}
+@keyframes sdPulse{50%{box-shadow:inset 0 0 0 4px #ffe8a0}}
+@keyframes sdErr{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+@keyframes sdFlash{30%{background:#bff2a0}}
+@keyframes sdPop{from{transform:scale(.3)}to{transform:scale(1)}}
+</style>`);
 /* ============ ЖИВОЙ МИР НА PHASER: блочный мир-фон, деревня из решённых примеров, стройка дома, эффекты ============ */
 /* Каждый верный ответ кладёт блок в дом. 10 блоков = дом, дом уходит в деревню на холмах.
    Phaser грузится с CDN (или из файла рядом в версии для Яндекса); если не загрузился — работает старый фон. */
