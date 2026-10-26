@@ -3270,7 +3270,19 @@ Object.assign(S,{
  clkOn:['Звуки нажатий: вкл','Tap sounds: on','Басу дыбысы: қосулы','Sonido de toques: sí','Tippgeräusche: an','Sons des touches : oui'],
  clkOff:['Звуки нажатий: выкл','Tap sounds: off','Басу дыбысы: өшірулі','Sonido de toques: no','Tippgeräusche: aus','Sons des touches : non'],
  mjMusT:['Восточная музыка','Oriental music','Шығыс әуені','Música oriental','Fernöstliche Musik','Musique orientale'],
+ muOn:['Звук включён','Sound on','Дыбыс қосулы','Sonido activado','Ton an','Son activé'],
+ muOff:['Звук выключен','Sound off','Дыбыс өшірулі','Sonido apagado','Ton aus','Son coupé'],
 });
+/* --- общий «Без звука»: всё, что играет в браузере, идёт через один регулятор громкости --- */
+const MUTE={ctx:[],orig:AudioNode.prototype.connect};
+function muteNode(c){let m=MUTE.ctx.find(x=>x.c===c);if(!m){const g=c.createGain();g.gain.value=SET.mute?0:1;MUTE.orig.call(g,c.destination);m={c,g};MUTE.ctx.push(m)}return m.g}
+AudioNode.prototype.connect=function(d,...a){try{if(d&&this.context&&d===this.context.destination)d=muteNode(this.context)}catch(e){}return MUTE.orig.call(this,d,...a)};
+const muIco=()=>SET.mute?'🔇':'🔊',muTxt=()=>t(SET.mute?'muOff':'muOn');
+function setMute(v){SET.mute=!!v;saveSettings();MUTE.ctx.forEach(m=>{try{m.g.gain.cancelScheduledValues(0);m.g.gain.value=SET.mute?0:1}catch(e){}});
+ if(SET.mute){try{if(navigator.vibrate)navigator.vibrate(0)}catch(e){}}
+ document.querySelectorAll('.mutebtn').forEach(b=>{b.textContent=muIco();b.title=muTxt();b.setAttribute('aria-label',muTxt());b.classList.toggle('muted',SET.mute)})}
+ACT.muteT=function(){setMute(!SET.mute);if(!SET.mute)setTimeout(()=>tone(880,0,.05,'square',.03),30)};
+const _toneMU=tone;tone=function(){if(SET.mute)return;return _toneMU.apply(this,arguments)};
 /* --- звук на смартфонах: iPhone глушит звук игр кнопкой «Без звука», а браузеры не дают играть до первого касания --- */
 function audUnlock(){try{if(navigator.audioSession&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback'}catch(e){}
  const a=ac();if(!a)return;if(a.state!=='running'){try{a.resume().catch(()=>{})}catch(e){}}
@@ -3279,13 +3291,13 @@ function audUnlock(){try{if(navigator.audioSession&&navigator.audioSession.type!
 document.addEventListener('visibilitychange',()=>{if(document.hidden||!AC||AC.state==='running')return;if(typeof yaMutedNow==='function'&&yaMutedNow())return;try{AC.resume().catch(()=>{})}catch(e){}});
 /* --- кнопка «звуки нажатий» во всех играх --- */
 const clkIco=()=>SET.clicks===false?'🔕':'🔔',clkTxt=()=>t(SET.clicks===false?'clkOff':'clkOn');
-const clkBtn=cls=>`<button class="${cls||'btn sm'} clkbtn" data-act="clicksT" title="${esc(clkTxt())}" aria-label="${esc(clkTxt())}">${clkIco()}</button>`;
+const clkBtn=cls=>`<button class="${cls||'btn sm'} mutebtn ${SET.mute?'muted':''}" data-act="muteT" title="${esc(muTxt())}" aria-label="${esc(muTxt())}">${muIco()}</button>`;
 ACT.clicksT=function(){SET.clicks=SET.clicks===false;saveSettings();if(SET.clicks)tone(880,0,.03,'square',.02);
  document.querySelectorAll('.clkbtn').forEach(b=>{b.textContent=clkIco();b.title=clkTxt();b.setAttribute('aria-label',clkTxt())});document.querySelectorAll('.clkbtn2').forEach(b=>b.textContent=clkIco()+' '+clkTxt())};
-const _startGameS=startGame;startGame=function(m){_startGameS(m);const h=document.querySelector('#game .gtop [data-act="audioPanel"]');if(h&&!document.querySelector('#game .clkbtn'))h.insertAdjacentHTML('afterend',clkBtn('icon'))};
-const _mgShellS=mgShell;mgShell=function(...a){const w=_mgShellS.apply(this,a),x=w&&w.querySelector('.mjbar [data-act="mgExit"]');if(x&&!w.querySelector('.clkbtn'))x.insertAdjacentHTML('beforebegin',clkBtn());return w};
-const _renderKidsS=renderKids;renderKids=function(){_renderKidsS();const h=document.querySelector('#app header.top .sp');if(h&&!document.querySelector('#app .clkbtn'))h.insertAdjacentHTML('afterend',clkBtn('icon'))};
-const _audioPanelS=ACT.audioPanel;ACT.audioPanel=function(){_audioPanelS.call(ACT);const m=document.querySelector('.overlay .modal');if(m&&!m.querySelector('.clkbtn2'))m.insertAdjacentHTML('beforeend',`<div class="row" style="margin:10px 0 0"><button class="btn sm clkbtn2" data-act="clicksT">${clkIco()} ${esc(clkTxt())}</button></div>`)};
+const _startGameS=startGame;startGame=function(m){_startGameS(m);const h=document.querySelector('#game .gtop [data-act="audioPanel"]');if(h&&!document.querySelector('#game .mutebtn'))h.insertAdjacentHTML('afterend',clkBtn('icon'))};
+const _mgShellS=mgShell;mgShell=function(...a){const w=_mgShellS.apply(this,a),x=w&&w.querySelector('.mjbar [data-act="mgExit"]');if(x&&!w.querySelector('.mutebtn'))x.insertAdjacentHTML('beforebegin',clkBtn());return w};
+const _renderKidsS=renderKids;renderKids=function(){_renderKidsS();const h=document.querySelector('#app header.top .sp');if(h&&!document.querySelector('#app .mutebtn'))h.insertAdjacentHTML('afterend',clkBtn('icon'))};
+const _audioPanelS=ACT.audioPanel;ACT.audioPanel=function(){_audioPanelS.call(ACT);const m=document.querySelector('.overlay .modal');if(m&&!m.querySelector('.clkbtn2'))m.insertAdjacentHTML('beforeend',`<div class="row" style="margin:10px 0 0"><button class="btn sm mutebtn ${SET.mute?'muted':''}" data-act="muteT" title="${esc(muTxt())}">${muIco()}</button><button class="btn sm clkbtn2" data-act="clicksT">${clkIco()} ${esc(clkTxt())}</button></div>`)};
 /* --- восточная расслабляющая музыка для маджонга (пентатоника, гучжэн, бамбуковая флейта, колокольчики, бурдон) --- */
 const MJM={on:false};
 const MJM_N=[57,60,62,64,67,69,72,74,76,79,81];
@@ -3329,11 +3341,18 @@ function mjmBell(t,m){const a=MJM.a,f=mtof(m);[1,2.76,5.4].forEach((r,i)=>{const
  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime([.03,.012,.006][i],t+.004);g.gain.exponentialRampToValueAtTime(.0003,t+3.2-i);o.connect(g);g.connect(MJM.rev);g.connect(MJM.dry);o.start(t);o.stop(t+3.3)})}
 const _openMjS=openMahjong;openMahjong=function(){_openMjS();mjmStart()};
 const _mjCloseS=mjClose;mjClose=function(){mjmStop();_mjCloseS()};
-const mjMusBtn=()=>`<button class="btn sm mjmusbtn ${SET.mjMusic===false?'':'pri'}" data-act="mjMus" title="${esc(t('mjMusT'))}" aria-label="${esc(t('mjMusT'))}">${SET.mjMusic===false?'🔇':'🎶'}</button>`;
+const mjMusBtn=()=>`<button class="btn sm mjmusbtn ${SET.mjMusic===false?'':'pri'}" data-act="mjMus" title="${esc(t('mjMusT'))}" aria-label="${esc(t('mjMusT'))}">${SET.mjMusic===false?'🎵':'🎶'}</button>`;
 ACT.mjMus=function(){SET.mjMusic=SET.mjMusic===false;saveSettings();SET.mjMusic?mjmStart():mjmStop();document.querySelectorAll('.mjmusbtn').forEach(b=>b.outerHTML=mjMusBtn())};
 function mjTopBtns(){const s=document.querySelector('#mjwrap .mjtopbtns');if(s&&!s.querySelector('.mjmusbtn'))s.insertAdjacentHTML('afterbegin',mjMusBtn()+clkBtn())}
 const _mjRenderS=mjRender;mjRender=function(msg){_mjRenderS(msg);mjTopBtns()};
 const _mjMapS=mjMap;mjMap=function(){_mjMapS();mjTopBtns()};
+
+/* кнопка «звук» в каждой шапке: игры, мини-игры, сетевые игры, меню */
+let muRaf=0;function muPlace(){muRaf=0;
+ document.querySelectorAll('header.top').forEach(h=>{if(h.querySelector('.mutebtn'))return;const sp=h.querySelector('.sp');if(sp)sp.insertAdjacentHTML('afterend',clkBtn('icon'));else h.insertAdjacentHTML('beforeend',clkBtn('icon'))});
+ document.querySelectorAll('.mjbar').forEach(b=>{if(b.querySelector('.mutebtn'))return;const x=b.querySelector('[data-act="mgExit"]');if(x)x.insertAdjacentHTML('beforebegin',clkBtn())})}
+new MutationObserver(()=>{if(!muRaf)muRaf=requestAnimationFrame(muPlace)}).observe(document.body,{childList:true,subtree:true});
+document.head.insertAdjacentHTML('beforeend',`<style>.mutebtn.muted{background:#ffb0b0}</style>`);
 /* ============ ТАНЧИКИ-КЛАССИКА (в духе «Танчиков» с Денди): одиночная игра и вдвоём против компьютера ============ */
 Object.assign(S,{
  gBC:['Танчики','Tanks','Танктер','Tanques','Panzer','Tanks'],
@@ -3507,7 +3526,7 @@ function bcSize(side,below){const w=Math.floor(innerWidth-side),h=Math.floor(inn
 function bcPadHtml(fire=true){return `<div class="bcpad ${fire?'':'nofire'}">${tkJoyHtml()}${fire?`<button class="bcfire" data-bc="f" aria-label="🔥"><i></i><b>🔥</b></button>`:''}</div>`}
 function tkJoyHtml(){return `<div class="bcjoy" data-joy><div class="bcjb"><div class="bcjk"></div><i class="u">▲</i><i class="d">▼</i><i class="l">◀</i><i class="r">▶</i></div><span class="bcjh">${t('tkJoyH')}</span></div>`}
 /* виброотклик (Android; на iPhone браузер не умеет — просто молчим) */
-function tkBuzz(p){try{if(SET.sound!==false&&navigator.vibrate)navigator.vibrate(p)}catch(e){}}
+function tkBuzz(p){try{if(SET.sound!==false&&!SET.mute&&navigator.vibrate)navigator.vibrate(p)}catch(e){}}
 /* плавающий джойстик: где коснулся — там центр, ведёшь пальцем — едешь */
 function tkJoy(zone,cb){if(!zone)return()=>{};const b=zone.querySelector('.bcjb'),k=zone.querySelector('.bcjk'),R=48;let id=null,cx=0,cy=0;
  const home=()=>{b.style.left='50%';b.style.top='50%';k.style.transform='translate(-50%,-50%)';zone.classList.remove('on')};
@@ -3938,7 +3957,9 @@ function sdStart(mode,rank,lv,diff){const p=cur();if(!p)return;const s=sdP(p);cl
   SD.st={mode,rank,lv,diff,cfg,G:sdGeom(cfg.n,cfg.bw,cfg.bh),sol:pz.sol,giv:pz.giv,cur:pz.giv.slice(),notes:new Array(cfg.n*cfg.n).fill(0),sel:-1,brush:0,nm:false,mist:0,hints:0,el:0,t0:Date.now(),undo:[],done:false,hint:null};
   sdBuild();if(mode==='lv'&&rank===0&&lv===1&&!s.tut)sdHintShow(false,t('sdTut'))},40)}
 function sdTitleTxt(st){return st.mode==='free'?`${t('sdFree')}: ${t('sdD_'+st.diff)}`:st.mode==='daily'?t('sdDaily'):st.mode==='exam'?'🎓 '+t('sdExam',{r:t('sdR'+st.rank)}):`${SD_ICO[st.rank]} ${t('sdR'+st.rank)} · ${t('sdLv',{n:st.lv})}`}
-function sdBuild(){const st=SD.st,n=st.cfg.n;const avW=Math.min(innerWidth-20,560),avH=innerHeight-(MOBILE?300:320);const cs=Math.min(n<=4?130:90,Math.max(30,Math.floor(Math.min(avW,Math.max(240,avH))/n)));st.cs=cs;st.ps=Math.max(30,Math.min(64,Math.floor((Math.min(innerWidth,600)-24)/n)-6));
+/* размер кнопок выбора: 9 фигур на узком экране — в два ряда (5+4), чтобы пальцем попадать уверенно */
+function sdPalSize(n){const w=Math.min(innerWidth,document.documentElement.clientWidth||innerWidth,600)-28,per=n===9&&w<520?5:n;return Math.max(34,Math.min(n===9?60:64,Math.floor((w-(per-1)*8)/per)))}
+function sdBuild(){const st=SD.st,n=st.cfg.n;const avW=Math.min((document.documentElement.clientWidth||innerWidth)-28,560),avH=innerHeight-(MOBILE?300:320);const cs=Math.min(n<=4?130:90,Math.max(30,Math.floor(Math.min(avW,Math.max(240,avH))/n)));st.cs=cs;st.ps=sdPalSize(n);
  const rule=st.cfg.bw?(st.cfg.sym==='shape'?t('sdRuleK'):t('sdRuleD')):t('sdRuleL');
  const tools=`<div class="sdtools">${st.cfg.n>=6?`<button class="btn sm" data-act="sdNotes" id="sdNm">✏️ ${t('sdNotes')}</button><button class="btn sm" data-act="sdErase">🧽</button>`:''}${st.cfg.n===9?`<button class="btn sm" data-act="sdAuto">🪄 ${t('sdAuto')}</button>`:''}<button class="btn sm" data-act="sdUndo">↩</button><button class="btn sm pri" data-act="sdHint">💡 ${t('sdHint')}</button></div>`;
  sdShell(`🧩 ${esc(sdTitleTxt(st))}`,esc(rule),`<div class="sdinfo on-sky"><span>⏱ <b id="sdTime">0:00</b></span><span>❌ <b id="sdMist">0</b></span><span>💡 <b id="sdHn">0</b></span></div>
@@ -3956,8 +3977,10 @@ function sdRefresh(){const st=SD.st;if(!st)return;const G=st.G,n=G.n,grid=docume
   if(st.hint&&st.hint.i===i)cl+=' hint';else if(hU&&hU.has(i))cl+=' hintU';
   if(el.dataset.c!==cl)el.className=el.dataset.c=cl;
   const key=v?'v'+v:'n'+st.notes[i];if(el.dataset.k!==key){el.dataset.k=key;el.innerHTML=v?sdSym(v,st.cfg.sym):st.notes[i]?`<div class="sdn n${n}">${[...Array(n)].map((_,k)=>`<span>${st.notes[i]&(1<<(k+1))?(st.cfg.sym==='shape'?`<i style="background:${SD_COL[k]}"></i>`:k+1):''}</span>`).join('')}</div>`:''}});
- const pal=document.getElementById('sdPal');if(pal)pal.innerHTML=[...Array(n)].map((_,k)=>{const v=k+1,left=n-st.cur.filter(x=>x===v).length;
-  return `<button class="sdsym ${st.cfg.sym} ${st.brush===v?'on':''} ${left?'':'full'}" data-act="sdSymb" data-arg="${v}" style="--ps:${st.ps}px">${sdSym(v,st.cfg.sym)}${left&&n>=6?`<i>${left}</i>`:''}</button>`}).join('');
+ /* кнопки выбора не пересоздаём (иначе на iPhone касание «теряется»), а только меняем состояние */
+ const pal=document.getElementById('sdPal');if(pal){const sig=st.cfg.sym+n+':'+st.ps;
+  if(pal.dataset.sig!==sig||pal.children.length!==n){pal.dataset.sig=sig;pal.classList.toggle('two',n===9&&sdPalSize(9)>40&&innerWidth<520);pal.innerHTML=[...Array(n)].map((_,k)=>`<button class="sdsym ${st.cfg.sym}" data-act="sdSymb" data-arg="${k+1}" style="--ps:${st.ps}px">${sdSym(k+1,st.cfg.sym)}<i class="cnt"></i></button>`).join('');const b0=pal.firstElementChild;pal.style.maxWidth=pal.classList.contains('two')&&b0?(b0.offsetWidth*5+4*6+2)+'px':''}
+  [...pal.children].forEach((b,k)=>{const v=k+1,left=n-st.cur.filter(x=>x===v).length,cl=`sdsym ${st.cfg.sym}${st.brush===v?' on':''}${left?'':' full'}`;if(b.className!==cl)b.className=cl;const i=b.lastElementChild,tx=left&&n>=6?String(left):'';if(i&&i.classList.contains('cnt')&&i.textContent!==tx)i.textContent=tx})}
  const nm=document.getElementById('sdNm');if(nm)nm.classList.toggle('pri',st.nm);
  const m=document.getElementById('sdMist');if(m)m.textContent=st.mist;const h=document.getElementById('sdHn');if(h)h.textContent=st.hints}
 function sdTip(html,cls){const e=document.getElementById('sdTip');if(e){e.className='sdtip on-sky '+(cls||'');e.innerHTML=html}}
@@ -3974,7 +3997,7 @@ function sdPlace(i,v){const st=SD.st,G=st.G;if(st.done||st.giv[i]||st.cur[i])ret
  /* закрытые строки / столбцы / квадраты */
  let done=0;G.cu[i].forEach(k=>{const u=G.units[k];if(u.every(j=>st.cur[j])){done++;u.forEach((j,q)=>{const e=sdCellEl(j);if(e)setTimeout(()=>{e.classList.remove('flash');void e.offsetWidth;e.classList.add('flash')},q*35)})}});
  if(done){[0,4,7].forEach((s2,q)=>tone(659.25*Math.pow(2,s2/12),.05+q*.07,.12,'square',.03));const r=el&&el.getBoundingClientRect();if(r)burst(r.left+r.width/2,r.top+r.height/2,8*done,6)}
- if(st.cur.every((x,j)=>x===st.sol[j]))setTimeout(sdWin,450)}
+ if(st.cur.every((x,j)=>x===st.sol[j]))setTimeout(()=>{if(SD.st===st)sdWin()},450)}
 function sdTick2(){}
 function sdHintShow(count,txt){const st=SD.st;if(!st||st.done)return;const h=sdLogic(st.cur,st.G);let hint;
  if(h){hint=h;txt=txt||t(h.k==='n'?'sdH1':st.G.kind[h.u]==='r'?'sdH2r':st.G.kind[h.u]==='c'?'sdH2c':'sdH2b')}
@@ -4058,7 +4081,8 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .sdpal{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:8px 0}
 .sdsym{position:relative;width:var(--ps);height:var(--ps);display:flex;align-items:center;justify-content:center;background:#f6f2e6;border:3px solid #1d1d2b;box-shadow:inset -3px -3px 0 #b9b19c;cursor:pointer;font-family:var(--font-px);font-size:calc(var(--ps)*.48);padding:0;color:#14141f}
 .sdsym svg,.sdsym .sdspr{width:86%;height:86%}.sdsym.on{background:#ffe08a;transform:translateY(-4px);box-shadow:0 4px 0 #1d1d2b}.sdsym.full{opacity:.3}
-.sdsym i{position:absolute;right:2px;bottom:1px;font-size:10px;font-style:normal;font-family:var(--font-body);font-weight:900;color:#555}
+.sdpal.two{margin-left:auto;margin-right:auto}.sdsym i.cnt:empty{display:none}
+.sdsym i{position:absolute;right:2px;bottom:1px;font-size:11px;font-style:normal;font-family:var(--font-body);font-weight:900;color:#555}
 .sdtip{min-height:46px;max-width:560px;text-align:center;font-weight:900;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:8px}
 .sdtip.bad{color:#ffb0b0}.sdtip.hintt{color:#ffe08a}.sdhv{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;background:#f6f2e6;border:2px solid #1d1d2b;font-family:var(--font-px);color:#1d1d2b}.sdhv svg{width:90%;height:90%}
 .sdstars{font-size:46px;letter-spacing:4px}.sdup{font-weight:900;font-size:18px;color:#3da52a}
@@ -5123,6 +5147,27 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .sdgrid.pgon .sdc>.sdspr,.sdgrid.pgon .sdc>b{visibility:hidden}
 .sddov,.sddcount{z-index:8}.mjfinger{z-index:99999}
 </style>`);
+/* поле судоку всегда помещается в ширину экрана (на iPhone раньше вылезало вправо и «прилипало» к левому краю) */
+function sdFit(g){if(!g||!g.isConnected)return false;const n=Math.round(Math.sqrt(g.querySelectorAll(':scope>.sdc').length));if(!n)return false;
+ const wrap=g.parentElement&&g.parentElement.classList.contains('sddwrap')?g.parentElement:null,par=(wrap||g).parentElement;if(!par)return false;
+ const pc=getComputedStyle(par),aw=Math.min(par.clientWidth-parseFloat(pc.paddingLeft)-parseFloat(pc.paddingRight),(document.documentElement.clientWidth||innerWidth)-12);
+ const cur=parseFloat(g.style.getPropertyValue('--cs'))||0;if(!g.dataset.cs0)g.dataset.cs0=cur;const cs0=+g.dataset.cs0;
+ const want=Math.max(24,Math.min(cs0,Math.floor((aw-8)/n)));if(!want||want===cur)return false;
+ g.style.gridTemplateColumns=`repeat(${n},${want}px)`;g.style.setProperty('--cs',want+'px');g.querySelectorAll(':scope>.sdc').forEach(c=>{c.style.width=c.style.height=want+'px'});
+ if(wrap){wrap.style.width=(want*n+8)+'px';if(typeof SDD!=='undefined'&&SDD.d)SDD.d.cs=want;document.querySelectorAll('.sddpal .sdsym').forEach(b=>b.style.setProperty('--ps',Math.max(38,Math.min(56,want-6))+'px'))}
+ if(g.id==='sdGrid'&&typeof SD!=='undefined'&&SD.st)SD.st.cs=want;return true}
+const _sdRefreshFIT=sdRefresh;sdRefresh=function(){sdFit(document.getElementById('sdGrid'));return _sdRefreshFIT.apply(this,arguments)};
+const _sddRefreshFIT=sddRefresh;sddRefresh=function(){sdFit(document.getElementById('sddGrid'));return _sddRefreshFIT.apply(this,arguments)};
+const _sdtDrawFIT=sdtDraw;sdtDraw=function(){sdFit(document.getElementById('sdtGrid'));return _sdtDrawFIT.apply(this,arguments)};
+addEventListener('resize',()=>{setTimeout(()=>{if(sdFit(document.getElementById("sdGrid")))sdRefresh();if(sdFit(document.getElementById('sddGrid')))sddRefresh();if(sdFit(document.getElementById('sdtGrid')))sdtDraw()},120)});
+document.head.insertAdjacentHTML('beforeend',`<style>#mgwrap{overflow-x:hidden}#app{overflow-x:clip}.bd8{width:min(400px,100%)!important}.sddpals{max-width:100%}@media(max-width:520px){#app .sddsec{padding-left:6px!important;padding-right:6px!important;margin-left:0;margin-right:0}}</style>`);
+/* быстрое и надёжное касание клеток и фигур: срабатывает при отпускании пальца (iPhone иногда «теряет» click, если палец чуть сдвинулся) */
+(()=>{const SEL='.sdgrid .sdc[data-act],.sdpal .sdsym[data-act],.sddpal .sdsym[data-act],.sdtpal [data-act]';let dn=null,fast=null;
+ document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'){dn=null;return}const el=e.target.closest&&e.target.closest(SEL);dn=el?{el,x:e.clientX,y:e.clientY,id:e.pointerId,t:Date.now()}:null},{passive:true,capture:true});
+ document.addEventListener('pointercancel',()=>{dn=null},{passive:true,capture:true});
+ document.addEventListener('pointerup',e=>{const d=dn;dn=null;if(!d||d.id!==e.pointerId||!d.el.isConnected)return;if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>26||Date.now()-d.t>900)return;
+  const el=d.el,f=ACT[el.dataset.act];if(!f)return;fast={t:Date.now(),x:e.clientX,y:e.clientY};try{ac();resumeAudio()}catch(x){}f(el.dataset.arg,el)},{capture:true});
+ document.addEventListener('click',e=>{if(!fast||Date.now()-fast.t>800)return;if(e.detail===0)return;if(Math.hypot(e.clientX-fast.x,e.clientY-fast.y)>40)return;fast=null;e.stopPropagation();e.preventDefault()},{capture:true})})();
 /* ============ ПРИМЕРЫ НА PHASER: живая карточка задания (буквы влетают, окошко ответа светится, верно/неверно — с эффектами) ============ */
 let EX_SC=null;
 function exSceneCls(){if(EX_SC)return EX_SC;
@@ -5180,6 +5225,66 @@ button,.btn,[data-act],a,label,input,select,textarea,.sdc,.sdsym{touch-action:ma
 .bccv,.rtcv,.bcpad,.bcpad *{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #app:has(#rtCv){padding-left:4px;padding-right:4px}
 #app section.panel:has(#rtCv){margin-left:0;margin-right:0;padding-left:2px!important;padding-right:2px!important}
+</style>`);
+/* ============ ИТОГИ ИГРЫ — ПО ЦЕНТРУ ЭКРАНА, ЗЕЛЁНАЯ РАМКА «ТВОЙ ХОД» ============ */
+Object.assign(S,{
+ endLook:['Посмотреть поле','View the board','Алаңды көру','Ver el tablero','Spielfeld ansehen','Voir le plateau'],
+ endShow:['Итоги','Results','Қорытынды','Resultados','Ergebnis','Résultats'],
+});
+/* --- сетевые игры: итог (mpEnd) поднимаем в отдельный слой поверх всего, по центру --- */
+const MPEND={k:'',peek:''};
+const mpEndKey=r=>(RM.id||'')+':'+(r&&r.game||'')+':'+(r&&r.st&&r.st.r!=null?r.st.r:'');
+const _mpEndU=mpEnd;mpEnd=function(r,winTxt){const k=mpEndKey(r);
+ return `<div class="endov mpend" data-k="${esc(k)}"><div class="modal blk endbox">${_mpEndU(r,winTxt)}<button class="btn sm endhide" data-act="endHide">👀 ${esc(t('endLook'))}</button></div><button class="btn pri endpill" data-act="endShow">🏁 ${esc(t('endShow'))}</button></div>`};
+function endHost(){let h=document.getElementById('endHost');if(!h){h=document.createElement('div');h.id='endHost';document.body.appendChild(h)}return h}
+ACT.endHide=function(_,b){const o=b&&b.closest('.endov');if(!o)return;o.classList.add('peek','noanim');if(o.classList.contains('mpend'))MPEND.peek=o.dataset.k||''};
+ACT.endShow=function(_,b){const o=b&&b.closest('.endov');if(!o)return;o.classList.remove('peek');MPEND.peek=''};
+let endRaf=0;function endScan(){endRaf=0;
+ /* сетевые: переносим в слой на body (у #app есть transform — внутри него fixed «уезжает» вниз страницы) */
+ const fresh=document.querySelector('#app .mpend');const h=document.getElementById('endHost');
+ if(fresh){const k=fresh.dataset.k||'';const hst=endHost();const old=hst.querySelector('.mpend');
+  if(old&&old.dataset.k===k)fresh.classList.add('noanim');if(MPEND.peek===k)fresh.classList.add('peek','noanim');
+  const mark=document.createElement('i');mark.className='endmark';mark.hidden=true;fresh.replaceWith(mark);hst.innerHTML='';hst.appendChild(fresh);MPEND.k=k}
+ else if(h&&h.firstChild){const r=RM.room,k=h.firstChild.dataset&&h.firstChild.dataset.k;
+  if(SCREEN!=='mp'||!RM.id||!r||r.status!=='play'||mpEndKey(r)!==k||!document.querySelector('#app .endmark'))h.innerHTML=''}
+ /* мини-игры (#mgEnd) и судоку-дуэль с ботом: окно с кнопками — поверх поля, по центру */
+ ['mgEnd','sddEnd'].forEach(id=>{const e=document.getElementById(id);if(!e)return;const fin=!!e.querySelector('button')&&!e.querySelector('.mpend,.endmark');
+  if(!fin){if(e.classList.contains('endov'))e.classList.remove('endov','peek','noanim');return}
+  if(!e.classList.contains('endov'))e.classList.add('endov');
+  if(!e.querySelector('.endpill')){let box=e.firstElementChild&&e.children.length===1&&e.firstElementChild.classList.contains('modal')?e.firstElementChild:null;
+   if(!box){box=document.createElement('div');box.className='modal blk endbox';while(e.firstChild)box.appendChild(e.firstChild);e.appendChild(box)}
+   box.insertAdjacentHTML('beforeend',`<button class="btn sm endhide" data-act="endHide">👀 ${esc(t('endLook'))}</button>`);
+   e.insertAdjacentHTML('beforeend',`<button class="btn pri endpill" data-act="endShow">🏁 ${esc(t('endShow'))}</button>`)}})}
+new MutationObserver(()=>{if(!endRaf)endRaf=requestAnimationFrame(endScan)}).observe(document.body,{childList:true,subtree:true});
+const _mgCloseEND=mgClose;mgClose=function(){const r=_mgCloseEND.apply(this,arguments);const h=document.getElementById('endHost');if(h&&!RM.id)h.innerHTML='';return r};
+
+/* --- шашки, уголки, крестики-нолики, мемори: зелёная светящаяся рамка поля, когда ходишь ты --- */
+const TURN={k:''};
+const _renderMpTURN=renderMp;renderMp=function(){const res=_renderMpTURN.apply(this,arguments);try{
+ const r=RM.room;if(!r||r.status!=='play'||!r.st||!['chk','ugl','ttt','mem'].includes(r.game))return res;const s=r.st,mine=s.turn===SESSION&&!s.win;
+ const b=document.querySelector('#app .bd8,#app .ttt,#app .mpmem');if(b){b.classList.toggle('myturn',mine);b.classList.toggle('theirturn',!mine&&!s.win)}
+ const tl=document.querySelector('#app .mpturn');if(tl)tl.classList.toggle('me',mine);
+ const k=RM.id+':'+s.r+':'+(s.n!=null?s.n:'')+':'+s.turn;if(mine&&TURN.k&&TURN.k!==k){tone(784,0,.08,'triangle',.06);tone(1046.5,.09,.12,'triangle',.06);try{if(!SET.mute&&navigator.vibrate)navigator.vibrate(40)}catch(e){}}TURN.k=mine?k:'x'}catch(e){}return res};
+
+document.head.insertAdjacentHTML('beforeend',`<style>
+#endHost{position:relative;z-index:70}
+.endov{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;background:rgba(6,8,20,.6);animation:endIn .4s .9s both}
+#endHost .endov{z-index:70}
+.endov>.endbox,.endov>.modal{width:100%;max-width:440px;margin:0!important;max-height:86vh;overflow:auto;animation:endPop .45s .9s both}
+.endov .endbox .row{justify-content:center}.endov .endhide{margin-top:10px}
+.endov.noanim,.endov.noanim>*{animation:none}
+.endov .endpill{display:none}
+.endov.peek{background:none;pointer-events:none;justify-content:flex-end;padding-bottom:max(18px,env(safe-area-inset-bottom))}
+.endov.peek>:not(.endpill){display:none}
+.endov.peek>.endpill{display:inline-flex;pointer-events:auto;box-shadow:0 0 0 3px #000,0 6px 18px rgba(0,0,0,.5)}
+@keyframes endIn{from{opacity:0;visibility:hidden}to{opacity:1;visibility:visible}}
+@keyframes endPop{from{transform:scale(.6)}70%{transform:scale(1.04)}to{transform:scale(1)}}
+.bd8.myturn,.ttt.myturn,.mpmem.myturn{box-shadow:0 0 0 4px #000,0 0 0 9px #3ee05a,0 0 26px 8px rgba(62,224,90,.75)!important;animation:myTurn 1.3s ease-in-out infinite}
+.ttt.myturn,.mpmem.myturn{padding:6px;border-radius:2px}
+.bd8.theirturn,.ttt.theirturn,.mpmem.theirturn{box-shadow:0 0 0 4px #000,0 0 0 8px #6b6f86!important;opacity:.93}
+.mpturn.me{background:#3ee05a;animation:myTurnTxt 1.3s ease-in-out infinite}
+@keyframes myTurn{50%{box-shadow:0 0 0 4px #000,0 0 0 9px #9dff8a,0 0 36px 12px rgba(62,224,90,.95)}}
+@keyframes myTurnTxt{50%{transform:scale(1.08)}}
 </style>`);
 </script>
 </body></html>
