@@ -5519,6 +5519,29 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .mailrow{display:flex;gap:8px;flex-wrap:wrap}.mailrow .inp{flex:1;min-width:180px}
 .err.ok{color:#2f8f22}.linkbtn{margin-top:10px;background:none!important;box-shadow:none!important;text-decoration:underline;font-weight:800}
 </style>`);
+/* ============ АВТОР: УДАЛЕНИЕ ИГРОКОВ ИЗ «ВСЕ ИГРОКИ» ============ */
+Object.assign(S,{
+ admDelT:['Удалить игрока «{n}»?','Delete player «{n}»?'],
+ admDelTx:['Профиль, его имя, дружбы и прогресс удалятся навсегда. Для подтверждения введите свой пароль.','The profile, its name, friendships and progress will be deleted forever. Enter your password to confirm.'],
+ admDelOk:['Игрок «{n}» удалён','Player «{n}» deleted'],
+ admDelBtn:['🗑 Удалить','🗑 Delete'],
+});
+const _renderLeadersADM=renderLeaders;renderLeaders=function(){const r=_renderLeadersADM.apply(this,arguments);if(!donIsAdmin())return r;
+ const all=Object.values(DB.players).map(norm),list=all.filter(p=>!LB_COUNTRY||p.country===LB_COUNTRY).sort((a,b)=>b.dopa-a.dopa);
+ const rows=document.querySelectorAll('#app table.tbl tr');if(rows.length!==list.length+1)return r;
+ rows[0].insertAdjacentHTML('beforeend','<th>🗑</th>');
+ list.forEach((p,i)=>rows[i+1].insertAdjacentHTML('beforeend',p.id===SESSION||DON_ADMINS.includes(p.id)?'<td></td>':`<td><button class="btn sm danger admdel" data-act="admDelAsk" data-arg="${esc(p.id)}" title="${esc(t('admDelBtn'))}" aria-label="${esc(t('admDelBtn'))}">🗑</button></td>`));return r};
+ACT.admDelAsk=function(id){const p=DB.players[id];if(!p||!donIsAdmin()||id===SESSION)return;
+ modal(`<h2>${esc(t('admDelT',{n:p.name}))}</h2><p style="font-weight:800">${esc(t('admDelTx'))}</p>
+  <input type="password" id="pw" class="inp" placeholder="${esc(t('password'))}" aria-label="${esc(t('password'))}" autocomplete="off"><div class="err" id="err"></div>
+  <div class="row"><button class="btn" data-act="close">${t('cancel')}</button><button class="btn danger" data-act="admDelDo" data-arg="${esc(id)}" data-enter>${t('admDelBtn')}</button></div>`)};
+ACT.admDelDo=async function(id,b){const me=cur(),p=DB.players[id];if(!me||!p||!donIsAdmin()||id===SESSION)return;
+ if(!passOk(me,document.getElementById('pw').value))return document.getElementById('err').textContent=t('wrongPass');
+ if(b)b.disabled=true;const name=p.name;
+ try{if(STORE.mode==='remote'&&STORE.db&&STORE.db.kind==='fb'&&STORE.db.fs){const fs=STORE.db.fs;
+   const q=await fs.collection('friends').where('members','array-contains',id).get();await Promise.all(q.docs.map(d=>d.ref.delete().catch(()=>{})))}}catch(e){}
+ await removePlayer(p);closeModal();toast(esc(t('admDelOk',{n:name})),4000);renderLeaders()};
+document.head.insertAdjacentHTML('beforeend',`<style>.admdel{padding:4px 8px;min-height:0}</style>`);
 /* ============ СПРАЙТЫ ИЗ ПАПКИ sprites/ (можно править картинки, игра подхватит их сама) ============ */
 /* Если рядом с игрой лежит папка sprites/ — картинки берутся оттуда. Нет файла — рисуется как раньше. */
 /* открыта с диска (file://): браузер считает картинки из папки «чужими» и запрещает читать их пиксели.
