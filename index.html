@@ -5286,5 +5286,238 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 @keyframes myTurn{50%{box-shadow:0 0 0 4px #000,0 0 0 9px #9dff8a,0 0 36px 12px rgba(62,224,90,.95)}}
 @keyframes myTurnTxt{50%{transform:scale(1.08)}}
 </style>`);
+/* ============ БЛАГОДАРНОСТЬ АВТОРУ, СТАТУС «МЕЦЕНАТ», ПОЧТА ДЛЯ ВОССТАНОВЛЕНИЯ ПАРОЛЯ ============ */
+const DON_URL='https://yoomoney.ru/to/4100119668958145';
+const DON_ADMINS=['pmv6td4a06ya5'];
+Object.assign(S,{
+ donBtn:['💛 Поблагодарить автора','💛 Thank the author'],
+ donTitle:['Поблагодарить автора','Thank the author'],
+ donText:['Игра бесплатная и без рекламы. Если она вам нравится, вы можете поддержать автора любой суммой. После перевода загрузите чек — и игрок получит статус «Меценат» 💛','The game is free and ad-free. If you like it, you can support the author with any amount. After paying, upload the receipt and the player gets the «Patron» status 💛'],
+ donAdult:['Этот раздел — для взрослых','This section is for adults'],
+ donWallet:['💳 Открыть кошелёк ЮMoney','💳 Open YooMoney wallet'],
+ donUpload:['🧾 Загрузить чек','🧾 Upload receipt'],
+ donPin:['🔒 PIN взрослого','🔒 Parent PIN'],
+ donMec:['Меценат','Patron'],
+ donStWait:['⏳ Чек на проверке у автора','⏳ The receipt is being checked'],
+ donStOk:['💛 Спасибо! Вы — Меценат','💛 Thank you! You are a Patron'],
+ donStNo:['Чек не подтверждён. Можно загрузить ещё раз','The receipt was not confirmed. You can upload another one'],
+ donGateT:['Проверка: вы взрослый?','Check: are you an adult?'],
+ donGateQ:['Напишите ответ цифрами:','Type the answer in digits:'],
+ donGateBad:['Неверно. Попробуйте ещё раз','Wrong. Try again'],
+ donPinQ:['Введите PIN взрослого','Enter the parent PIN'],
+ donPinLock:['Слишком много попыток. Подождите минуту','Too many attempts. Wait a minute'],
+ donPinSet:['Придумайте PIN из 4 цифр. Он будет нужен для входа в этот раздел вместо задачи. Не вводите его при ребёнке','Choose a 4-digit PIN. It will be asked instead of the task. Do not type it in front of the child'],
+ donPinNew:['Новый PIN','New PIN'],
+ donPinNew2:['Повторите PIN','Repeat PIN'],
+ donPinOff:['Убрать PIN','Remove PIN'],
+ donPinErr:['PIN — 4 цифры, оба поля одинаковые','PIN is 4 digits, both fields must match'],
+ donPinSaved:['PIN сохранён','PIN saved'],
+ donSum:['Сумма, ₽','Amount, ₽'],
+ donDate:['Дата перевода','Payment date'],
+ donFile:['Фото или скриншот чека','Photo or screenshot of the receipt'],
+ donSend:['Отправить','Send'],
+ donNeed:['Укажите сумму, дату и картинку чека','Enter the amount, date and receipt image'],
+ donSent:['Чек отправлен автору. Статус появится после проверки','Receipt sent. The status will appear after the check'],
+ donOnline:['Нужен интернет (онлайн-версия игры)','Internet is required (online version)'],
+ donAdm:['🧾 Чеки на проверку','🧾 Receipts to check'],
+ donAdmNone:['Новых чеков нет','No new receipts'],
+ donAdmOk:['✅ Меценат','✅ Patron'],
+ donAdmNo:['✖ Отклонить','✖ Reject'],
+ donAdmLogin:['Чеки закрыты правилами базы. Войдите как автор: письмо со ссылкой придёт на вашу почту','Receipts are protected. Sign in as the author by email link'],
+ donCongrats:['Вы получили статус «Меценат»! Спасибо за поддержку 💛','You got the «Patron» status! Thank you 💛'],
+ mailSec:['📧 Почта для восстановления пароля','📧 Email for password recovery'],
+ mailNote:['Если забудете пароль, на эту почту придёт ссылка для входа. Почту видит только Google (Firebase), в игре она скрыта','If you forget the password, a sign-in link will be sent to this email. Only Google (Firebase) stores it'],
+ mailBound:['Привязана: {m}','Linked: {m}'],
+ mailBind:['Привязать','Link'],
+ mailChange:['Изменить почту','Change email'],
+ mailPh:['Почта взрослого','Parent email'],
+ mailSent:['Письмо отправлено на {m}. Откройте ссылку из письма (проверьте «Спам»)','Email sent to {m}. Open the link from it (check Spam)'],
+ mailBad:['Проверьте адрес почты','Check the email address'],
+ mailOff:['Вход по почте ещё не включён автором в Firebase','Email sign-in is not enabled in Firebase yet'],
+ mailOk:['Почта привязана ✅','Email linked ✅'],
+ mailForgot:['Забыли пароль?','Forgot password?'],
+ mailForgotT:['Восстановление пароля','Password recovery'],
+ mailForgotTx:['Введите почту, привязанную к профилю ({m}). Придёт письмо со ссылкой — по ней можно задать новый пароль','Enter the email linked to the profile ({m}). You will get a link to set a new password'],
+ mailNoBind:['К этому профилю почта не привязана. Попросите автора игры помочь','No email is linked to this profile. Ask the game author for help'],
+ mailAsk:['Для подтверждения введите почту, на которую пришло письмо','To confirm, enter the email the link was sent to'],
+ mailPick:['Выберите профиль и задайте новый пароль','Choose a profile and set a new password'],
+ mailNone:['С этой почтой не связан ни один профиль','No profile is linked to this email'],
+ mailLinkBad:['Ссылка устарела или уже использована. Запросите новую','The link has expired or was already used. Request a new one'],
+ mailPw:['Новый пароль','New password'],
+ mailPw2:['Повторите пароль','Repeat password'],
+ mailPwErr:['Пароль от 4 символов, оба поля одинаковые','Password: 4+ characters, both fields must match'],
+ mailPwOk:['Пароль изменён ✅','Password changed ✅'],
+});
+const donOnline=()=>STORE.mode==='remote'&&STORE.db&&STORE.db.kind==='fb'&&STORE.db.fs&&/^https?:/.test(location.protocol);
+const donIsAdmin=()=>DON_ADMINS.includes(SESSION);
+const mailMask=e=>{const [u,d]=String(e).split('@');return (u||'').slice(0,2)+'•••@'+(d||'')};
+const mailHash=(pid,e)=>hash('mail:'+pid+':'+String(e).trim().toLowerCase());
+/* --- статус «Меценат» рядом с именем --- */
+const _pnameDON=pname;pname=p=>_pnameDON(p)+(p&&p.mecenat?` <span class="mecen" title="${esc(t('donMec'))}">💛</span>`:'');
+
+/* --- защита от детей: PIN взрослого или задача для взрослых (на 3 минуты после проверки) --- */
+const DONG={until:0,fail:0,lock:0};
+function numWords(n){const L=LANG==='ru'?'ru':LANG==='en'?'en':'';if(!L)return String(n);
+ const W={ru:{u:['','один','два','три','четыре','пять','шесть','семь','восемь','девять'],t:['десять','одиннадцать','двенадцать','тринадцать','четырнадцать','пятнадцать','шестнадцать','семнадцать','восемнадцать','девятнадцать'],d:['','','двадцать','тридцать','сорок','пятьдесят','шестьдесят','семьдесят','восемьдесят','девяносто']},
+  en:{u:['','one','two','three','four','five','six','seven','eight','nine'],t:['ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'],d:['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety']}}[L];
+ if(n<10)return W.u[n];if(n<20)return W.t[n-10];return W.d[Math.floor(n/10)]+(n%10?(L==='en'?'-':' ')+W.u[n%10]:'')}
+function donGate(next){const p=cur();if(!p)return;if(Date.now()<DONG.until)return next();
+ if(p.ppin){if(Date.now()<DONG.lock)return modal(`<h2>🔒</h2><p style="font-weight:800">${t('donPinLock')}</p><div class="row"><button class="btn" data-act="close">OK</button></div>`);
+  DONG.next=next;return modal(`<h2>🔒 ${t('donGateT')}</h2><p style="font-weight:800">${t('donPinQ')}</p><input type="password" inputmode="numeric" maxlength="4" id="dgIn" class="inp" autocomplete="off"><div class="err" id="err"></div>
+   <div class="row"><button class="btn" data-act="close">${t('cancel')}</button><button class="btn pri" data-act="donGateOk" data-arg="pin" data-enter>OK</button></div>`)}
+ const a=21+Math.floor(Math.random()*19),b=11+Math.floor(Math.random()*9);DONG.ans=a*b;DONG.next=next;
+ const mul=LANG==='ru'?'умножить на':LANG==='en'?'times':'×';
+ modal(`<h2>🔒 ${t('donGateT')}</h2><p style="font-weight:800">${t('donGateQ')}</p><p class="dongq">${esc(numWords(a))} ${mul} ${esc(numWords(b))}</p>
+  <input type="text" inputmode="numeric" id="dgIn" class="inp" autocomplete="off"><div class="err" id="err"></div>
+  <div class="row"><button class="btn" data-act="close">${t('cancel')}</button><button class="btn pri" data-act="donGateOk" data-arg="task" data-enter>OK</button></div>`)}
+ACT.donGateOk=function(kind){const p=cur(),v=(document.getElementById('dgIn')||{}).value||'',err=document.getElementById('err');
+ const ok=kind==='pin'?hash('ppin:'+p.id+':'+v.trim())===p.ppin:+v.replace(/\s/g,'')===DONG.ans;
+ if(!ok){DONG.fail++;if(kind==='pin'&&DONG.fail>=3){DONG.fail=0;DONG.lock=Date.now()+60000;closeModal();return donGate(DONG.next)}
+  if(kind==='task'&&DONG.fail>=2){DONG.fail=0;return donGate(DONG.next)}if(err)err.textContent=t('donGateBad');return}
+ DONG.fail=0;DONG.until=Date.now()+180000;const f=DONG.next;DONG.next=null;closeModal();if(f)f()};
+
+/* --- окно «Поблагодарить автора» --- */
+function donStatus(p){const d=p.don||{};if(p.mecenat)return `<p class="donst ok">${t('donStOk')}</p>`;if(d.st==='wait')return `<p class="donst">${t('donStWait')}</p>`;if(d.st==='no')return `<p class="donst no">${t('donStNo')}</p>`;return ''}
+ACT.donOpen=function(){donGate(donMain)};
+function donMain(){const p=cur();if(!p)return;
+ modal(`<h2>💛 ${t('donTitle')}</h2><p style="font-weight:800">${t('donText')}</p>${donStatus(p)}
+  <div class="col"><a class="btn pri big donlink" href="${DON_URL}" target="_blank" rel="noopener noreferrer">${t('donWallet')}</a>
+  <button class="btn" data-act="donUp">${t('donUpload')}</button>
+  <button class="btn sm" data-act="donPinSet">${t('donPin')}${p.ppin?' ✅':''}</button>
+  ${donIsAdmin()?`<button class="btn sm" data-act="donAdm">${t('donAdm')}</button>`:''}
+  <button class="btn sm" data-act="close">${t('cancel')}</button></div>`)}
+
+ACT.donPinSet=function(){donGate(()=>{const p=cur();modal(`<h2>🔒 ${t('donPin')}</h2><p style="font-weight:800">${t('donPinSet')}</p>
+  <input type="password" inputmode="numeric" maxlength="4" id="pp1" class="inp" placeholder="${esc(t('donPinNew'))}" autocomplete="off"><input type="password" inputmode="numeric" maxlength="4" id="pp2" class="inp" placeholder="${esc(t('donPinNew2'))}" autocomplete="off"><div class="err" id="err"></div>
+  <div class="row">${p.ppin?`<button class="btn danger sm" data-act="donPinSave" data-arg="off">${t('donPinOff')}</button>`:''}<button class="btn" data-act="donOpen">←</button><button class="btn pri" data-act="donPinSave" data-enter>OK</button></div>`)})};
+ACT.donPinSave=function(a){const p=cur();if(a==='off'){delete p.ppin;save(p);toast(t('donPinSaved'));return donMain()}
+ const a1=document.getElementById('pp1').value.trim(),a2=document.getElementById('pp2').value.trim();
+ if(!/^\d{4}$/.test(a1)||a1!==a2)return document.getElementById('err').textContent=t('donPinErr');
+ p.ppin=hash('ppin:'+p.id+':'+a1);save(p);toast(t('donPinSaved'));donMain()};
+
+/* --- загрузка чека: картинка ужимается до ~150–400 КБ и хранится в базе --- */
+ACT.donUp=function(){donGate(()=>{if(!donOnline())return modal(`<p style="font-weight:800">${t('donOnline')}</p><div class="row"><button class="btn" data-act="close">OK</button></div>`);
+ const today=new Date(),ds=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+ modal(`<h2>${t('donUpload')}</h2>
+  <label class="donlbl">${t('donSum')}<input type="number" inputmode="decimal" min="1" step="1" id="dnSum" class="inp"></label>
+  <label class="donlbl">${t('donDate')}<input type="date" id="dnDate" class="inp" value="${ds}" max="${ds}"></label>
+  <label class="donlbl">${t('donFile')}<input type="file" id="dnFile" accept="image/*" class="inp"></label><img id="dnPrev" class="donprev" alt="" hidden>
+  <div class="err" id="err"></div>
+  <div class="row"><button class="btn" data-act="donOpen">←</button><button class="btn pri" data-act="donSend" id="dnGo">${t('donSend')}</button></div>`);
+ const f=document.getElementById('dnFile');f.addEventListener('change',async()=>{const im=document.getElementById('dnPrev');DON_IMG=null;if(!f.files[0])return;
+  try{DON_IMG=await donShrink(f.files[0]);im.src=DON_IMG;im.hidden=false}catch(e){document.getElementById('err').textContent='⚠️ '+t('donNeed')}})})};
+let DON_IMG=null;
+function donShrink(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file),im=new Image();im.onload=()=>{URL.revokeObjectURL(url);
+  let s=Math.min(1,1400/Math.max(im.width,im.height)),q=.75,out='';const c=document.createElement('canvas');
+  for(let k=0;k<8;k++){c.width=Math.max(1,Math.round(im.width*s));c.height=Math.max(1,Math.round(im.height*s));const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
+   out=c.toDataURL('image/jpeg',q);if(out.length<560000)break;if(q>.5)q-=.1;else s*=.8}res(out)};im.onerror=()=>{URL.revokeObjectURL(url);rej()};im.src=url})}
+ACT.donSend=async function(){const p=cur(),sum=Math.round(+document.getElementById('dnSum').value),date=document.getElementById('dnDate').value,err=document.getElementById('err');
+ if(!(sum>0)||!date||!DON_IMG)return err.textContent=t('donNeed');const b=document.getElementById('dnGo');if(b)b.disabled=true;
+ try{const ref=STORE.db.fs.collection('receipts').doc();await ref.set({pid:p.id,name:String(p.name).slice(0,40),amount:sum,date,img:DON_IMG,t:Date.now(),st:'new'});
+  p.don={st:'wait',t:Date.now(),id:ref.id};save(p);DON_IMG=null;closeModal();toast(t('donSent'),5000)}
+ catch(e){if(b)b.disabled=false;err.textContent='⚠️ '+((e&&e.message)||'error')}};
+
+/* --- автор: проверка чеков --- */
+const DON_ADM={list:[]};
+ACT.donAdm=async function(){if(!donIsAdmin()||!donOnline())return;modal(`<h2>${t('donAdm')}</h2><p>…</p>`);
+ try{const q=await STORE.db.fs.collection('receipts').where('st','==','new').limit(25).get();DON_ADM.list=q.docs.map(d=>Object.assign({id:d.id},d.data()));donAdmRender()}
+ catch(e){if(e&&e.code==='permission-denied')return modal(`<h2>${t('donAdm')}</h2><p style="font-weight:800">${t('donAdmLogin')}</p><input type="email" id="mlIn" class="inp" placeholder="email" value="${esc(mailLS('adm')||'')}"><div class="err" id="err"></div>
+   <div class="row"><button class="btn" data-act="close">${t('cancel')}</button><button class="btn pri" data-act="mailSend" data-arg="admin">${t('donSend')}</button></div>`);
+  modal(`<p>⚠️ ${esc((e&&e.message)||'error')}</p><div class="row"><button class="btn" data-act="close">OK</button></div>`)}};
+function donAdmRender(){const L=DON_ADM.list;
+ modal(`<h2>${t('donAdm')}</h2>${L.length?L.map(r=>{const p=DB.players[r.pid];return `<div class="donrc blk"><img src="${esc(r.img||'')}" alt="" data-act="donZoom" data-arg="${esc(r.id)}">
+  <div><b>${p?pname(norm(p)):esc(r.name||r.pid)}</b><br>💰 ${+r.amount||0} ₽ · 📅 ${esc(r.date||'')}<br><small>${new Date(r.t||0).toLocaleString(loc())}</small>
+  <div class="row"><button class="btn sm" data-act="donDecide" data-arg="no:${esc(r.id)}">${t('donAdmNo')}</button><button class="btn sm pri" data-act="donDecide" data-arg="ok:${esc(r.id)}">${t('donAdmOk')}</button></div></div></div>`}).join(''):`<p style="font-weight:800">${t('donAdmNone')}</p>`}
+  <div class="row"><button class="btn" data-act="close">OK</button></div>`,false,'donadm')}
+ACT.donZoom=function(id){const r=DON_ADM.list.find(x=>x.id===id);if(!r)return;modal(`<img src="${esc(r.img)}" alt="" style="max-width:100%"><div class="row"><button class="btn" data-act="donAdmBack">←</button></div>`,false,'donadm')};
+ACT.donAdmBack=donAdmRender;
+ACT.donDecide=async function(a){const [d,id]=a.split(':'),r=DON_ADM.list.find(x=>x.id===id);if(!r)return;
+ try{await STORE.db.fs.collection('receipts').doc(id).update({st:d,by:SESSION,at:Date.now()});
+  const p=DB.players[r.pid];if(p){if(d==='ok'){const m=p.mecenat||{sum:0};p.mecenat={t:Date.now(),sum:(+m.sum||0)+(+r.amount||0),seen:false}}p.don={st:d,t:Date.now()};save(p)}
+  DON_ADM.list=DON_ADM.list.filter(x=>x.id!==id);donAdmRender()}catch(e){toast('⚠️ '+((e&&e.message)||'error'),5000)}};
+
+/* --- кнопка в меню + поздравление нового мецената --- */
+const _renderMenuDON=renderMenu;renderMenu=function(){const r=_renderMenuDON.apply(this,arguments);const p=cur();
+ const rows=document.querySelectorAll('#app > .row'),row=rows[rows.length-1];if(row&&!row.querySelector('[data-act="donOpen"]'))row.insertAdjacentHTML('beforeend',`<button class="btn donbtn" data-act="donOpen">${t('donBtn')}</button>`);
+ if(p&&p.mecenat&&!p.mecenat.seen){p.mecenat.seen=true;save(p);setTimeout(()=>{toast(`<big>💛</big><span>${t('donCongrats')}</span>`,6000);try{fireworks(4)}catch(e){}},600)}return r};
+
+/* ============ ПОЧТА: привязка и восстановление пароля (Firebase Authentication, вход по ссылке из письма) ============ */
+const mailLS=(k,v)=>{try{if(v===undefined)return localStorage.getItem('dofa_mail_'+k);if(v===null)localStorage.removeItem('dofa_mail_'+k);else localStorage.setItem('dofa_mail_'+k,v)}catch(e){return null}};
+let MAIL_AUTH=null;
+async function mailAuth(){if(MAIL_AUTH)return MAIL_AUTH;if(!window.firebase||!firebase.apps||!firebase.apps.length)throw {code:'no-fb'};
+ if(!firebase.auth)await loadScript(FB_SDK+'firebase-auth-compat.js');MAIL_AUTH=firebase.auth();try{MAIL_AUTH.languageCode=LANG}catch(e){}return MAIL_AUTH}
+const mailBase=()=>location.origin+location.pathname;
+const mailErrTxt=e=>{const c=(e&&e.code)||'';return /operation-not-allowed|unauthorized|admin-restricted|no-fb/.test(c)?t('mailOff'):/invalid-email|missing-email/.test(c)?t('mailBad'):/invalid-action|expired/.test(c)?t('mailLinkBad'):'⚠️ '+((e&&e.message)||c||'error')};
+const mailValid=e=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+/* в профиле (статистика) */
+const _renderStatsMAIL=renderStats;renderStats=function(){const r=_renderStatsMAIL.apply(this,arguments);const p=cur();if(!p)return r;
+ const del=document.querySelector('#app [data-act="delAsk"]'),row=del&&del.closest('.row');
+ const html=`<section class="panel blk" id="mailSec"><h2>${t('mailSec')}</h2><p style="font-weight:800">${t('mailNote')}</p>
+  ${p.mailHint?`<p class="donst ok">${esc(t('mailBound',{m:p.mailHint}))}</p>`:''}
+  ${donOnline()?`<div class="mailrow"><input type="email" id="mlIn" class="inp" placeholder="${esc(t('mailPh'))}" autocomplete="email"><button class="btn pri" data-act="mailSend" data-arg="bind">${p.mailHint?t('mailChange'):t('mailBind')}</button></div><div class="err" id="err"></div>`:`<p class="muted" style="font-weight:800">${t('donOnline')}</p>`}</section>`;
+ if(row)row.insertAdjacentHTML('beforebegin',html);else document.getElementById('app').insertAdjacentHTML('beforeend',html);return r};
+/* отправка письма со ссылкой: bind — привязать почту к профилю, reset — новый пароль, admin — вход автора */
+ACT.mailSend=async function(kind,b){const inp=document.getElementById('mlIn'),err=document.getElementById('err'),e=(inp&&inp.value||'').trim();
+ if(!mailValid(e)){if(err)err.textContent=t('mailBad');return}const pid=kind==='reset'?MAIL_PID:SESSION;
+ if(b)b.disabled=true;
+ try{const A=await mailAuth();
+  if(kind==='bind'){const p=cur();p.mailPend={h:mailHash(p.id,e),t:Date.now()};save(p);try{await flush()}catch(x){}}
+  await A.sendSignInLinkToEmail(e,{url:mailBase()+'?mail='+kind+(pid?'&pid='+encodeURIComponent(pid):''),handleCodeInApp:true});
+  mailLS('email',e);if(kind==='admin')mailLS('adm',e);
+  if(err){err.className='err ok';err.textContent=t('mailSent',{m:e})}else toast(t('mailSent',{m:e}),7000);if(kind!=='bind')setTimeout(closeModal,2500)}
+ catch(x){if(err){err.className='err';err.textContent=mailErrTxt(x)}if(b)b.disabled=false}};
+/* «Забыли пароль?» в окне входа */
+let MAIL_PID=null;
+const _pickPlayerMAIL=ACT.pickPlayer;ACT.pickPlayer=function(id){_pickPlayerMAIL.call(ACT,id);const m=document.querySelector('.overlay .modal');
+ if(m&&!m.querySelector('[data-act="mailForgot"]'))m.insertAdjacentHTML('beforeend',`<button class="btn sm linkbtn" data-act="mailForgot" data-arg="${esc(id)}">${t('mailForgot')}</button>`)};
+ACT.mailForgot=function(id){const p=DB.players[id];if(!p)return;MAIL_PID=id;
+ if(!p.mailHint||!donOnline())return modal(`<h2>${t('mailForgotT')}</h2><p style="font-weight:800">${donOnline()?t('mailNoBind'):t('donOnline')}</p><div class="row"><button class="btn" data-act="pickPlayer" data-arg="${esc(id)}">←</button></div>`);
+ modal(`<h2>${t('mailForgotT')}</h2><p style="font-weight:800">${esc(t('mailForgotTx',{m:p.mailHint}))}</p><input type="email" id="mlIn" class="inp" autocomplete="email" value="${esc(mailLS('email')||'')}"><div class="err" id="err"></div>
+  <div class="row"><button class="btn" data-act="pickPlayer" data-arg="${esc(id)}">←</button><button class="btn pri" data-act="mailSend" data-arg="reset" data-enter>${t('donSend')}</button></div>`)};
+/* открыли ссылку из письма */
+const MAILIN={u:null,kind:'',pid:''};
+async function mailLanding(){const q=new URLSearchParams(location.search),kind=q.get('mail');if(!kind||!/[?&]oobCode=/.test(location.search))return;
+ for(let i=0;i<150&&!(STORE.ready&&window.firebase&&firebase.apps&&firebase.apps.length);i++)await new Promise(r=>setTimeout(r,200));
+ let A;try{A=await mailAuth()}catch(e){return}if(!A.isSignInWithEmailLink(location.href))return;
+ MAILIN.kind=kind;MAILIN.pid=q.get('pid')||'';const e=mailLS('email');if(e)return mailFinish(e);
+ modal(`<h2>📧</h2><p style="font-weight:800">${t('mailAsk')}</p><input type="email" id="mlIn" class="inp" autocomplete="email"><div class="err" id="err"></div>
+  <div class="row"><button class="btn pri" data-act="mailConfirm" data-enter>OK</button></div>`,true)}
+ACT.mailConfirm=function(){const e=(document.getElementById('mlIn').value||'').trim();if(!mailValid(e))return document.getElementById('err').textContent=t('mailBad');mailFinish(e)};
+const mailClean=()=>{try{history.replaceState(null,'',mailBase())}catch(e){}};
+async function mailFinish(email){let u;
+ try{const A=await mailAuth();const c=await A.signInWithEmailLink(email,location.href);u=c.user}catch(x){mailClean();return modal(`<h2>📧</h2><p style="font-weight:800">${mailErrTxt(x)}</p><div class="row"><button class="btn" data-act="close">OK</button></div>`)}
+ mailClean();mailLS('email',email);MAILIN.u=u;const em=(u.email||email).toLowerCase();
+ if(MAILIN.kind==='bind'){const p=DB.players[MAILIN.pid];
+  if(!p||!p.mailPend||p.mailPend.h!==mailHash(p.id,em)||Date.now()-p.mailPend.t>86400000){try{await MAIL_AUTH.signOut()}catch(x){}return modal(`<h2>📧</h2><p style="font-weight:800">${t('mailLinkBad')}</p><div class="row"><button class="btn" data-act="close">OK</button></div>`)}
+  p.uid=u.uid;p.mailHint=mailMask(em);delete p.mailPend;save(p);try{await MAIL_AUTH.signOut()}catch(x){}
+  closeModal();toast(t('mailOk'),5000);if(SESSION===p.id&&SCREEN==='stats')renderStats();return}
+ if(MAILIN.kind==='admin'){closeModal();if(donIsAdmin())ACT.donAdm();return}
+ /* reset: профили с этой почтой */
+ const list=Object.values(DB.players).filter(p=>p.uid===u.uid);
+ if(!list.length){try{await MAIL_AUTH.signOut()}catch(x){}return modal(`<h2>📧</h2><p style="font-weight:800">${t('mailNone')}</p><div class="row"><button class="btn" data-act="close">OK</button></div>`)}
+ const sel=list.find(p=>p.id===MAILIN.pid)||list[0];
+ modal(`<h2>${t('mailForgotT')}</h2><p style="font-weight:800">${t('mailPick')}</p>
+  ${list.length>1?`<select id="mlPid" class="inp">${list.map(p=>`<option value="${esc(p.id)}" ${p===sel?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`:`<p><b>${pname(norm(sel))}</b></p><input type="hidden" id="mlPid" value="${esc(sel.id)}">`}
+  <input type="password" id="mlP1" class="inp" placeholder="${esc(t('mailPw'))}" autocomplete="new-password"><input type="password" id="mlP2" class="inp" placeholder="${esc(t('mailPw2'))}" autocomplete="new-password"><div class="err" id="err"></div>
+  <div class="row"><button class="btn pri big" data-act="mailNewPw" data-enter>OK</button></div>`,true)}
+ACT.mailNewPw=async function(){const u=MAILIN.u,pid=document.getElementById('mlPid').value,p=DB.players[pid],a=document.getElementById('mlP1').value,b=document.getElementById('mlP2').value;
+ if(!u||!p||p.uid!==u.uid)return;if(a.length<4||a!==b)return document.getElementById('err').textContent=t('mailPwErr');
+ p.hv=2;p.pass=hash('dofa2:'+p.id+':'+a);save(p);try{await MAIL_AUTH.signOut()}catch(x){}MAILIN.u=null;
+ SESSION=pid;norm(p);p.last=Date.now();closeModal();toast(t('mailPwOk'),5000);renderMenu()};
+setTimeout(mailLanding,300);
+
+document.head.insertAdjacentHTML('beforeend',`<style>
+.mecen{display:inline-block;font-size:.9em;filter:drop-shadow(0 0 4px #ffd23f);vertical-align:middle}
+.donlink{text-decoration:none;text-align:center}.donbtn{background:linear-gradient(#ffe36a,#ffb800)!important;color:#3a2400!important}
+.modal .col{display:flex;flex-direction:column;gap:8px;align-items:stretch;margin-top:10px}
+.dongq{font-size:22px;font-weight:900;margin:6px 0 10px}
+.donst{font-weight:900;padding:6px 8px;background:#fff3c4;color:#3a2400;box-shadow:0 0 0 2px #000}.donst.ok{background:#c9f5b8;color:#14400a}.donst.no{background:#ffd0d0;color:#5a0e0e}
+.donlbl{display:block;text-align:left;font-weight:800;margin:6px 0}.donlbl .inp{width:100%;margin-top:4px}
+.donprev{max-width:100%;max-height:200px;margin:6px auto;display:block;box-shadow:0 0 0 2px #000}
+.donadm{max-width:620px}.donrc{display:flex;gap:10px;align-items:flex-start;text-align:left;padding:8px;margin:8px 0}.donrc img{width:110px;max-height:150px;object-fit:cover;cursor:zoom-in;box-shadow:0 0 0 2px #000}
+.donrc .row{justify-content:flex-start;margin-top:6px}
+.mailrow{display:flex;gap:8px;flex-wrap:wrap}.mailrow .inp{flex:1;min-width:180px}
+.err.ok{color:#2f8f22}.linkbtn{margin-top:10px;background:none!important;box-shadow:none!important;text-decoration:underline;font-weight:800}
+</style>`);
 </script>
 </body></html>
