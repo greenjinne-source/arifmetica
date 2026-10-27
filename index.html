@@ -5519,5 +5519,49 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .mailrow{display:flex;gap:8px;flex-wrap:wrap}.mailrow .inp{flex:1;min-width:180px}
 .err.ok{color:#2f8f22}.linkbtn{margin-top:10px;background:none!important;box-shadow:none!important;text-decoration:underline;font-weight:800}
 </style>`);
+/* ============ СПРАЙТЫ ИЗ ПАПКИ sprites/ (можно править картинки, игра подхватит их сама) ============ */
+/* Если рядом с игрой лежит папка sprites/ — картинки берутся оттуда. Нет файла — рисуется как раньше. */
+/* открыта с диска (file://): браузер считает картинки из папки «чужими» и запрещает читать их пиксели.
+   Phaser читает пиксели при создании текстуры — отдаём ему пустые данные, на рисование это не влияет. */
+if(location.protocol==='file:'){const gi=CanvasRenderingContext2D.prototype.getImageData;CanvasRenderingContext2D.prototype.getImageData=function(x,y,w,h){try{return gi.apply(this,arguments)}catch(e){if(e&&e.name==='SecurityError')return new ImageData(Math.max(1,Math.abs(w|0)||1),Math.max(1,Math.abs(h|0)||1));throw e}}}
+const SPRO={base:'sprites/',img:{},done:false,cbs:[]};
+const SPRO_MASCOT={i:'mascot/dofik-idle.png',h:'mascot/dofik-happy.png',j:'mascot/dofik-joy.png',s:'mascot/dofik-sad.png',w:'mascot/dofik-smile.png'};
+const SPRO_LIST=['tanks/tanks.png','race/race.png','sea/sea.png','sudoku/sudoku.png',...PW_KINDS.map(k=>'world/blocks/'+k+'.png'),...Object.values(SPRO_MASCOT)];
+const sproUrl=p=>SPRO.base+p;
+const sproOn=f=>{if(SPRO.done)f();else SPRO.cbs.push(f)};
+(function(){let left=SPRO_LIST.length;const fin=()=>{if(SPRO.done)return;SPRO.done=true;SPRO.cbs.splice(0).forEach(f=>{try{f()}catch(e){}});sproApply()};
+ SPRO_LIST.forEach(p=>{const im=new Image();im.onload=()=>{SPRO.img[p]=im;if(SPRO.done)sproApply();if(--left===0)fin()};im.onerror=()=>{if(--left===0)fin()};im.src=sproUrl(p)});
+ setTimeout(fin,2500)})();
+function sproApply(){const I=SPRO.img;
+ /* танки и гонки: тот же атлас, новая картинка */
+ [['tanks','tanks/tanks.png'],['race','race/race.png']].forEach(([k,p])=>{if(!I[p]||SPR_SRC[k]===sproUrl(p))return;SPR_SRC[k]=sproUrl(p);if(SPR[k]){SPR[k].ok=false;SPR[k].onload=()=>{SPR[k].ok=true};SPR[k].src=sproUrl(p)}SPR._p={}});
+ /* морской бой */
+ if(I['sea/sea.png']&&!SPRO.sea){SPRO.sea=1;document.documentElement.style.setProperty('--seaimg',`url(${sproUrl('sea/sea.png')})`);
+  if(typeof SEA_PH!=='undefined'){if(!SEA_PH.img){SEA_PH.img=new Image();SEA_PH.img.onload=()=>{SEA_PH.ok=true;(SEA_PH.w||[]).forEach(f=>f());SEA_PH.w=[]}}else SEA_PH.ok=false;SEA_PH.img.src=sproUrl('sea/sea.png');
+   if(SEA_PH.img.complete&&SEA_PH.img.naturalWidth)SEA_PH.ok=true;try{if(PG.g&&PG.g.textures.exists('seat'))PG.g.textures.remove('seat')}catch(e){}}}
+ /* судоку */
+ if(I['sudoku/sudoku.png']&&!SPRO.sd){SPRO.sd=1;document.head.insertAdjacentHTML('beforeend',`<style>.sdspr,.sdbadge{background-image:url(${sproUrl('sudoku/sudoku.png')})!important}</style>`);
+  if(typeof SDPH!=='undefined'){if(!SDPH.img){SDPH.img=new Image();SDPH.img.onload=()=>{SDPH.ok=true;const w=SDPH.w;SDPH.w=[];w.forEach(f=>f())}}else SDPH.ok=false;SDPH.img.src=sproUrl('sudoku/sudoku.png');
+   if(SDPH.img.complete&&SDPH.img.naturalWidth)SDPH.ok=true;try{if(PG.g&&PG.g.textures.exists('sdspr'))PG.g.textures.remove('sdspr')}catch(e){}}}
+ sproMascot()}
+/* живой мир: блоки 16×16 */
+const _pwBlockSP=pwBlock;pwBlock=function(kind){const c=_pwBlockSP.apply(this,arguments),im=SPRO.img['world/blocks/'+kind+'.png'];
+ if(im){const x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);x.imageSmoothingEnabled=false;x.drawImage(im,0,0,c.width,c.height)}return c};
+/* мир строится после того, как картинки загрузились (не дольше 2,5 с) */
+const _pwStartSP=pwStart;pwStart=function(){const a=arguments;if(SPRO.done)return _pwStartSP.apply(this,a);sproOn(()=>_pwStartSP.apply(this,a))};
+/* Дофик: в мире (холсты 20×22) и на экранах игры */
+function sproMascot(){const I=SPRO.img;if(!I[SPRO_MASCOT.i])return;
+ if(!SPRO.mcss){SPRO.mcss=1;document.head.insertAdjacentHTML('beforeend',`<style>
+.mascot.spro>svg{display:none}.mascot .sproimg{display:none;width:100%;height:100%;image-rendering:pixelated;object-fit:contain}
+.mascot .sproimg.i{display:block}.mascot.m-happy .sproimg.i,.mascot.m-joy .sproimg.i,.mascot.m-mega .sproimg.i,.mascot.m-sad .sproimg.i{display:none}
+.mascot.m-happy .sproimg.h,.mascot.m-joy .sproimg.j,.mascot.m-mega .sproimg.j,.mascot.m-sad .sproimg.s{display:block}</style>`);
+  const fix=()=>document.querySelectorAll('.mascot:not(.spro)').forEach(m=>{if(!m.querySelector(':scope>svg'))return;m.classList.add('spro');
+   m.insertAdjacentHTML('beforeend',['i','h','j','s'].map(k=>`<img class="sproimg ${k}" alt="" draggable="false" src="${sproUrl(I[SPRO_MASCOT[k]]?SPRO_MASCOT[k]:SPRO_MASCOT.i)}">`).join(''))});
+  fix();let raf=0;new MutationObserver(()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;fix()})}).observe(document.body,{childList:true,subtree:true})}
+ /* мир: перерисовываем готовые холсты Дофика */
+ const tick=()=>{const sc=typeof PW!=='undefined'&&PW.scene;if(!sc||!sc.dofReady)return setTimeout(tick,500);
+  [['dofI',SPRO_MASCOT.i],['dofH',SPRO_MASCOT.j],['dofB',I[SPRO_MASCOT.w]?SPRO_MASCOT.w:SPRO_MASCOT.h]].forEach(([key,p])=>{const im=I[p];if(!im||!sc.textures.exists(key))return;
+   const t=sc.textures.get(key),c=t.getSourceImage();if(!c||!c.getContext)return;const x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);x.imageSmoothingEnabled=false;x.drawImage(im,0,0,c.width,c.height);if(t.refresh)t.refresh()})};
+ if(!SPRO.mw){SPRO.mw=1;tick()}}
 </script>
 </body></html>
