@@ -3918,7 +3918,8 @@ const SD_SHP=['<circle cx="20" cy="20" r="15.5"/>','<rect x="5.5" y="5.5" width=
 const SD_EY=[19,19,24,21,17,19];
 function sdShape(v){const k=v-1;if(SD.sprOk)return sdFr(k);const y=SD_EY[k];
  return `<svg viewBox="0 0 40 40" aria-hidden="true"><g fill="${SD_COL[k]}" stroke="#1d1d2b" stroke-width="2.4">${SD_SHP[k]}</g><g fill="#fff"><circle cx="15.5" cy="${y}" r="3.3"/><circle cx="24.5" cy="${y}" r="3.3"/></g><g fill="#1d1d2b"><circle cx="16.2" cy="${y+.6}" r="1.7"/><circle cx="25.2" cy="${y+.6}" r="1.7"/></g><path d="M17 ${y+5} Q20 ${y+7.5} 23 ${y+5}" stroke="#1d1d2b" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>`}
-const sdSym=(v,sym)=>sym==='shape'?sdShape(v):sym==='cdigit'?`<b style="color:${SD_COL[(v-1)%6]}">${v}</b>`:`<b>${v}</b>`;
+const SD_PIC=['🐶','🐱','🐰','🦊','🐻','🐼','🐸','🐷','🐵'];
+const sdSym=(v,sym)=>sym==='shape'?sdShape(v):sym==='pic'?`<b class="emo">${SD_PIC[(v-1)%9]}</b>`:sym==='cdigit'?`<b style="color:${SD_COL[(v-1)%6]}">${v}</b>`:`<b>${v}</b>`;
 /* спрайты (Gemini → пиксели 32×32): 0–5 фигуры, 6–11 радостные фигуры, 12–15 значки рангов */
 const SD_SPR='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAAgCAMAAABTlTDXAAAAwFBMVEXnbhKg41Qzn0qQzf383VqSFCz9zhvknmFOn+uYWjYvcM3yoJf2WFPTnv7u16POae/2oB3m4+QpKEhnKCh60IOI2ZPVLS6jR8aYu+ykalFoVC+lpahVVWZrc40mEjByNKSEyD5wwvctdEKim1PPdrt2z34xUS04XYs0gLFtmURUh7DvJEYAAAAICTQOEDX+TUpBjfr9ghf+vBSqTf44rU65ETDvmQqNO8dnvPSrUf4+i/aWO7z8/f305dGa4EzSNDBoBlAWAAAAQHRSTlP//////////////////////////////////////////////////////////wD/////////////////////////N9U1/AAADopJREFUeNrtW4d228YSBWlWsQgUZVHVcsurmRVFyoBZJP7/X2XK9l2QSV78zslJ5lgULLTh3Lt3ZhaL4ue/7S9txZ/MX4A/d7yVat73ANp+XPDS6xeZA34ofvA/f4UjexXbD8Uvvbr6beerxq/2paWt6Tuewucoga4B5j22OcB1jgDgrPHScOyg0wA3u+df8tjl+/1kD3jBVSEF1M/RPsgcFAIEp/BT8aX3YG/g3yx7Pvpv7wDhN2v5lvn6dwDf35F9zwdnBnBxznaR2Y97p9NpzxjAXUwAivlILA0/wK9jwAkBAeh0quwB/iWPXb7ff36O9gADwFHX/rvwwxH8cxA1I6d3o//6AAj2+Zdsvrz2X6UEgNZsNnt7a73xD1MgPvedZ9khOpmdG1ukAHam007ZZStKpkBIAIH/SVsUfgjurm2begHw/v37oxLVWa0aiDNB49v627n4JQwwUff8l/CbSONGxv9legOF/l/mNAD2+iboP19aIe0gIA77rNh/3g60BAL/eQ+ovTsCOrNZB8FHHUAlyDAAEdjP3n0Xy1EAzmeT80Vd17u6XhAHotMRfoT+m1i3W1oGFOaI0Wj85Ozg34Dw3y4TO0vFGN63Xz7DUfxXZQ7ZyWS93uA/YPhpc12nLJb4PReZKyiHvuc/aHjy/idQg7p8eWlnFcr5X8lpKiAO+U+m/V+H/otIxf5DMP7fyKCD59NGxACA2X7/6bu1hAEwm0wIfrr/YlFHDCD8Cws/M6BrGFBY/J+CEF55N0ACLJc0Zk4Q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';SD.sprOk=true;
 const sdFr=(f,cls)=>`<i class="${cls||'sdspr'}" style="background-position:${(f*100/15).toFixed(3)}% 0"></i>`;
@@ -3960,7 +3961,7 @@ function sdTitleTxt(st){return st.mode==='free'?`${t('sdFree')}: ${t('sdD_'+st.d
 /* размер кнопок выбора: 9 фигур на узком экране — в два ряда (5+4), чтобы пальцем попадать уверенно */
 function sdPalSize(n){const w=Math.min(innerWidth,document.documentElement.clientWidth||innerWidth,600)-28,per=n===9&&w<520?5:n;return Math.max(34,Math.min(n===9?60:64,Math.floor((w-(per-1)*8)/per)))}
 function sdBuild(){const st=SD.st,n=st.cfg.n;const avW=Math.min((document.documentElement.clientWidth||innerWidth)-28,560),avH=innerHeight-(MOBILE?300:320);const cs=Math.min(n<=4?130:90,Math.max(30,Math.floor(Math.min(avW,Math.max(240,avH))/n)));st.cs=cs;st.ps=sdPalSize(n);
- const rule=st.cfg.bw?(st.cfg.sym==='shape'?t('sdRuleK'):t('sdRuleD')):t('sdRuleL');
+ const rule=st.cfg.bw?(st.cfg.sym==='shape'||st.cfg.sym==='pic'?t('sdRuleK'):t('sdRuleD')):t('sdRuleL');
  const tools=`<div class="sdtools">${st.cfg.n>=6?`<button class="btn sm" data-act="sdNotes" id="sdNm">✏️ ${t('sdNotes')}</button><button class="btn sm" data-act="sdErase">🧽</button>`:''}${st.cfg.n===9?`<button class="btn sm" data-act="sdAuto">🪄 ${t('sdAuto')}</button>`:''}<button class="btn sm" data-act="sdUndo">↩</button><button class="btn sm pri" data-act="sdHint">💡 ${t('sdHint')}</button></div>`;
  sdShell(`🧩 ${esc(sdTitleTxt(st))}`,esc(rule),`<div class="sdinfo on-sky"><span>⏱ <b id="sdTime">0:00</b></span><span>❌ <b id="sdMist">0</b></span><span>💡 <b id="sdHn">0</b></span></div>
   <div class="sdgrid sz${n} ${st.cfg.sym}" id="sdGrid" style="grid-template-columns:repeat(${n},${cs}px);--cs:${cs}px">${st.cur.map((_,i)=>`<div class="sdc" data-act="sdCell" data-arg="${i}" role="button" style="width:${cs}px;height:${cs}px"></div>`).join('')}</div>
@@ -3976,7 +3977,7 @@ function sdRefresh(){const st=SD.st;if(!st)return;const G=st.G,n=G.n,grid=docume
   if(st.giv[i])cl+=' g';else if(v)cl+=' u';if(i===sel)cl+=' sel';else if(peer&&peer.has(i))cl+=' hl';if(v&&focus&&v===focus)cl+=' same';
   if(st.hint&&st.hint.i===i)cl+=' hint';else if(hU&&hU.has(i))cl+=' hintU';
   if(el.dataset.c!==cl)el.className=el.dataset.c=cl;
-  const key=v?'v'+v:'n'+st.notes[i];if(el.dataset.k!==key){el.dataset.k=key;el.innerHTML=v?sdSym(v,st.cfg.sym):st.notes[i]?`<div class="sdn n${n}">${[...Array(n)].map((_,k)=>`<span>${st.notes[i]&(1<<(k+1))?(st.cfg.sym==='shape'?`<i style="background:${SD_COL[k]}"></i>`:k+1):''}</span>`).join('')}</div>`:''}});
+  const key=v?'v'+v:'n'+st.notes[i];if(el.dataset.k!==key){el.dataset.k=key;el.innerHTML=v?sdSym(v,st.cfg.sym):st.notes[i]?`<div class="sdn n${n}">${[...Array(n)].map((_,k)=>`<span>${st.notes[i]&(1<<(k+1))?(st.cfg.sym==='shape'?`<i style="background:${SD_COL[k]}"></i>`:st.cfg.sym==='pic'?SD_PIC[k]:k+1):''}</span>`).join('')}</div>`:''}});
  /* кнопки выбора не пересоздаём (иначе на iPhone касание «теряется»), а только меняем состояние */
  const pal=document.getElementById('sdPal');if(pal){const sig=st.cfg.sym+n+':'+st.ps;
   if(pal.dataset.sig!==sig||pal.children.length!==n){pal.dataset.sig=sig;pal.classList.toggle('two',n===9&&sdPalSize(9)>40&&innerWidth<520);pal.innerHTML=[...Array(n)].map((_,k)=>`<button class="sdsym ${st.cfg.sym}" data-act="sdSymb" data-arg="${k+1}" style="--ps:${st.ps}px">${sdSym(k+1,st.cfg.sym)}<i class="cnt"></i></button>`).join('');const b0=pal.firstElementChild;pal.style.maxWidth=pal.classList.contains('two')&&b0?(b0.offsetWidth*5+4*6+2)+'px':''}
@@ -5110,6 +5111,24 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .mjboard.pgon>.mjt::after{content:none!important}
 .mjboard.pgon>.mjt:focus-visible{outline:3px solid #ffd23f}
 </style>`);
+/* ============ МАДЖОНГ: 4-я плитка без пары в окошке — проигрыш ============ */
+Object.assign(S,{
+ mjLoseT:['Окошко заполнено — проигрыш!','The tray is full — you lose!'],
+ mjLoseTx:['В окошке 4 разные плитки, и ни у одной нет пары. Следи, чтобы в окошке было место!','There are 4 different tiles in the tray and none has a pair. Keep a free slot in the tray!'],
+ mjLoseUndo:['↩ Отменить ход ({n})','↩ Undo move ({n})'],
+ mjTrayRules:['Нажми на свободную плитку — она прилетит в окошко. Две одинаковые исчезают. 4 разные в окошке — проигрыш!','Tap a free tile — it flies into the tray. Two alike vanish. 4 different tiles in the tray — you lose!'],
+});
+function mjLoseCheck(){if(MJ.tut||MJ.over||MJ.ov||MJ.view!=='game'||MJ.busy)return;const tr=mjTrayTiles();if(tr.length<MJ_TRAY)return;
+ if(new Set(tr.map(t0=>t0.s)).size<tr.length)return;
+ MJ.over=true;MJ.lost=true;MJ.q=[];mjPause(true);clearInterval(MJ.tm);try{sadTrombone()}catch(e){}
+ const canUndo=MJ.undo>0&&MJ.hist.length>0;
+ MJ.ov=`<div class="modal blk mjend mjlose"><div style="font-size:56px">😢</div><h2>${esc(t('mjLoseT'))}</h2><p style="font-weight:800">${esc(t('mjLoseTx'))}</p>
+  <div class="row">${canUndo?`<button class="btn" data-act="mjLoseUndo">${esc(t('mjLoseUndo',{n:MJ.undo}))}</button>`:''}<button class="btn pri big" data-act="mjRetry">${esc(t('mjRetry'))}</button><button class="btn" data-act="mjToMap">🗺</button></div></div>`;
+ setTimeout(()=>{if(MJ.lost)_mjRenderLOSE()},450)}
+ACT.mjLoseUndo=function(){if(!MJ.lost)return;MJ.lost=false;MJ.over=false;MJ.ov=null;mjPause(false);mjTick();ACT.mjUndo()};
+const _mjRetryLOSE=ACT.mjRetry;ACT.mjRetry=function(){MJ.lost=false;MJ.over=false;return _mjRetryLOSE.apply(this,arguments)};
+const _mjToMapLOSE=ACT.mjToMap;ACT.mjToMap=function(){MJ.lost=false;MJ.over=false;return _mjToMapLOSE.apply(this,arguments)};
+const _mjRenderLOSE=mjRender;mjRender=function(){const r=_mjRenderLOSE.apply(this,arguments);mjLoseCheck();return r};
 /* ============ СУДОКУ НА PHASER: живые фигурки и цифры поверх клеток (клетки, подсветка и заметки — прежние) ============ */
 const SDPH={img:null,ok:false,w:[]};
 function sdPhImg(cb){if(SDPH.ok)return cb();SDPH.w.push(cb);if(!SDPH.img){SDPH.img=new Image();SDPH.img.onload=()=>{SDPH.ok=true;const w=SDPH.w;SDPH.w=[];w.forEach(f=>f())};SDPH.img.src=SD_SPR}}
@@ -5127,6 +5146,7 @@ function sdpSceneCls(){if(SDP_SC)return SDP_SC;
     if(key)filled++;let o=this.cl[i];if(o&&o.key===key&&Math.abs(o.cs-r.w)<1){if(!this.tweens.isTweening(o.obj))o.obj.setPosition(r.cx,r.cy);seen.add(i);return}
     const prev=o;if(o){o.obj.destroy();delete this.cl[i]}if(!key)return;seen.add(i);
     let obj;if(sp){obj=this.add.image(r.cx,r.cy,'sdspr',fr);const s=r.w*.84/obj.frame.width;obj.setScale(s);obj.bs=s}
+    else if(bb.classList.contains('emo')){obj=this.add.text(r.cx,r.cy,txt,{fontFamily:'"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',fontSize:Math.round(r.w*.6)+'px',padding:{y:Math.round(r.w*.08)}}).setOrigin(.5);obj.bs=1;obj.setScale(1)}
     else{obj=this.add.text(r.cx,r.cy,txt,{fontFamily:'"Press Start 2P",monospace',fontSize:Math.round(r.w*.42)+'px',color:col,stroke:'#ffffff',strokeThickness:Math.max(2,Math.round(r.w*.05))}).setOrigin(.5);obj.bs=1;obj.setScale(1)}
     obj.setDepth(10);o=this.cl[i]={obj,key,cs:r.w,ph:Math.random()*6.28};
     /* новая фигура: «пружинка» и искры; счастливая — подпрыгивает */
@@ -5168,6 +5188,36 @@ document.head.insertAdjacentHTML('beforeend',`<style>#mgwrap{overflow-x:hidden}#
  document.addEventListener('pointerup',e=>{const d=dn;dn=null;if(!d||d.id!==e.pointerId||!d.el.isConnected)return;if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>26||Date.now()-d.t>900)return;
   const el=d.el,f=ACT[el.dataset.act];if(!f)return;fast={t:Date.now(),x:e.clientX,y:e.clientY};try{ac();resumeAudio()}catch(x){}f(el.dataset.arg,el)},{capture:true});
  document.addEventListener('click',e=>{if(!fast||Date.now()-fast.t>800)return;if(e.detail===0)return;if(Math.hypot(e.clientX-fast.x,e.clientY-fast.y)>40)return;fast=null;e.stopPropagation();e.preventDefault()},{capture:true})})();
+/* ============ СУДОКУ: ЦИФРЫ ИЛИ РИСУНКИ НА ЛЮБОМ УРОВНЕ ============ */
+Object.assign(S,{
+ sdPicT:['Показывать:','Show:'],
+ sdPicNum:['🔢 Цифры','🔢 Digits'],
+ sdPicPic:['🖼 Рисунки','🖼 Pictures'],
+ sdPicAuto:['Как в уровне','As in level'],
+});
+/* выбор игрока: '' — как задумано в уровне, 'pic' — рисунки, 'num' — цифры */
+const sdPicPref=()=>{const p=cur();return p?(sdP(p).sym||''):''};
+function sdSymFor(cfg){const pr=sdPicPref();if(pr==='pic')return cfg.n<=6?'shape':'pic';if(pr==='num')return cfg.sym==='shape'?'cdigit':cfg.sym;return cfg.sym}
+const _sdBuildPIC=sdBuild;sdBuild=function(){const st=SD.st;if(st){if(!st.cfg0)st.cfg0=st.cfg;st.cfg=Object.assign({},st.cfg0,{sym:sdSymFor(st.cfg0)})}
+ const r=_sdBuildPIC.apply(this,arguments);sdPicBtn();return r};
+function sdPicBtn(){const tools=document.querySelector('#mgwrap .sdtools');const st=SD.st;if(!tools||!st)return;const old=tools.querySelector('.sdpicbtn');if(old)old.remove();
+ const pic=st.cfg.sym==='shape'||st.cfg.sym==='pic';
+ tools.insertAdjacentHTML('afterbegin',`<button class="btn sm sdpicbtn" data-act="sdPicT">${pic?t('sdPicNum'):t('sdPicPic')}</button>`)}
+/* переключение прямо в игре: прогресс сохраняется, меняется только вид */
+ACT.sdPicT=function(){const p=cur(),st=SD.st;if(!p||!st)return;const s=sdP(p),pic=st.cfg.sym==='shape'||st.cfg.sym==='pic';s.sym=pic?'num':'pic';save(p);
+ st.cfg=Object.assign({},st.cfg0||st.cfg,{sym:sdSymFor(st.cfg0||st.cfg)});
+ const g=document.getElementById('sdGrid');if(g){g.classList.remove('shape','digit','cdigit','pic');g.classList.add(st.cfg.sym);[...g.children].forEach(el=>{el.dataset.k=''})}
+ const rp=document.querySelector('#mgwrap > p.on-sky');if(rp&&st.cfg.bw)rp.textContent=t(st.cfg.sym==='shape'||st.cfg.sym==='pic'?'sdRuleK':'sdRuleD');
+ sdRefresh();sdPicBtn()};
+/* выбор на экране уровней */
+ACT.sdPicSet=function(v){const p=cur();if(!p)return;sdP(p).sym=v;save(p);sdHome()};
+const _sdHomePIC=sdHome;sdHome=function(){const r=_sdHomePIC.apply(this,arguments);const h=document.querySelector('#mgwrap .sdhome .sdtabs');if(h&&!document.querySelector('.sdpicrow')){const v=sdPicPref();
+ h.insertAdjacentHTML('afterend',`<div class="sdpicrow"><span class="on-sky">${t('sdPicT')}</span>${[['',t('sdPicAuto')],['num',t('sdPicNum')],['pic',t('sdPicPic')]].map(([k,n])=>`<button class="btn sm ${v===k?'pri':''}" data-act="sdPicSet" data-arg="${k}">${esc(n)}</button>`).join('')}</div>`)}return r};
+document.head.insertAdjacentHTML('beforeend',`<style>
+.sdc b.emo,.sdsym b.emo,.sdhv b.emo,.sdgrid.pic .sdn{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",var(--font-px),sans-serif}
+.sdc b.emo{font-size:calc(var(--cs)*.62);text-shadow:none;line-height:1}.sdsym b.emo{font-size:calc(var(--ps)*.6);text-shadow:none;line-height:1}.sdhv b.emo{font-size:22px;text-shadow:none}
+.sdpicrow{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;margin:8px 0;font-weight:900}
+</style>`);
 /* ============ ПРИМЕРЫ НА PHASER: живая карточка задания (буквы влетают, окошко ответа светится, верно/неверно — с эффектами) ============ */
 let EX_SC=null;
 function exSceneCls(){if(EX_SC)return EX_SC;
@@ -5542,6 +5592,18 @@ ACT.admDelDo=async function(id,b){const me=cur(),p=DB.players[id];if(!me||!p||!d
    const q=await fs.collection('friends').where('members','array-contains',id).get();await Promise.all(q.docs.map(d=>d.ref.delete().catch(()=>{})))}}catch(e){}
  await removePlayer(p);closeModal();toast(esc(t('admDelOk',{n:name})),4000);renderLeaders()};
 document.head.insertAdjacentHTML('beforeend',`<style>.admdel{padding:4px 8px;min-height:0}</style>`);
+/* ============ ШАПКА С КНОПКОЙ «НАЗАД» ВСЕГДА НА ВИДУ, БЕЗ «РЕЗЕРВНОЙ КОПИИ» ============ */
+/* на длинных экранах (статистика, все игроки) шапка прилипает к верху — кнопка ⬅ видна при прокрутке */
+document.head.insertAdjacentHTML('beforeend',`<style>
+#app > header.top{position:sticky;top:max(4px,env(safe-area-inset-top));z-index:40}
+.backrow{display:flex;justify-content:center;margin:16px 0 8px}
+</style>`);
+const backRow=()=>`<div class="backrow"><button class="btn big" data-act="back">⬅ ${esc(t('backBtn'))}</button></div>`;
+Object.assign(S,{backBtn:['Назад','Back','Артқа','Atrás','Zurück','Retour']});
+const _renderStatsUI3=renderStats;renderStats=function(){const r=_renderStatsUI3.apply(this,arguments);const a=document.getElementById('app');if(a&&!a.querySelector('.backrow'))a.insertAdjacentHTML('beforeend',backRow());return r};
+const _renderLeadersUI3=renderLeaders;renderLeaders=function(){const r=_renderLeadersUI3.apply(this,arguments);
+ const b=document.querySelector('#app [data-act="exportData"]'),sec=b&&b.closest('section');if(sec)sec.remove();
+ const a=document.getElementById('app');if(a&&!a.querySelector('.backrow'))a.insertAdjacentHTML('beforeend',backRow());return r};
 /* ============ СПРАЙТЫ ИЗ ПАПКИ sprites/ (можно править картинки, игра подхватит их сама) ============ */
 /* Если рядом с игрой лежит папка sprites/ — картинки берутся оттуда. Нет файла — рисуется как раньше. */
 /* открыта с диска (file://): браузер считает картинки из папки «чужими» и запрещает читать их пиксели.
