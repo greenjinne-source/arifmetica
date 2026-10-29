@@ -5695,6 +5695,75 @@ ACT.admDelDo=async function(id,b){const me=cur(),p=DB.players[id];if(!me||!p||!d
    const q=await fs.collection('friends').where('members','array-contains',id).get();await Promise.all(q.docs.map(d=>d.ref.delete().catch(()=>{})))}}catch(e){}
  await removePlayer(p);closeModal();toast(esc(t('admDelOk',{n:name})),4000);renderLeaders()};
 document.head.insertAdjacentHTML('beforeend',`<style>.admdel{padding:4px 8px;min-height:0}</style>`);
+/* ============ МАГАЗИН: АВАТАРКИ И РАМКИ ЗА ДОФУ ============ */
+/* Кошелёк = заработанная дофа − потраченная. Общий счёт (рейтинг, достижения) не уменьшается. */
+Object.assign(S,{
+ shopT:['🛒 Магазин','🛒 Shop','🛒 Дүкен','🛒 Tienda','🛒 Laden','🛒 Boutique'],
+ shopWallet:['Кошелёк: ⚡ {n}','Wallet: ⚡ {n}','Әмиян: ⚡ {n}','Monedero: ⚡ {n}','Geldbörse: ⚡ {n}','Porte-monnaie : ⚡ {n}'],
+ shopInfo:['Трать дофу на новые аватарки и рамки. Общий счёт дофы в рейтинге при этом не уменьшается.','Spend dofa on new avatars and frames. Your total dofa in the rating stays the same.'],
+ shopAvaT:['Аватарки за дофу','Avatars for dofa'],shopFrT:['Рамки за дофу','Frames for dofa'],
+ shopBuyQ:['Купить за ⚡ {n}?','Buy for ⚡ {n}?'],shopBuy:['Купить','Buy'],
+ shopNo:['Не хватает дофы: нужно ещё ⚡ {n}. Решай примеры — и всё получится!','Not enough dofa: you need ⚡ {n} more. Solve problems and you will get it!'],
+ shopOk:['Покупка! Новая вещь уже в коллекции','Purchased! It is in your collection now'],
+ shopBought:['Куплено','Bought'],shopPut:['Сразу надеть','Wear now'],
+ shopAchT:['За достижения','For achievements'],
+});
+const SHOP_AVA=[['🐨',40],['🐧',40],['🐹',40],['🐢',60],['🦒',60],['🐙',60],['🦋',80],['🐬',80],['🦩',100],['🐝',100],['🦔',120],['🐳',150],['🦜',150],['👻',180],['🦕',200],['🧚',250],['🐉',400]];
+const SHOP_AVA_OK=()=>SHOP_AVA.filter(([e])=>!AVATARS.some(a=>a[0]===e));
+const SHOP_FR=[['wood',50],['grass',80],['candy',100],['ice',150],['ocean',200],['sunset',250],['royal',350],['stars',450],['galaxy',600]];
+Object.assign(FRAME_TX,{
+ wood:['Деревянная','Wooden','Ағаш','De madera','Holz','En bois'],grass:['Травяная','Grass','Шөп','De hierba','Gras','Herbe'],
+ candy:['Карамельная','Candy','Кәмпит','Caramelo','Zuckerstange','Bonbon'],ice:['Ледяная','Ice','Мұз','De hielo','Eis','Glace'],
+ ocean:['Морская','Ocean','Теңіз','Océano','Ozean','Océan'],sunset:['Закатная','Sunset','Күн батуы','Atardecer','Sonnenuntergang','Coucher de soleil'],
+ royal:['Королевская','Royal','Патшалық','Real','Königlich','Royale'],stars:['Звёздная','Starry','Жұлдызды','Estrellada','Sternen','Étoilée'],
+ galaxy:['Галактика','Galaxy','Галактика','Galaxia','Galaxie','Galaxie'],
+});
+const shopWallet=p=>Math.max(0,(+p.dopa||0)-(+p.spent||0));
+const shopPrice=(k,id)=>{const r=(k==='a'?SHOP_AVA:SHOP_FR).find(x=>x[0]===id);return r?r[1]:null};
+const shopOwn=(p,k,id)=>(k==='a'?p.avatars:p.frames).includes(id);
+function shopItem(p,k,id,price){const own=shopOwn(p,k,id),sel=k==='a'?p.avatar===id:p.frame===id,can=shopWallet(p)>=price;
+ const pic=k==='a'?ava(id,p.frame,'m'):ava(p.avatar,id,'m');const nm=k==='f'?`<span>${esc(fName(id))}</span>`:'';
+ if(own)return `<button class="item slotbox ${sel?'selitem':''}" data-act="${k==='a'?'equipAva':'equipFrame'}" data-arg="${esc(id)}">${pic}${nm}<small>${sel?t('selected'):t('choose')}</small></button>`;
+ return `<button class="item slotbox shopit ${can?'':'poor'}" data-act="shopAsk" data-arg="${k}:${esc(id)}">${pic}${nm}<small class="price">⚡ ${price}</small></button>`}
+const _renderCollectionSHOP=renderCollection;renderCollection=function(){const r=_renderCollectionSHOP.apply(this,arguments);const p=norm(cur());if(!p)return r;
+ /* в списках «за достижения» — только старые вещи; купленные показываем в магазине */
+ const head=document.querySelector('#app > header.top');if(!head)return r;
+ const html=`<section class="panel blk shop"><h2>${t('shopT')}</h2><div class="wallet">${esc(t('shopWallet',{n:shopWallet(p)}))}</div><p class="muted" style="font-weight:800;margin:6px 0 12px">${esc(t('shopInfo'))}</p>
+  <h3>${t('shopAvaT')}</h3><div class="items">${SHOP_AVA_OK().map(([e,pr])=>shopItem(p,'a',e,pr)).join('')}</div>
+  <h3>${t('shopFrT')}</h3><div class="items">${SHOP_FR.map(([f,pr])=>shopItem(p,'f',f,pr)).join('')}</div></section>`;
+ head.insertAdjacentHTML('afterend',html);
+ /* счётчики в разделах «за достижения» не учитывают купленное */
+ const secs=[...document.querySelectorAll('#app > section.panel:not(.shop)')];
+ const fix=(sec,own,all)=>{const h=sec&&sec.querySelector('h2');if(h)h.textContent=h.textContent.replace(/\(\d+\/\d+\)/,`(${own}/${all})`)};
+ fix(secs[0],p.avatars.filter(e=>AVATARS.some(a=>a[0]===e)).length,AVATARS.length);fix(secs[1],p.frames.filter(f=>FRAMES.some(a=>a[0]===f)).length,FRAMES.length);
+ return r};
+ACT.shopAsk=function(a){const p=cur();if(!p)return;const [k,id]=String(a).split(/:(.*)/s);const price=shopPrice(k,id);if(price==null||shopOwn(p,k,id))return;
+ const need=price-shopWallet(p);if(need>0){sndWrong();return toast(esc(t('shopNo',{n:need})),3500)}
+ const pic=k==='a'?ava(id,p.frame,'l'):ava(p.avatar,id,'l');
+ modal(`<h2>${k==='f'?esc(fName(id)):''}</h2><div style="display:flex;justify-content:center;margin:8px 0 12px">${pic}</div><p style="font-weight:900;font-size:20px">${esc(t('shopBuyQ',{n:price}))}</p>
+  <p class="muted" style="font-weight:800">${esc(t('shopWallet',{n:shopWallet(p)}))} → ⚡ ${shopWallet(p)-price}</p>
+  <div class="row"><button class="btn" data-act="close">${t('cancel')}</button><button class="btn pri" data-act="shopDo" data-arg="${k}:${esc(id)}" data-enter>${t('shopBuy')}</button></div>`)};
+ACT.shopDo=function(a,b){const p=cur();if(!p)return;const [k,id]=String(a).split(/:(.*)/s);const price=shopPrice(k,id);if(price==null||shopOwn(p,k,id)||shopWallet(p)<price)return closeModal();
+ if(b)b.disabled=true;p.spent=(+p.spent||0)+price;if(k==='a'){p.avatars.push(id);p.avatar=id}else{p.frames.push(id);p.frame=id}save(p);
+ closeModal();sndFanfare();try{fireworks(2)}catch(e){}toast(esc(t('shopOk')),2500);renderCollection()};
+document.head.insertAdjacentHTML('beforeend',`<style>
+.shop h3{margin:14px 0 8px;font-size:16px}
+.shop .wallet{display:inline-block;font-family:var(--font-px);font-size:clamp(16px,4.4vw,22px);padding:8px 14px;background:#2b2b2b;color:#ffd23f;box-shadow:inset 3px 3px 0 #000,inset -3px -3px 0 #555}
+.item.shopit .price{font-family:var(--font-px);font-size:14px;color:#ffd23f}
+.item.shopit.poor{opacity:.6}.item.shopit.poor .price{color:#ff9a9a}
+.fr-wood::before{background:repeating-linear-gradient(0deg,#7a4a1e 0 3px,#a8692e 3px 7px,#8b5a28 7px 10px)}
+.fr-grass::before{background:linear-gradient(#6ad44a 0 35%,#3f9e2f 35% 55%,#8a5a2b 55%)}
+.fr-candy::before{background:repeating-linear-gradient(45deg,#ff5fa2 0 5px,#fff 5px 10px)}
+.fr-ice::before{background:linear-gradient(135deg,#e8fbff,#9fe3ff 40%,#d6f6ff 60%,#6cc8f0)}.fr-ice{filter:drop-shadow(0 0 6px #aef0ff)}
+.fr-ocean::before{background:repeating-linear-gradient(90deg,#0a5bd6 0 6px,#1f8ff0 6px 12px,#5cc8ff 12px 18px);background-size:36px 100%;animation:shopwave 1.4s linear infinite}
+.fr-sunset::before{background:linear-gradient(180deg,#ffcf3f,#ff7a3b 45%,#e63b6f 75%,#6b2bb0)}.fr-sunset{filter:drop-shadow(0 0 6px #ff8a4b)}
+.fr-royal::before{background:repeating-linear-gradient(45deg,#5a1e9e 0 5px,#7d3cd0 5px 10px);box-shadow:inset 0 0 0 3px #ffd23f}.fr-royal{filter:drop-shadow(0 0 6px #ffd23f)}
+.fr-stars::before{background:radial-gradient(#fff 1px,transparent 1.6px) 0 0/9px 9px,radial-gradient(#ffe68a 1px,transparent 1.6px) 4px 5px/11px 11px,#101a40;animation:shoptw 1.8s ease-in-out infinite}.fr-stars{filter:drop-shadow(0 0 6px #8fb0ff)}
+.fr-galaxy::before{background:conic-gradient(#ff3bd4,#7a3bff,#3bd8ff,#3bff9a,#ffe63b,#ff3bd4);animation:hue 3s linear infinite}.fr-galaxy{filter:drop-shadow(0 0 9px #c86bff)}
+@keyframes shopwave{to{background-position:36px 0}}
+@keyframes shoptw{50%{filter:brightness(1.5)}}
+@media (prefers-reduced-motion:reduce){.fr-ocean::before,.fr-stars::before,.fr-galaxy::before{animation:none}}
+</style>`);
 /* ============ ШАПКА С КНОПКОЙ «НАЗАД» ВСЕГДА НА ВИДУ, БЕЗ «РЕЗЕРВНОЙ КОПИИ» ============ */
 /* на длинных экранах (статистика, все игроки) шапка прилипает к верху — кнопка ⬅ видна при прокрутке */
 document.head.insertAdjacentHTML('beforeend',`<style>
