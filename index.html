@@ -5265,8 +5265,64 @@ ACT.sdHQClose=function(){SD.hq=null;closeModal();sdHPause(false)};
 const _sdRefreshHN=sdRefresh;sdRefresh=function(){const r=_sdRefreshHN.apply(this,arguments);const st=SD.st;if(!st)return r;
  const hb=document.querySelector('#mgwrap .sdtools [data-act="sdHint"]');if(hb){const n=sdHL(st);hb.textContent=t('sdHintLeft',{n});hb.classList.toggle('pri',n>0)}
  const ab=document.querySelector('#mgwrap .sdtools [data-act="sdAuto"]');if(ab){ab.classList.toggle('pri',!!st.auto);ab.setAttribute('aria-pressed',st.auto?'true':'false')}return r};
+/* ============ ЗАДАЧИ «БОЛЬШЕ / МЕНЬШЕ»: КОЛИЧЕСТВО ПРЕДМЕТАМИ (🍎 🚗 🎈 …) ============ */
+Object.assign(S,{
+ wvShow:['{e} Показать предметами','{e} Show as pictures','{e} Заттармен көрсету','{e} Mostrar con dibujos','{e} Mit Bildern zeigen','{e} Montrer en images'],
+ wvHide:['🙈 Скрыть предметы','🙈 Hide pictures','🙈 Заттарды жасыру','🙈 Ocultar dibujos','🙈 Bilder ausblenden','🙈 Masquer les images'],
+});
+const WV_OBJ=[[/яблок|apple|manzana|apfel|äpfel|pomme|алма/i,'🍎'],[/конфет|cand|caramelo|bonbon|кәмпит/i,'🍬'],[/машин|toy car|coche|spielzeugauto|voiture/i,'🚗'],
+ [/накле|sticker|pegatina|autocollant|жапсырма/i,'⭐'],[/шарик|balloon|globo|ballon|шар/i,'🎈'],[/карандаш|pencil|lápi|buntstift|crayon|қарындаш/i,'✏️'],
+ [/книг|book|libro|buch|bücher|livre|кітап/i,'📚'],[/ракуш|shell|concha|muschel|coquillage/i,'🐚']];
+/* тот же генератор задач, но запоминаем, кто сколько имеет и какие предметы */
+genWord=function(){let nm=null;const _two=two;two=function(){const r=_two.apply(this,arguments);if(!nm)nm=r;return r};
+ let f;try{f=(WORD[LANG]||WORD.en)()}finally{two=_two}
+ const k=rnd(0,3);let q,v;
+ if(k===0){const a=rnd(2,15),d=rnd(1,20-a);q={t:f[0]({a,d}),a:a+d,long:1};v={k,x:a,y:d}}
+ else if(k===1){const a=rnd(4,20),d=rnd(1,a-1);q={t:f[1]({a,d}),a:a-d,long:1};v={k,x:a,y:d}}
+ else{const a=rnd(3,20),b=rnd(1,a-1);q={t:f[k]({a,b}),a:a-b,long:1};v={k,x:a,y:b}}
+ const N=x=>Array.isArray(x)?x[0]:String(x);v.A=nm?N(nm[0]):'';v.B=nm?N(nm[1]):'';
+ let tx=q.t;if(nm)[].concat(nm[0],nm[1]).forEach(s=>{tx=tx.split(String(s)).join(' ')});const o=WV_OBJ.find(([r])=>r.test(tx));v.e=o?o[1]:'🔵';q.viz=v;return q};
+if(MODES.word)MODES.word.gen=genWord;
+function wvRow(name,lbl,n,cls){/* cls(i) — класс i-го предмета */
+ let it='';for(let i=0;i<n;i++)it+=`<i class="${cls?cls(i):''}" style="animation-delay:${i*25}ms"><span>${'{E}'}</span></i>`;
+ return `<div class="wvrow"><div class="wvname"><b>${esc(name)}</b><span>${esc(lbl)}</span></div><div class="wvit">${it}</div></div>`}
+function wvHtml(v){const e=v.e;let h;
+ if(v.k===0)h=wvRow(v.A,String(v.x),v.x)+wvRow(v.B,`${v.x} + ${v.y} = ?`,v.x+v.y,i=>i>=v.x?'add':'');
+ else if(v.k===1)h=wvRow(v.A,String(v.x),v.x)+wvRow(v.B,`${v.x} − ${v.y} = ?`,v.x,i=>i>=v.x-v.y?'gone':'');
+ else if(v.k===2)h=wvRow(v.A,String(v.x),v.x)+wvRow(v.B,String(v.y),v.y);
+ else h=wvRow(v.A,String(v.y),v.y)+wvRow(v.B,String(v.x),v.x);
+ return h.split('{E}').join(e)}
+function wvUpdate(){const g=document.getElementById('game');if(!g)return;const q=G&&G.q,v=q&&q.viz;
+ const row=g.querySelector('.tblrow');let b=document.getElementById('vizBtn');
+ if(row&&!b){row.insertAdjacentHTML('afterbegin','<button class="btn sm" id="vizBtn" data-act="wvToggle"></button>');b=document.getElementById('vizBtn')}
+ let p=document.getElementById('wviz');const ar=g.querySelector('.arena');if(!p&&ar){ar.insertAdjacentHTML('afterend','<div class="wviz blk" id="wviz" hidden></div>');p=document.getElementById('wviz')}
+ if(b){b.hidden=!v;if(v)b.textContent=SET.wviz?t('wvHide'):t('wvShow',{e:v.e})}
+ if(p){p.hidden=!(v&&SET.wviz);if(v&&SET.wviz)p.innerHTML=wvHtml(v)}}
+ACT.wvToggle=function(){SET.wviz=!SET.wviz;try{saveSettings()}catch(e){}sndTick();wvUpdate()};
+const _nextQWV=nextQ;nextQ=function(){const r=_nextQWV.apply(this,arguments);wvUpdate();return r};
+document.head.insertAdjacentHTML('beforeend',`<style>
+.wviz{max-width:640px;margin:0 auto 14px;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.wviz[hidden]{display:none}
+.wvrow{display:flex;gap:10px;align-items:center}
+.wvname{flex:0 0 clamp(78px,24vw,130px);display:flex;flex-direction:column;font-weight:800;line-height:1.2;min-width:0}
+.wvname b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wvname span{font-family:var(--font-px);font-size:clamp(10px,2.9vw,14px);opacity:.85;margin-top:3px;white-space:nowrap}
+.wvit{flex:1;display:grid;grid-template-columns:repeat(10,1fr);gap:2px;font-size:clamp(14px,4.6vw,28px);line-height:1.25;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.wvit i{font-style:normal;text-align:center;animation:wvpop .25s ease-out backwards}
+.wvit i.add{background:rgba(70,232,63,.35);box-shadow:0 0 0 2px #46e83f inset}
+.wvit i{position:relative}.wvit i.gone span{opacity:.35;filter:grayscale(1)}.wvit i.gone::after{content:'';position:absolute;left:8%;right:8%;top:50%;height:3px;background:#e33;transform:rotate(-30deg)}
+@keyframes wvpop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.wvit i{animation:none}}
+</style>`);
 /* ============ ПРИМЕРЫ НА PHASER: живая карточка задания (буквы влетают, окошко ответа светится, верно/неверно — с эффектами) ============ */
 let EX_SC=null;
+/* текст, перенесённый на несколько строк, рисуем построчно — иначе длинная задача уходит за край */
+function exLines(node){const t=node.textContent,rg=document.createRange();rg.selectNodeContents(node);const rs=rg.getClientRects();
+ if(rs.length<=1){const r=rg.getBoundingClientRect();return r.width?[{t,r}]:[]}
+ const out=[],re=/\S+\s*/g;let m,cur=null;
+ while((m=re.exec(t))){rg.setStart(node,m.index);rg.setEnd(node,m.index+m[0].trimEnd().length);const r=rg.getBoundingClientRect();if(!r.width)continue;
+  if(cur&&Math.abs(r.top-cur.top)<r.height*.5){cur.t+=m[0];cur.right=Math.max(cur.right,r.right);cur.bottom=Math.max(cur.bottom,r.bottom)}
+  else{cur={t:m[0],left:r.left,top:r.top,right:r.right,bottom:r.bottom};out.push(cur)}}
+ return out.map(o=>({t:o.t.trimEnd(),r:{left:o.left,top:o.top,width:o.right-o.left,height:o.bottom-o.top}}))}
 function exSceneCls(){if(EX_SC)return EX_SC;
  EX_SC=class extends Phaser.Scene{
   constructor(){super('exs')}
@@ -5275,7 +5331,7 @@ function exSceneCls(){if(EX_SC)return EX_SC;
   sync(board,k){const q=board.querySelector('#q');if(!q)return;const cs=getComputedStyle(q),fam=cs.fontFamily,fsz=parseFloat(cs.fontSize)*k,col=cs.color,slot=q.querySelector('.slot');
    const bb=board.getBoundingClientRect(),P=r=>({x:(r.left-bb.left)*k,y:(r.top-bb.top)*k,w:r.width*k,h:r.height*k});
    /* части задания: текстовые куски и окошко ответа */
-   const items=[];const walk=n=>{for(const c of n.childNodes){if(c.nodeType===3){const t=c.textContent;if(!t.trim())continue;const rg=document.createRange();rg.selectNodeContents(c);const r=rg.getBoundingClientRect();if(r.width)items.push({t,r:P(r),col:getComputedStyle(c.parentElement).color})}
+   const items=[];const walk=n=>{for(const c of n.childNodes){if(c.nodeType===3){const t=c.textContent;if(!t.trim())continue;const col=getComputedStyle(c.parentElement).color;exLines(c).forEach(L=>items.push({t:L.t,r:P(L.r),col}))}
      else if(c.nodeType===1){if(c.classList.contains('slot')){const sub=[];const sw=(n,strike)=>{for(const d of n.childNodes){if(d.nodeType===3){const t=d.textContent;if(!t.trim())continue;const rg=document.createRange();rg.selectNodeContents(d);const r=rg.getBoundingClientRect();if(r.width)sub.push({t,r:P(r),col:getComputedStyle(d.parentElement).color,fs:parseFloat(getComputedStyle(d.parentElement).fontSize)*k,strike})}
         else if(d.nodeType===1)sw(d,strike||/line-through/.test(getComputedStyle(d).textDecorationLine||getComputedStyle(d).textDecoration))}};sw(c,false);
        items.push({slot:1,t:c.textContent,html:c.innerHTML,sub,r:P(c.getBoundingClientRect()),cls:c.className,bg:getComputedStyle(c).backgroundColor,col:getComputedStyle(c).color})}else walk(c)}}};walk(q);
