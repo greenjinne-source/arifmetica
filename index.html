@@ -5228,6 +5228,43 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .sdc b.emo{font-size:calc(var(--cs)*.62);text-shadow:none;line-height:1}.sdsym b.emo{font-size:calc(var(--ps)*.6);text-shadow:none;line-height:1}.sdhv b.emo{font-size:22px;text-shadow:none}
 .sdpicrow{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;margin:8px 0;font-weight:900}
 </style>`);
+/* ============ СУДОКУ: АВТО-ЗАМЕТКИ ВКЛ/ВЫКЛ, 3 ПОДСКАЗКИ + ПОДСКАЗКА ЗА РЕШЁННЫЙ ПРИМЕР ============ */
+Object.assign(S,{
+ sdAutoOff:['Авто-заметки выключены','Auto notes off'],
+ sdHintLeft:['💡 Подсказка ({n})','💡 Hint ({n})'],
+ sdHintNoT:['Подсказки закончились','No hints left'],
+ sdHintNoTx:['Реши пример — и получишь ещё одну подсказку!','Solve a problem to get one more hint!'],
+ sdHintWrong:['Не то! Правильно: {a}. Попробуй этот:','Not quite! Answer: {a}. Try this one:'],
+ sdHintGot:['+1 подсказка!','+1 hint!'],
+});
+const SD_HINTS=3;
+/* --- авто-заметки: повторное нажатие выключает --- */
+const _sdAutoHN=ACT.sdAuto;ACT.sdAuto=function(){const st=SD.st;if(!st||st.done)return;
+ if(!st.auto){_sdAutoHN.apply(this,arguments);const u=st.undo[st.undo.length-1];if(u&&u.i===-1)u.autoPrev=false;st.auto=true;sdRefresh();return}
+ const snap=[];st.cur.forEach((v,i)=>{if(!v&&st.notes[i]){snap.push([i,st.notes[i]]);st.notes[i]=0}});
+ st.undo.push({i:-1,notes:snap,autoPrev:true});st.auto=false;sndTick();sdTip(esc(t('sdAutoOff')));sdRefresh()};
+const _sdUndoHN=ACT.sdUndo;ACT.sdUndo=function(){const st=SD.st;const u=st&&!st.done&&st.undo[st.undo.length-1];
+ const r=_sdUndoHN.apply(this,arguments);if(u&&u.autoPrev!==undefined){st.auto=u.autoPrev;sdRefresh()}return r};
+/* --- подсказки: не больше 3, дальше — за решённый пример --- */
+const sdHL=st=>st.hl===undefined?(st.hl=SD_HINTS):st.hl;
+ACT.sdHint=function(){const st=SD.st;if(!st||st.done)return;
+ if(st.hint&&!st.cur[st.hint.i])return sdHintShow(false); /* та же подсказка ещё не использована — показываем снова бесплатно */
+ if(sdHL(st)<=0)return sdHQuiz();st.hl--;sdHintShow(true)};
+function sdHPause(on){const st=SD.st;if(!st)return;if(on){if(st.t0){st.el+=Date.now()-st.t0;st.t0=0}}else if(!st.t0&&!st.done)st.t0=Date.now()}
+function sdHQuiz(note){const st=SD.st;if(!st)return;sdHPause(true);const m=pick(mjQuizModes());const q=MODES[m].gen();
+ if(!q.cmp){q.opts=makeOpts(q).slice(0,4);if(!q.opts.map(String).includes(String(q.a)))q.opts[rnd(0,3)]=+q.a}SD.hq=q;
+ const opts=q.cmp?['<','=','>'].map(s=>`<button class="btn" data-act="sdHQAns" data-arg="${esc(s)}">${esc(s)}</button>`).join(''):q.opts.map(v=>`<button class="btn" data-act="sdHQAns" data-arg="${esc(v)}">${esc(v)}</button>`).join('');
+ const qt=q.long?`<div class="mjqlong">${esc(q.t)}</div>`:`<div class="mjq">${esc(q.t).replace('□','<span class="slot">?</span>')}</div>`;
+ modal(`<div style="font-size:44px">💡</div><h2>${esc(t('sdHintNoT'))}</h2><p style="font-weight:800">${esc(note||t('sdHintNoTx'))}</p>${qt}<div class="kgrid">${opts}</div>
+  <div class="row" style="margin:6px 0 0"><button class="btn sm" data-act="sdHQClose">${t('cancel')}</button></div>`,true,'mjquiz sdhq');const ov=[...document.querySelectorAll('.overlay')].pop();if(ov)ov.style.zIndex=95}
+ACT.sdHQAns=function(v){const st=SD.st,q=SD.hq;if(!st||!q)return;
+ if(String(v)===String(q.a)){SD.hq=null;sndCorrect(5);closeModal();sdHPause(false);toast(esc(t('sdHintGot')),1800);st.hl=sdHL(st)+1;sdRefresh();ACT.sdHint();return}
+ sndWrong();sdHQuiz(t('sdHintWrong',{a:q.a}))};
+ACT.sdHQClose=function(){SD.hq=null;closeModal();sdHPause(false)};
+/* надпись на кнопке: сколько подсказок осталось; подсветка включённых авто-заметок */
+const _sdRefreshHN=sdRefresh;sdRefresh=function(){const r=_sdRefreshHN.apply(this,arguments);const st=SD.st;if(!st)return r;
+ const hb=document.querySelector('#mgwrap .sdtools [data-act="sdHint"]');if(hb){const n=sdHL(st);hb.textContent=t('sdHintLeft',{n});hb.classList.toggle('pri',n>0)}
+ const ab=document.querySelector('#mgwrap .sdtools [data-act="sdAuto"]');if(ab){ab.classList.toggle('pri',!!st.auto);ab.setAttribute('aria-pressed',st.auto?'true':'false')}return r};
 /* ============ ПРИМЕРЫ НА PHASER: живая карточка задания (буквы влетают, окошко ответа светится, верно/неверно — с эффектами) ============ */
 let EX_SC=null;
 function exSceneCls(){if(EX_SC)return EX_SC;
