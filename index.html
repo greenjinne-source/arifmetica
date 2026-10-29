@@ -5129,6 +5129,16 @@ ACT.mjLoseUndo=function(){if(!MJ.lost)return;MJ.lost=false;MJ.over=false;MJ.ov=n
 const _mjRetryLOSE=ACT.mjRetry;ACT.mjRetry=function(){MJ.lost=false;MJ.over=false;return _mjRetryLOSE.apply(this,arguments)};
 const _mjToMapLOSE=ACT.mjToMap;ACT.mjToMap=function(){MJ.lost=false;MJ.over=false;return _mjToMapLOSE.apply(this,arguments)};
 const _mjRenderLOSE=mjRender;mjRender=function(){const r=_mjRenderLOSE.apply(this,arguments);mjLoseCheck();return r};
+/* --- кнопка «↩ Назад»: срабатывает и во время полёта плитки, не сбрасывается после «Перемешать» --- */
+const _mjUndoFIX=ACT.mjUndo;ACT.mjUndo=function(){if(MJ.view!=='game'||MJ.tut)return _mjUndoFIX.apply(this,arguments);
+ if(!MJ.undo||!MJ.hist.length&&!MJ.busy)return;
+ if(MJ.lost){MJ.lost=false;MJ.over=false;MJ.ov=null;mjPause(false);mjTick()}
+ if(MJ.busy){MJ.q=[];if(MJ.wantUndo)return;MJ.wantUndo=1;let n=0;const w=()=>{if(!MJ.wantUndo)return;if(MJ.busy&&++n<40)return setTimeout(w,50);MJ.wantUndo=0;MJ.q=[];
+   if(MJ.lost){MJ.lost=false;MJ.over=false;MJ.ov=null;mjPause(false);mjTick()}_mjUndoFIX.call(ACT)};return setTimeout(w,50)}
+ return _mjUndoFIX.apply(this,arguments)};
+ACT.mjLoseUndo=function(){if(!MJ.lost)return;ACT.mjUndo()};
+const _mjReshuffleFIX=mjReshuffle;mjReshuffle=function(){const h=MJ.hist.slice(),r=_mjReshuffleFIX.apply(this,arguments);if(r)MJ.hist=h;return r};
+const _mjStartGameFIX=mjStartGame;mjStartGame=function(){MJ.lost=false;MJ.wantUndo=0;return _mjStartGameFIX.apply(this,arguments)};
 /* ============ СУДОКУ НА PHASER: живые фигурки и цифры поверх клеток (клетки, подсветка и заметки — прежние) ============ */
 const SDPH={img:null,ok:false,w:[]};
 function sdPhImg(cb){if(SDPH.ok)return cb();SDPH.w.push(cb);if(!SDPH.img){SDPH.img=new Image();SDPH.img.onload=()=>{SDPH.ok=true;const w=SDPH.w;SDPH.w=[];w.forEach(f=>f())};SDPH.img.src=SD_SPR}}
