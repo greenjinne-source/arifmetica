@@ -5820,5 +5820,68 @@ function sproMascot(){const I=SPRO.img;if(!I[SPRO_MASCOT.i])return;
   [['dofI',SPRO_MASCOT.i],['dofH',SPRO_MASCOT.j],['dofB',I[SPRO_MASCOT.w]?SPRO_MASCOT.w:SPRO_MASCOT.h]].forEach(([key,p])=>{const im=I[p];if(!im||!sc.textures.exists(key))return;
    const t=sc.textures.get(key),c=t.getSourceImage();if(!c||!c.getContext)return;const x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);x.imageSmoothingEnabled=false;x.drawImage(im,0,0,c.width,c.height);if(t.refresh)t.refresh()})};
  if(!SPRO.mw){SPRO.mw=1;tick()}}
+/* ============ УГОЛКИ: ДОФИКИ ВМЕСТО ФИШЕК + АНИМАЦИЯ ПРЫЖКОВ (откуда начал и где прыгал) ============ */
+const UGL={rid:null,b:null,last:null,anim:0};
+const uglDof=()=>{const I=typeof SPRO!=='undefined'&&SPRO.img&&SPRO.img[SPRO_MASCOT.i];return I?`<img src="${sproUrl(SPRO_MASCOT.i)}" alt="" draggable="false">`:MASCOT_SVG};
+/* путь хода: шаг на соседнюю клетку или цепочка прыжков (ищем по старой доске) */
+function uglPath(b,f,to){const r0=Math.floor(f/8),c0=f%8,rt=Math.floor(to/8),ct=to%8;if(Math.abs(r0-rt)+Math.abs(c0-ct)===1)return [f,to];
+ const D=[[-1,0],[1,0],[0,-1],[0,1]],ok=(r,c)=>r>=0&&r<8&&c>=0&&c<8,par=new Map([[f,-1]]),q=[f];
+ while(q.length){const x=q.shift();if(x===to)break;const r=Math.floor(x/8),c=x%8;
+  for(const [dr,dc] of D){const r1=r+dr,c1=c+dc,r2=r+2*dr,c2=c+2*dc;if(!ok(r2,c2))continue;const m=r1*8+c1,n=r2*8+c2;
+   if(b[m]!=='.'&&b[n]==='.'&&!par.has(n)){par.set(n,x);q.push(n)}}}
+ if(!par.has(to))return [f,to];const p=[];for(let x=to;x!==-1;x=par.get(x))p.unshift(x);return p}
+function uglDiff(b0,b1){let f=-1,to=-1,who='';for(let i=0;i<64;i++){if(b0[i]!=='.'&&b1[i]==='.')f=i;else if(b0[i]==='.'&&b1[i]!=='.'){to=i;who=b1[i]}}
+ return f>=0&&to>=0?{f,to,who,path:uglPath(b0,f,to)}:null}
+function uglDeco(s,animate){const bd=document.querySelector('#app .bd8');if(!bd)return;document.querySelectorAll('#app .mpsc span').forEach(e=>{if(e.textContent.includes('🟡'))e.innerHTML=e.innerHTML.replace('🟡','🟠')});bd.classList.add('ugl');
+ bd.querySelectorAll('.pc.ya,.pc.bz').forEach(e=>{if(!e.classList.contains('dof')){e.classList.add('dof');e.innerHTML=uglDof()}});
+ const L=UGL.last;if(!L)return;const cell=i=>bd.querySelector(`[data-act="mpCell"][data-arg="${i}"]`);
+ /* след: клетка старта, места приземлений и пунктир пути */
+ const fc=cell(L.f);if(fc&&s.b[L.f]==='.'){fc.classList.add('ugfrom',L.who==='a'?'ufa':'ufb');if(!fc.querySelector('.ugghost'))fc.insertAdjacentHTML('beforeend',`<i class="ugghost ${L.who==='a'?'ya':'bz'}">${uglDof()}</i>`)}
+ L.path.slice(1,-1).forEach((i,k)=>{const c=cell(i);if(c&&s.b[i]==='.'){c.classList.add('ugstep');c.insertAdjacentHTML('beforeend',`<b class="ugn">${k+1}</b>`)}});
+ const flip=bd.firstElementChild&&+bd.firstElementChild.dataset.arg===63,pt=i=>{const r=Math.floor(i/8),c=i%8;return flip?[7-c+.5,7-r+.5]:[c+.5,r+.5]};
+ const pts=L.path.map(pt),col=L.who==='a'?'#ff8a2a':'#3d7bff';
+ bd.insertAdjacentHTML('beforeend',`<svg class="ugpath" viewBox="0 0 8 8" preserveAspectRatio="none" aria-hidden="true"><defs><marker id="ugar" viewBox="0 0 4 4" refX="2" refY="2" markerWidth="2.4" markerHeight="2.4" orient="auto"><path d="M0,0L4,2L0,4z" fill="${col}"/></marker></defs>
+  <polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#000" stroke-opacity=".55" stroke-width=".17" stroke-linejoin="round"/>
+  <polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${col}" stroke-width=".09" stroke-dasharray=".22 .14" stroke-linejoin="round" marker-end="url(#ugar)"/></svg>`);
+ if(animate)uglAnim(bd,L,cell)}
+/* прыжок: дофик летит по дугам через каждую точку приземления */
+function uglAnim(bd,L,cell){const tc=cell(L.to),pc=tc&&tc.querySelector('.pc');if(!pc||!bd.animate)return;const id=++UGL.anim;
+ const br=bd.getBoundingClientRect(),cen=i=>{const c=cell(i);if(!c)return null;const r=c.getBoundingClientRect();return {x:r.left-br.left,y:r.top-br.top,w:r.width}};
+ const P=L.path.map(cen);if(P.some(x=>!x))return;const w=P[0].w;
+ const fly=document.createElement('i');fly.className='pc dof ugfly '+(L.who==='a'?'ya':'bz');fly.innerHTML=uglDof();fly.style.cssText=`left:${w*.05}px;top:${w*.05}px;width:${w*.9}px;height:${w*.9}px`;bd.appendChild(fly);
+ pc.style.visibility='hidden';bd.querySelectorAll('.ugpath polyline').forEach(p=>{p.style.opacity='0'});
+ const done=()=>{fly.remove();if(pc.isConnected){pc.style.visibility='';pc.animate([{transform:'scale(1.25,.8)'},{transform:'scale(.95,1.1)'},{transform:'scale(1)'}],{duration:260,easing:'ease-out'})}
+  bd.querySelectorAll('.ugpath polyline').forEach(p=>{p.style.transition='opacity .3s';p.style.opacity=''})};
+ let k=0;const hop=()=>{if(id!==UGL.anim||!fly.isConnected){fly.remove();return}if(k>=P.length-1)return done();
+  const a=P[k],b=P[k+1],jump=L.path.length>2||Math.abs(L.path[1]-L.path[0])!==1&&Math.abs(L.path[1]-L.path[0])!==8,hgt=w*(jump?.9:.35),mx=(a.x+b.x)/2,my=(a.y+b.y)/2-hgt;
+  const an=fly.animate([{transform:`translate(${a.x}px,${a.y}px) scale(1)`},{transform:`translate(${mx}px,${my}px) scale(1.18)`,offset:.5},{transform:`translate(${b.x}px,${b.y}px) scale(1)`}],{duration:jump?340:260,easing:'ease-in-out',fill:'forwards'});
+  try{tone(520+k*110,0,.07,'square',.035)}catch(e){}
+  const mark=cell(L.path[k+1]);an.onfinish=()=>{if(mark&&k+1<P.length-1)mark.animate([{boxShadow:'inset 0 0 0 4px #fff'},{boxShadow:'inset 0 0 0 0 transparent'}],{duration:400});k++;hop()}};
+ hop()}
+const _renderMpUGL=renderMp;renderMp=function(){const r0=_renderMpUGL.apply(this,arguments);const r=RM.room;
+ if(!r||r.game!=='ugl'||!r.st||typeof r.st.b!=='string'){UGL.rid=null;UGL.b=null;UGL.last=null;return r0}
+ const s=r.st,key=RM.id+':'+(s.r||0);let animate=false;
+ if(UGL.rid!==key){UGL.rid=key;UGL.b=s.b;UGL.last=null}
+ else if(UGL.b!==s.b){const d=uglDiff(UGL.b,s.b);UGL.b=s.b;UGL.last=d;animate=!!d}
+ uglDeco(s,animate);return r0};
+document.head.insertAdjacentHTML('beforeend',`<style>
+.bd8.ugl{position:relative}
+.bd8.ugl .pc.dof{background:none!important;box-shadow:none!important;border-radius:0;width:90%;height:90%;display:block;position:relative;z-index:5;filter:drop-shadow(0 2px 0 rgba(0,0,0,.45))}
+.pc.dof svg,.pc.dof img{width:100%;height:100%;display:block;image-rendering:pixelated}
+.pc.dof.bz svg,.pc.dof.bz img{filter:hue-rotate(200deg) saturate(1.15)}
+.bd8.ugl .sq.sel .pc.dof{animation:ugsel .6s ease-in-out infinite alternate}
+@keyframes ugsel{to{transform:translateY(-12%) scale(1.06)}}
+.ugfly{position:absolute;z-index:6;pointer-events:none;will-change:transform}
+.sq.ugfrom{position:relative;box-shadow:inset 0 0 0 3px rgba(255,255,255,.9)}
+.sq.ugfrom.ufa{background-image:repeating-linear-gradient(45deg,rgba(255,138,42,.35) 0 4px,transparent 4px 8px)}
+.sq.ugfrom.ufb{background-image:repeating-linear-gradient(45deg,rgba(61,123,255,.35) 0 4px,transparent 4px 8px)}
+.ugghost{width:70%;height:70%;opacity:.35;filter:grayscale(.3);pointer-events:none;display:block}
+.ugghost svg,.ugghost img{width:100%;height:100%;display:block}.ugghost.bz svg,.ugghost.bz img{filter:hue-rotate(200deg)}
+.sq.ugstep{position:relative}
+.ugn{position:absolute;left:28%;top:28%;width:44%;height:44%;display:grid;place-items:center;border-radius:50%;background:#fff;color:#000;font:900 clamp(9px,2.4vw,14px)/1 var(--font-body,sans-serif);box-shadow:0 0 0 2px #000;pointer-events:none}
+.ugpath{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+.ugn{z-index:4}
+@media (prefers-reduced-motion:reduce){.bd8.ugl .sq.sel .pc.dof{animation:none}}
+</style>`);
 </script>
 </body></html>
