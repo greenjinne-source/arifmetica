@@ -4369,7 +4369,7 @@ Object.assign(S,{
  pwFirst:['Каждый верный ответ — блок для домика внизу. 10 блоков — дом в твоей деревне!','Every correct answer adds a block to the house below. 10 blocks build a house for your village!','Әр дұрыс жауап — төмендегі үйге бір блок. 10 блок — ауылыңа жаңа үй!','Cada respuesta correcta añade un bloque a la casa. ¡10 bloques = una casa para tu aldea!','Jede richtige Antwort ist ein Block für das Haus unten. 10 Blöcke = ein Haus für dein Dorf!','Chaque bonne réponse ajoute un bloc à la maison. 10 blocs = une maison pour ton village !'],
 });
 const PW={on:false,ready:false,loading:false,g:null,fx:null,scene:null,fxs:null,mode:'login',lastScr:''};
-const PW_SRC=window.PHASER_SRC||['https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js','https://unpkg.com/phaser@3.90.0/dist/phaser.min.js'];
+const PW_SRC=window.PHASER_SRC||['lib/phaser.min.js','https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js','https://unpkg.com/phaser@3.90.0/dist/phaser.min.js'];
 const pwWanted=()=>SET.pw!==false&&!SC.reduce;
 const pwFx=()=>PW.on&&PW.fxs&&PW.fxs.ready;
 function pwLoad(){if(PW.on||PW.loading||!pwWanted())return;if(window.Phaser)return pwStart();PW.loading=true;let i=0;
@@ -6095,12 +6095,14 @@ addEventListener('keydown',e=>{if(SCREEN!=='menu'||!document.getElementById('vil
 addEventListener('keyup',e=>{if(VKEY[e.key])VJ.keys[VKEY[e.key]]=0});addEventListener('blur',()=>{VJ.keys={}});
 /* ---------- встраивание в меню ---------- */
 ACT.vilToggle=function(){SET.vil=SET.vil===false;try{saveSettings()}catch(e){}renderMenu()};
-function vilMount(){const st=document.getElementById('vilStage');if(!st)return;const cw=st.clientWidth,ch=st.clientHeight;if(cw<20||ch<20)return;const k=Math.min(2,window.devicePixelRatio||1);
+function vilFit(){const w=document.getElementById('vilWrap');if(!w)return;const vh=(window.visualViewport&&visualViewport.height)||innerHeight;
+ const top=w.getBoundingClientRect().top+scrollY;const h=Math.round(Math.max(260,Math.min(680,vh-Math.min(top,vh*.42)-10)));w.style.height=h+'px';return top}
+function vilMount(){vilFit();const st=document.getElementById('vilStage');if(!st)return;const cw=st.clientWidth,ch=st.clientHeight;if(cw<20||ch<20)return;const k=Math.min(2,window.devicePixelRatio||1);
  if(!VIL.T)vilBuild();
  vilLoadImgs(ok=>{if(!st.isConnected)return;if(!ok)return vilFallback();
   pgMount(st,Math.round(cw*k),Math.round(ch*k),[cw,ch],'vils',vilSceneCls(),{dpr:k}).then(sc=>{const ld=document.getElementById('vilLoad');if(ld)ld.remove();if(!sc&&st.isConnected)vilFallback()})})}
 function vilFallback(){if(SCREEN!=='menu')return;toast(esc(t('vilFail')),3000);document.querySelectorAll('#app .vilhide').forEach(e=>e.classList.remove('vilhide'));const v=document.querySelector('#app .vil');if(v)v.remove()}
-addEventListener('resize',()=>{const sc=VIL.sc,st=document.getElementById('vilStage');if(!sc||!st||!sc.sys.isActive())return;const k=Math.min(2,window.devicePixelRatio||1),cw=st.clientWidth,ch=st.clientHeight;
+addEventListener('resize',()=>{vilFit();const sc=VIL.sc,st=document.getElementById('vilStage');if(!sc||!st||!sc.sys.isActive())return;const k=Math.min(2,window.devicePixelRatio||1),cw=st.clientWidth,ch=st.clientHeight;
  sc.game.scale.resize(Math.round(cw*k),Math.round(ch*k));sc.game.canvas.style.width=cw+'px';sc.game.canvas.style.height=ch+'px';sc.dpr=k;sc.resizeCam()});
 const _renderMenuVIL=renderMenu;renderMenu=function(){const r=_renderMenuVIL.apply(this,arguments);VIL.run=null;
  const head=document.querySelector('#app > header.top');if(!head)return r;
@@ -6109,13 +6111,13 @@ const _renderMenuVIL=renderMenu;renderMenu=function(){const r=_renderMenuVIL.app
  head.insertAdjacentHTML('afterend',`<section class="vil panel blk"><div class="vilbar2"><span class="vilhint">${esc(t('vilHint'))}</span><span class="vilbtns"><button class="btn sm" data-act="vilHome">${t('vilHome')}</button><button class="btn sm" data-act="vilToggle">${t('vilList')}</button></span></div>
  <div class="vilwrap" id="vilWrap"><div class="vilstage" id="vilStage"><div class="vilload" id="vilLoad">${esc(t('vilLoad'))}</div></div>
  <div class="viljoy" id="vilJoy" aria-label="joystick"><i></i></div><button class="viljump" data-act="vilJump" aria-label="${esc(t('vilJump'))}">⤴</button><button class="btn pri vilenter" id="vilEnter" data-act="vilEnterNear" hidden></button></div></section>`);
- requestAnimationFrame(vilMount);return r};
+ requestAnimationFrame(()=>{const top=vilFit();const vh=(window.visualViewport&&visualViewport.height)||innerHeight;if(top>vh*.42&&scrollY<5)try{scrollTo({top:top-Math.round(vh*.42)+4})}catch(e){}vilMount()});return r};
 document.head.insertAdjacentHTML('beforeend',`<style>
 .vilhide{display:none!important}
 .vil{padding:8px!important;overflow:hidden}
 .vilbar2{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 4px 6px}
 .vilhint{font-weight:800;font-size:13px;flex:1;min-width:160px}.vilbtns{display:flex;gap:6px;flex-wrap:wrap}
-.vilwrap{position:relative;overflow:hidden;height:min(70vh,640px);background:#4f9a3a;box-shadow:inset 0 0 0 3px #000;touch-action:none;user-select:none;-webkit-user-select:none}
+.vilwrap{position:relative;overflow:hidden;height:min(70vh,640px);height:min(70dvh,640px);background:#4f9a3a;box-shadow:inset 0 0 0 3px #000;touch-action:none;user-select:none;-webkit-user-select:none}
 .vilstage{position:absolute;inset:0;cursor:pointer}.vilstage canvas{display:block}
 .vilload{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-weight:900;text-shadow:2px 2px 0 #000}
 .viljoy{position:absolute;left:14px;bottom:14px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,.28);box-shadow:inset 0 0 0 4px rgba(255,255,255,.55),0 0 0 3px #000;z-index:6;touch-action:none}
@@ -6126,6 +6128,7 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .vilenter{position:absolute;right:12px;bottom:108px;z-index:6;max-width:58%;white-space:normal;line-height:1.25;text-align:center;font-size:13px!important;padding:8px 10px!important;animation:vilpop .2s ease-out}
 @keyframes vilpop{from{transform:scale(.6);opacity:0}}
 @media (hover:hover) and (pointer:fine){.viljoy{width:100px;height:100px}}
+@media (max-width:560px){.vilhint{display:none}.vilbar2{justify-content:flex-end;margin-bottom:4px}.viljoy{width:104px;height:104px;left:10px;bottom:10px}.viljump{width:66px;height:66px;right:10px;bottom:14px;font-size:26px}.vilenter{bottom:92px}}
 </style>`);
 </script>
 </body></html>
