@@ -6100,7 +6100,8 @@ function vilFit(){const w=document.getElementById('vilWrap');if(!w)return;const 
 function vilMount(){vilFit();const st=document.getElementById('vilStage');if(!st)return;const cw=st.clientWidth,ch=st.clientHeight;if(cw<20||ch<20)return;const k=Math.min(2,window.devicePixelRatio||1);
  if(!VIL.T)vilBuild();
  vilLoadImgs(ok=>{if(!st.isConnected)return;if(!ok)return vilFallback();
-  pgMount(st,Math.round(cw*k),Math.round(ch*k),[cw,ch],'vils',vilSceneCls(),{dpr:k}).then(sc=>{const ld=document.getElementById('vilLoad');if(ld)ld.remove();if(!sc&&st.isConnected)vilFallback()})})}
+  pgLib(okL=>{if(!st.isConnected)return;if(!okL||!window.Phaser)return vilFallback();let C;try{C=vilSceneCls()}catch(e){return vilFallback()}
+  pgMount(st,Math.round(cw*k),Math.round(ch*k),[cw,ch],'vils',C,{dpr:k}).then(sc=>{const ld=document.getElementById('vilLoad');if(ld)ld.remove();if(!sc&&st.isConnected)vilFallback()})})})}
 function vilFallback(){if(SCREEN!=='menu')return;toast(esc(t('vilFail')),3000);document.querySelectorAll('#app .vilhide').forEach(e=>e.classList.remove('vilhide'));const v=document.querySelector('#app .vil');if(v)v.remove()}
 addEventListener('resize',()=>{vilFit();const sc=VIL.sc,st=document.getElementById('vilStage');if(!sc||!st||!sc.sys.isActive())return;const k=Math.min(2,window.devicePixelRatio||1),cw=st.clientWidth,ch=st.clientHeight;
  sc.game.scale.resize(Math.round(cw*k),Math.round(ch*k));sc.game.canvas.style.width=cw+'px';sc.game.canvas.style.height=ch+'px';sc.dpr=k;sc.resizeCam()});
