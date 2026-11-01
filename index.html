@@ -5883,6 +5883,193 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .ugn{z-index:4}
 @media (prefers-reduced-motion:reduce){.bd8.ugl .sq.sel .pc.dof{animation:none}}
 </style>`);
+/* ============ ШАХМАТЫ: с компьютером, вдвоём за одним экраном, онлайн с другом ============ */
+Object.assign(S,{
+ again:['Продолжить ▶','Continue ▶','Жалғастыру ▶','Continuar ▶','Weiter ▶','Continuer ▶'],
+ g_chs:['Шахматы','Chess','Шахмат','Ajedrez','Schach','Échecs'],
+ h_chs:['Классические шахматы','Classic chess','Классикалық шахмат','Ajedrez clásico','Klassisches Schach','Échecs classiques'],
+ r_chs:['Пешки ходят вперёд, конь прыгает буквой «Г». Поставь мат королю соперника!','Pawns move forward, the knight jumps in an L. Checkmate the enemy king!'],
+ chsAi:['🤖 С компьютером','🤖 Vs computer'],chsDuo:['👥 Вдвоём','👥 Two players'],chsDuoH:['за одним экраном, по очереди','on one screen, taking turns'],
+ chsOnline:['🌐 С другом онлайн','🌐 With a friend online'],chsOnlineH:['пригласи друга из списка друзей','invite someone from your friends'],
+ chsLvl:['Сила:','Level:'],chsL0:['🐣 Лёгкий','🐣 Easy'],chsL1:['🦊 Средний','🦊 Medium'],chsL2:['🦁 Сильный','🦁 Hard'],
+ chsColor:['Играю за:','I play:'],chsWh:['♔ Белых','♔ White'],chsBl:['♚ Чёрных','♚ Black'],chsRnd:['🎲 Случайно','🎲 Random'],
+ chsGo:['▶ Играть','▶ Play'],chsNew:['🔄 Новая партия','🔄 New game'],chsUndo:['↶ Вернуть ход','↶ Undo'],chsModes:['☰ Режимы','☰ Modes'],chsResign:['🏳 Сдаться','🏳 Resign'],
+ chsW:['Белые','White'],chsB:['Чёрные','Black'],chsComp:['Компьютер','Computer'],chsThink:['думает…','thinking…'],chsMove:['ходит','to move'],
+ chsCheck:['Шах!','Check!'],chsMate:['Мат!','Checkmate!'],chsDraw:['🤝 Ничья!','🤝 Draw!'],chsStale:['Пат — ничья','Stalemate — a draw'],chsRep:['Позиция повторилась трижды — ничья','Threefold repetition — a draw'],
+ chs50:['50 ходов без взятий — ничья','50 moves without captures — a draw'],chsBare:['Матовать нечем — ничья','Not enough pieces to mate — a draw'],chsGaveUp:['{n} сдались','{n} resigned'],
+ chsWin:['🏆 Победа! Поздравляем, {n}!','🏆 Victory! Congratulations, {n}!'],chsWinYou:['🏆 Победа! Поздравляем, ты обыграл компьютер!','🏆 Victory! Congratulations, you beat the computer!'],
+ chsLose:['Не вешай нос — твоя победа впереди! 💪','Chin up — your victory is ahead! 💪'],chsLoseTo:['{n}, не вешай нос — твоя победа впереди! 💪','{n}, chin up — your victory is ahead! 💪'],
+ chsOnlineNo:['Онлайн-игра работает, когда есть интернет и вход в аккаунт','Online play needs internet and a signed-in account'],
+});
+/* --- движок: доска — строка из 64 клеток (0 = a8 … 63 = h1), белые — заглавные --- */
+const CH0='rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR';
+const chUp=c=>c>='A'&&c<='Z',chCol=c=>c==='.'?'':(chUp(c)?'w':'b'),chOpp=c=>c==='w'?'b':'w';
+const CHN=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]],CHK=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]],CHR=[[-1,0],[1,0],[0,-1],[0,1]],CHB=[[-1,-1],[-1,1],[1,-1],[1,1]];
+function chAtt(b,sq,by){if(sq<0)return false;const r=sq>>3,c=sq&7,w=by==='w',at=(rr,cc)=>rr>=0&&rr<8&&cc>=0&&cc<8?b[rr*8+cc]:'';
+ const P=w?'P':'p',N=w?'N':'n',K=w?'K':'k',B=w?'B':'b',R=w?'R':'r',Q=w?'Q':'q',pr=w?r+1:r-1;
+ if(at(pr,c-1)===P||at(pr,c+1)===P)return true;for(const [a,d] of CHN)if(at(r+a,c+d)===N)return true;for(const [a,d] of CHK)if(at(r+a,c+d)===K)return true;
+ for(const [a,d] of CHR){let rr=r+a,cc=c+d;while(rr>=0&&rr<8&&cc>=0&&cc<8){const x=b[rr*8+cc];if(x!=='.'){if(x===R||x===Q)return true;break}rr+=a;cc+=d}}
+ for(const [a,d] of CHB){let rr=r+a,cc=c+d;while(rr>=0&&rr<8&&cc>=0&&cc<8){const x=b[rr*8+cc];if(x!=='.'){if(x===B||x===Q)return true;break}rr+=a;cc+=d}}
+ return false}
+function chGen(S,capsOnly){const b=S.b,me=S.t,w=me==='w',out=[];
+ for(let i=0;i<64;i++){const p=b[i];if(p==='.'||chCol(p)!==me)continue;const r=i>>3,c=i&7,L=p.toLowerCase();
+  const add=(t,x)=>{if(capsOnly&&b[t]==='.'&&!(x&&(x.e||x.p)))return;const m={f:i,t};if(x)Object.assign(m,x);out.push(m)};
+  if(L==='p'){const d=w?-1:1,r1=r+d,last=w?0:7;if(r1<0||r1>7)continue;const t1=r1*8+c;
+   if(b[t1]==='.'){add(t1,r1===last?{p:'q'}:null);if(r===(w?6:1)&&b[(r+2*d)*8+c]==='.')add((r+2*d)*8+c,{dbl:1})}
+   for(const dc of [-1,1]){const cc=c+dc;if(cc<0||cc>7)continue;const t=r1*8+cc;if(b[t]!=='.'&&chCol(b[t])!==me)add(t,r1===last?{p:'q'}:null);else if(t===S.ep)add(t,{e:1})}}
+  else if(L==='n'||L==='k'){for(const [a,d] of (L==='n'?CHN:CHK)){const rr=r+a,cc=c+d;if(rr<0||rr>7||cc<0||cc>7)continue;const t=rr*8+cc;if(b[t]==='.'||chCol(b[t])!==me)add(t)}
+   if(L==='k'&&!capsOnly){const op=chOpp(me),row=w?7:0,R=w?'R':'r';if(i===row*8+4&&!chAtt(b,i,op)){
+    if(S.cs.includes(w?'K':'k')&&b[row*8+5]==='.'&&b[row*8+6]==='.'&&b[row*8+7]===R&&!chAtt(b,row*8+5,op)&&!chAtt(b,row*8+6,op))add(row*8+6,{c:'K'});
+    if(S.cs.includes(w?'Q':'q')&&b[row*8+3]==='.'&&b[row*8+2]==='.'&&b[row*8+1]==='.'&&b[row*8]===R&&!chAtt(b,row*8+3,op)&&!chAtt(b,row*8+2,op))add(row*8+2,{c:'Q'})}}}
+  else{const D=L==='r'?CHR:L==='b'?CHB:CHR.concat(CHB);for(const [a,d] of D){let rr=r+a,cc=c+d;while(rr>=0&&rr<8&&cc>=0&&cc<8){const t=rr*8+cc,q=b[t];if(q==='.')add(t);else{if(chCol(q)!==me)add(t);break}rr+=a;cc+=d}}}}
+ return out}
+function chDo(S,m){const b=S.b.split(''),p=b[m.f],w=S.t==='w',cap=b[m.t];b[m.t]=m.p?(w?m.p.toUpperCase():m.p):p;b[m.f]='.';
+ if(m.e)b[m.t+(w?8:-8)]='.';
+ if(m.c){const row=w?7:0;if(m.c==='K'){b[row*8+5]=b[row*8+7];b[row*8+7]='.'}else{b[row*8+3]=b[row*8];b[row*8]='.'}}
+ let cs=S.cs;if(p==='K')cs=cs.replace('K','').replace('Q','');if(p==='k')cs=cs.replace('k','').replace('q','');
+ [[63,'K'],[56,'Q'],[7,'k'],[0,'q']].forEach(([sq,f])=>{if(m.f===sq||m.t===sq)cs=cs.replace(f,'')});
+ return {b:b.join(''),t:w?'b':'w',cs,ep:m.dbl?(m.f+m.t)/2:-1,hm:(p==='P'||p==='p'||cap!=='.'||m.e)?0:(S.hm||0)+1}}
+const chKing=(b,col)=>b.indexOf(col==='w'?'K':'k');
+const chInCheck=S=>chAtt(S.b,chKing(S.b,S.t),chOpp(S.t));
+function chLegal(S){return chGen(S).filter(m=>{const N=chDo(S,m);return !chAtt(N.b,chKing(N.b,S.t),N.t)})}
+function chBare(b){const x=[...b].filter(c=>c!=='.'&&c!=='k'&&c!=='K');return !x.length||(x.length===1&&/[nbNB]/.test(x[0]))}
+const chKey=S=>S.b+S.t+S.cs+S.ep;
+/* итог позиции: '' — играем дальше; иначе {win:'w'|'b'|'draw',why} */
+function chResult(S,rep){const mv=chLegal(S);if(!mv.length)return chInCheck(S)?{win:chOpp(S.t),why:'mate'}:{win:'draw',why:'stale'};
+ if((S.hm||0)>=100)return {win:'draw',why:'50'};if(chBare(S.b))return {win:'draw',why:'bare'};if(rep&&rep[chKey(S)]>=3)return {win:'draw',why:'rep'};return null}
+/* --- компьютер: альфа-бета + взятия до тишины --- */
+const CHV={p:100,n:310,b:330,r:500,q:900,k:0};
+function chEval(b){let s=0;for(let i=0;i<64;i++){const p=b[i];if(p==='.')continue;const L=p.toLowerCase(),w=p!==L,r=i>>3,c=i&7,rr=w?r:7-r,cen=3.5-Math.max(Math.abs(3.5-r),Math.abs(3.5-c));
+  let v=CHV[L];if(L==='p')v+=(6-rr)*7+(c>1&&c<6?cen*4:0);else if(L==='n')v+=cen*12-(rr===7?8:0);else if(L==='b')v+=cen*6-(rr===7?8:0);else if(L==='q')v+=cen*2;else if(L==='r')v+=(rr===1?15:0);else if(L==='k')v+=rr===7?(c<3||c>5?18:4):-16;
+  s+=w?v:-v}return s}
+const chOrd=(b,ms)=>ms.map(m=>[m,(b[m.t]!=='.'?10*CHV[b[m.t].toLowerCase()]-CHV[b[m.f].toLowerCase()]+1000:0)+(m.p?800:0)]).sort((a,c)=>c[1]-a[1]).map(x=>x[0]);
+function chQ(S,a,bt,d,ctx){if(++ctx.n>ctx.max)return chEval(S.b)*(S.t==='w'?1:-1);const sp=chEval(S.b)*(S.t==='w'?1:-1);if(sp>=bt)return sp;if(sp>a)a=sp;if(d<=0)return a;
+ for(const m of chOrd(S.b,chGen(S,true))){const N=chDo(S,m);if(chAtt(N.b,chKing(N.b,S.t),N.t))continue;const v=-chQ(N,-bt,-a,d-1,ctx);if(v>=bt)return v;if(v>a)a=v}return a}
+function chAB(S,d,a,bt,ply,ctx){if(d<=0)return chQ(S,a,bt,ctx.qd,ctx);let any=false;
+ for(const m of chOrd(S.b,chGen(S))){const N=chDo(S,m);if(chAtt(N.b,chKing(N.b,S.t),N.t))continue;any=true;const v=-chAB(N,d-1,-bt,-a,ply+1,ctx);if(v>=bt)return v;if(v>a)a=v}
+ if(!any)return chInCheck(S)?-100000+ply:0;return a}
+function chBest(S,lvl){const ms=chLegal(S);if(!ms.length)return null;const depth=[1,2,3][lvl]||2,noise=[90,25,6][lvl]||20,ctx={n:0,max:[4e4,1.2e5,3e5][lvl]||1e5,qd:[0,2,4][lvl]||2};
+ let best=null,bv=-1e9;for(const m of chOrd(S.b,ms)){const v=-chAB(chDo(S,m),depth-1,-1e9,1e9,1,ctx)+(Math.random()*2-1)*noise;if(v>bv){bv=v;best=m}}return best}
+/* --- игра на экране --- */
+const CHG={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
+const CH={mode:null,lvl:1,col:'w',me:'w',S:null,hist:[],sel:-1,last:null,over:null,think:false,rep:{},tok:0,lvlSel:1,colSel:'w'};
+const chPiece=p=>`<i class="cp ${chUp(p)?'w':'b'}">${CHG[p.toLowerCase()]}︎</i>`;
+function chCaptured(b,col){/* фигуры цвета col, которых уже нет на доске */const full={p:8,n:2,b:2,r:2,q:1},cnt={};for(const c of b)if(c!=='.'&&chCol(c)===col){const L=c.toLowerCase();cnt[L]=(cnt[L]||0)+1}
+ let h='';['q','r','b','n','p'].forEach(L=>{for(let k=0;k<Math.max(0,full[L]-(cnt[L]||0));k++)h+=CHG[L]+'︎'});return h}
+function chBoardHtml(S,o){const flip=o.flip,mv=o.moves||[],tg=o.sel>=0?mv.filter(m=>m.f===o.sel):[],ck=chInCheck(S)?chKing(S.b,S.t):-1;let h='';
+ for(let k=0;k<64;k++){const i=flip?63-k:k,r=i>>3,c=i&7,p=S.b[i],dk=(r+c)%2===1,t=tg.find(m=>m.t===i);
+  const cl=['sq',dk?'dk':'lt',i===o.sel?'sel':'',t?(p!=='.'||t.e?'tg cap':'tg'):'',o.last&&(i===o.last.f||i===o.last.t)?'last':'',i===ck?'chk':'',o.can&&mv.some(m=>m.f===i)?'can':''].filter(Boolean).join(' ');
+  const fl=(flip?r===0:r===7)?`<b class="fl">${'abcdefgh'[c]}</b>`:'',rk=(flip?c===7:c===0)?`<b class="rk">${8-r}</b>`:'';
+  h+=`<button class="${cl}" data-act="${o.act}" data-arg="${i}">${p!=='.'?chPiece(p):''}${fl}${rk}</button>`}
+ return `<div class="chsb ${o.cls||''}">${h}</div>`}
+function chCard(col,name,now,sub,b){return `<div class="chscard ${col} ${now?'now':''}"><span class="chk0">${col==='w'?'♔':'♚'}︎</span><b>${esc(name)}</b>${now?`<em>${esc(sub)}</em>`:''}<span class="chcap">${chCaptured(b,chOpp(col))}</span></div>`}
+function chsMenu(){MG.type='chs';CH.tok++;CH.think=false;const L=CH.lvlSel,C=CH.colSel;
+ mgShell('♞ '+t('g_chs'),t('r_chs'),`<div class="chsmenu">
+  <div class="panel blk chsbox"><h3>${t('chsAi')}</h3>
+   <div class="chsopt"><span>${t('chsLvl')}</span>${[0,1,2].map(k=>`<button class="btn sm ${L===k?'pri':''}" data-act="chsLvl" data-arg="${k}">${t('chsL'+k)}</button>`).join('')}</div>
+   <div class="chsopt"><span>${t('chsColor')}</span>${[['w','chsWh'],['b','chsBl'],['r','chsRnd']].map(([k,s])=>`<button class="btn sm ${C===k?'pri':''}" data-act="chsCol" data-arg="${k}">${t(s)}</button>`).join('')}</div>
+   <button class="btn pri big" data-act="chsStart" data-arg="ai">${t('chsGo')}</button></div>
+  <div class="panel blk chsbox"><h3>${t('chsDuo')}</h3><p>${t('chsDuoH')}</p><button class="btn pri big" data-act="chsStart" data-arg="duo">${t('chsGo')}</button></div>
+  <div class="panel blk chsbox"><h3>${t('chsOnline')}</h3><p>${t('chsOnlineH')}</p><button class="btn big" data-act="chsOnline">${t('chsGo')}</button></div></div>`)}
+function chsNames(){const p=cur();if(CH.mode==='ai'){const me=(p&&p.name)||t('chsW'),ai='🤖 '+t('chsComp')+' · '+t('chsL'+CH.lvl).replace(/^\S+\s/,'');return CH.me==='w'?{w:me,b:ai}:{w:ai,b:me}}return {w:t('chsW'),b:t('chsB')}}
+function chsRender(){if(MG.type!=='chs'||!CH.S)return;const S=CH.S,flip=CH.mode==='ai'&&CH.me==='b',top=flip?'w':'b',bot=flip?'b':'w',nm=chsNames();
+ const myTurn=!CH.over&&!CH.think&&!(CH.mode==='ai'&&S.t!==CH.me),mv=myTurn?chLegal(S):[];CH.moves=mv;
+ const sub=c=>CH.mode==='ai'&&c!==CH.me?t('chsThink'):t('chsMove');
+ const chk=!CH.over&&chInCheck(S)?`<div class="chsmsg chk">${t('chsCheck')}</div>`:'';
+ let end='';if(CH.over){const o=CH.over,why={stale:'chsStale','50':'chs50',bare:'chsBare',rep:'chsRep'}[o.why];
+  if(o.win==='draw')end=`<h2>${t('chsDraw')}</h2>${why?`<p>${esc(t(why))}</p>`:''}`;
+  else{const wn=nm[o.win],ln=nm[chOpp(o.win)],pre=o.why==='mate'?`<p class="chsmate">${t('chsMate')}</p>`:o.why==='resign'?`<p>${esc(t('chsGaveUp',{n:ln}))}</p>`:'';
+   if(CH.mode==='ai')end=o.win===CH.me?`${pre}<h2>${t('chsWinYou')}</h2>`:`${pre}<div class="chsbig">🤗</div><h2>${t('chsLose')}</h2>`;
+   else end=`${pre}<h2>${esc(t('chsWin',{n:wn}))}</h2><p class="chslose">${esc(t('chsLoseTo',{n:ln}))}</p>`}
+  end=`<div class="chsend modal blk">${end}<div class="row"><button class="btn" data-act="chsMenu">${t('chsModes')}</button><button class="btn pri big" data-act="chsStart" data-arg="${CH.mode}" data-enter>${t('chsNew')}</button></div></div>`}
+ const bar=`<div class="row chsctl"><button class="btn sm" data-act="chsUndo" ${CH.hist.length&&!CH.think?'':'disabled'}>${t('chsUndo')}</button>${CH.over?'':`<button class="btn sm" data-act="chsResign">${t('chsResign')}</button>`}<button class="btn sm" data-act="chsMenu">${t('chsModes')}</button></div>`;
+ mgShell('♞ '+t('g_chs'),'',`<div class="chswrap">${chCard(top,nm[top],!CH.over&&S.t===top,sub(top),S.b)}
+  <div class="chsbw">${chBoardHtml(S,{flip,moves:mv,sel:CH.sel,last:CH.last,act:'chsCell',can:CH.sel<0,cls:myTurn?'live':''})}${end}</div>
+  ${chCard(bot,nm[bot],!CH.over&&S.t===bot,sub(bot),S.b)}${chk}${bar}</div>`);
+ const w=document.getElementById('mgwrap');if(w){const p=w.querySelector(':scope > p.on-sky');if(p&&!p.textContent.trim())p.remove()}}
+function chsStart(mode){const tok=++CH.tok;CH.mode=mode;CH.lvl=CH.lvlSel;CH.me=CH.colSel==='r'?(Math.random()<.5?'w':'b'):CH.colSel;if(mode!=='ai')CH.me='w';
+ CH.S={b:CH0,t:'w',cs:'KQkq',ep:-1,hm:0};CH.hist=[];CH.sel=-1;CH.last=null;CH.over=null;CH.think=false;CH.rep={};CH.rep[chKey(CH.S)]=1;MG.type='chs';chsRender();
+ if(mode==='ai'&&CH.me!=='w')chsAi(tok)}
+function chsPlay(m){const S=CH.S,cap=S.b[m.t]!=='.'||m.e;CH.hist.push({S,last:CH.last,rep:Object.assign({},CH.rep)});CH.S=chDo(S,m);CH.last={f:m.f,t:m.t};CH.sel=-1;
+ const k=chKey(CH.S);CH.rep[k]=(CH.rep[k]||0)+1;
+ try{if(chInCheck(CH.S)){tone(988,0,.08,'square',.05);tone(740,.09,.12,'square',.05)}else if(cap){tone(330,0,.07,'square',.06);tone(196,.05,.1,'triangle',.06)}else tone(587,0,.05,'triangle',.05)}catch(e){}
+ const res=chResult(CH.S,CH.rep);if(res){CH.over=res;chsRender();chsFinish();return}
+ chsRender();if(CH.mode==='ai'&&CH.S.t!==CH.me)chsAi(CH.tok)}
+function chsAi(tok){CH.think=true;chsRender();setTimeout(()=>{if(tok!==CH.tok||MG.type!=='chs'||!document.getElementById('mgwrap'))return;const t0=performance.now(),m=chBest(CH.S,CH.lvl);
+ setTimeout(()=>{if(tok!==CH.tok||MG.type!=='chs')return;CH.think=false;if(m)chsPlay(m);else chsRender()},Math.max(0,420-(performance.now()-t0)))},60)}
+function chsFinish(){const o=CH.over,p=cur();if(!o)return;
+ if(o.win==='draw'){try{tone(523,0,.15,'triangle',.05);tone(523,.18,.2,'triangle',.05)}catch(e){}return}
+ const human=CH.mode!=='ai'||o.win===CH.me;
+ if(human){sndFanfare();try{fireworks(4);rain(60)}catch(e){}
+  if(CH.mode==='ai'&&p){p.chsW=(+p.chsW||0)+1;if(MG.reward){p.dopa+=10;MG.reward=false;try{announce(checkUnlocks(p))}catch(e){}const d=document.getElementById('dopaVal');if(d)d.textContent=p.dopa}save(p)}}
+ else{try{[523,466,415,392].forEach((f,i)=>tone(f,i*.16,.2,'triangle',.05))}catch(e){}}
+ setTimeout(()=>{const e=document.querySelector('#mgwrap .chsend');if(e&&e.scrollIntoView)e.scrollIntoView({behavior:'smooth',block:'nearest'})},80)}
+Object.assign(ACT,{
+ chsMenu(){chsMenu()},chsLvl(k){CH.lvlSel=+k;sndTick();chsMenu()},chsCol(k){CH.colSel=k;sndTick();chsMenu()},chsStart(m){sndTick();chsStart(m)},
+ chsCell(i){i=+i;if(CH.over||CH.think)return;const S=CH.S;if(CH.mode==='ai'&&S.t!==CH.me){sndWrong();return}const mv=CH.moves||chLegal(S);
+  if(CH.sel>=0){const m=mv.find(x=>x.f===CH.sel&&x.t===i);if(m)return chsPlay(m)}
+  if(S.b[i]!=='.'&&chCol(S.b[i])===S.t&&mv.some(x=>x.f===i)){CH.sel=CH.sel===i?-1:i;sndTick()}else{if(CH.sel<0&&S.b[i]!=='.')sndWrong();CH.sel=-1}chsRender()},
+ chsUndo(){if(CH.think||!CH.hist.length)return;const pop=()=>{const h=CH.hist.pop();CH.S=h.S;CH.last=h.last;CH.rep=h.rep};pop();if(CH.mode==='ai')while(CH.hist.length&&CH.S.t!==CH.me)pop();
+  CH.over=null;CH.sel=-1;CH.tok++;sndTick();chsRender();if(CH.mode==='ai'&&CH.S.t!==CH.me)chsAi(CH.tok)},
+ chsResign(){if(CH.over||CH.think)return;CH.over={win:CH.mode==='ai'?chOpp(CH.me):chOpp(CH.S.t),why:'resign'};CH.tok++;chsRender();chsFinish()},
+ chsOnline(){if(typeof socialOn!=='function'||!socialOn()){sndWrong();return toast(esc(t('chsOnlineNo')),3500)}mgClose();setTimeout(()=>ACT.mpNew('chs'),60)},
+});
+const _mgStartCHS=ACT.mgStart;ACT.mgStart=function(k){if(k==='chs'){closeModal();MG.type='chs';CH.S=null;return chsMenu()}return _mgStartCHS.apply(this,arguments)};
+const _mgCloseCHS=mgClose;mgClose=function(){CH.tok++;CH.think=false;return _mgCloseCHS.apply(this,arguments)};
+const _mgPickCHS=mgPickHtml;mgPickHtml=function(){const h=_mgPickCHS.apply(this,arguments);const i=h.lastIndexOf('</div>');return i<0?h:h.slice(0,i)+`<button class="btn" data-act="mgStart" data-arg="chs"><span>♞</span>${t('g_chs')}</button>`+h.slice(i)};
+/* --- онлайн через комнаты (как шашки) --- */
+MPG.chs={i:'♞',max:2};
+const _mpInitCHS=mpInitState;mpInitState=function(r,prevR){if(r.game!=='chs')return _mpInitCHS.apply(this,arguments);const P=shufA(active(r));
+ return {r:(prevR||0)+1,b:CH0,t:'w',cs:'KQkq',ep:-1,hm:0,w:P[0],k:P[1],turn:P[0],win:'',why:'',n:0,lf:-1,lt:-1}};
+const chOnS=s=>({b:s.b,t:s.t,cs:s.cs||'',ep:s.ep==null?-1:s.ep,hm:s.hm||0});
+function chOnApply(ss,m,me){const N=chDo(chOnS(ss),m),res=chResult(N);let win='',why='';if(res){win=res.win==='draw'?'draw':me;why=res.why}
+ return {'st.b':N.b,'st.t':N.t,'st.cs':N.cs,'st.ep':N.ep,'st.hm':N.hm,'st.turn':me===ss.w?ss.k:ss.w,'st.win':win,'st.why':why,'st.n':(ss.n||0)+1,'st.lf':m.f,'st.lt':m.t}}
+const _mpTapCHS=mpBoardTap;mpBoardTap=function(i){const r=RM.room;if(!r||r.game!=='chs')return _mpTapCHS.apply(this,arguments);if(r.status!=='play')return;
+ const s=r.st,me=SESSION;if(s.win||s.turn!==me){sndWrong();return}const S=chOnS(s),mv=chLegal(S);
+ if(RM.sel>=0){const m=mv.find(x=>x.f===RM.sel&&x.t===i);if(m){RM.sel=-1;sndTick();mpTx(rr=>{const q=rr.st;if(q.turn!==me||q.b!==s.b)return null;return chOnApply(q,m,me)});return}}
+ if(mv.some(x=>x.f===i)){RM.sel=RM.sel===i?-1:i;sndTick()}else{RM.sel=-1;if(S.b[i]!=='.')sndWrong()}renderMp()};
+const _mpResCHS=mpResult;mpResult=function(key,res){const r=_mpResCHS.apply(this,arguments);try{if(res==='lose'&&RM.room&&RM.room.game==='chs'){const p=document.querySelector('.overlay.losem p, .losem p, .overlay p');if(p)p.textContent=t('chsLose')}}catch(e){}return r};
+const _renderMpCHS=renderMp;renderMp=function(){const res=_renderMpCHS.apply(this,arguments);try{const r=RM.room;if(!r||r.game!=='chs'||r.status!=='play'||!r.st)return res;
+ const s=r.st,me=SESSION,col=s.w===me?'w':'b',flip=col==='b',S=chOnS(s),mine=s.turn===me&&!s.win,mv=mine?chLegal(S):[],sec=document.querySelector('#app > section.panel');if(!sec)return res;
+ const nm={w:pnm(s.w),b:pnm(s.k)},top=flip?'w':'b',bot=flip?'b':'w',now=c=>!s.win&&S.t===c;
+ let end='';if(s.win){if(s.win==='draw')end=`<h2>${t('chsDraw')}</h2>`;else if(s.win===me)end=`<h2>${t('chsWinYou').replace(/,.*$/,'!')}</h2>`;
+  else end=`<div class="chsbig">🤗</div><h2>${t('chsLose')}</h2>`;
+  if(s.why==='mate')end=`<p class="chsmate">${t('chsMate')}</p>`+end}
+ const chk=!s.win&&chInCheck(S)?`<div class="chsmsg chk">${t('chsCheck')}</div>`:'';
+ sec.innerHTML=`<h2>♞ ${esc(t('g_chs'))}</h2><div class="chswrap">${chCard(top,nm[top],now(top),t('chsMove'),S.b)}
+  <div class="chsbw">${chBoardHtml(S,{flip,moves:mv,sel:RM.sel,last:s.lf>=0?{f:s.lf,t:s.lt}:null,act:'mpCell',can:RM.sel<0,cls:mine?'live':''})}</div>
+  ${chCard(bot,nm[bot],now(bot),t('chsMove'),S.b)}${chk}</div>${s.win?mpEnd(r,end):''}`}catch(e){console.error(e)}return res};
+document.head.insertAdjacentHTML('beforeend',`<style>
+.chsmenu{display:grid;gap:12px;width:min(520px,94vw);margin:6px auto}
+.chsbox{text-align:center;padding:12px!important}.chsbox h3{margin:0 0 8px}.chsbox p{font-weight:800;margin:0 0 10px}
+.chsopt{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;margin:0 0 10px}.chsopt span{font-weight:900;margin-right:4px}
+.chswrap{--cs:min(54px,11.2vw);display:flex;flex-direction:column;align-items:center;gap:8px;margin:4px auto 10px;width:calc(var(--cs)*8 + 12px)}
+.chsbw{position:relative}
+.chsb{display:grid;grid-template-columns:repeat(8,var(--cs));grid-auto-rows:var(--cs);border:6px solid #3a2a1a;box-shadow:0 0 0 3px #000,0 6px 0 rgba(0,0,0,.35);background:#3a2a1a}
+.chsb .sq{position:relative;border:0;padding:0;margin:0;min-width:0;min-height:0;display:grid;place-items:center;cursor:pointer;font:inherit;box-shadow:none;border-radius:0}
+.chsb .sq.lt{background:#f0d9b5}.chsb .sq.dk{background:#b58863}
+.chsb .sq.last::before{content:'';position:absolute;inset:0;background:rgba(255,226,60,.42)}
+.chsb .sq.sel::before{content:'';position:absolute;inset:0;background:rgba(80,200,90,.55);box-shadow:inset 0 0 0 3px #1d7a24}
+.chsb .sq.chk{background:radial-gradient(circle,#ff6a6a 0,#e01818 55%,#8a0000 100%)}
+.chsb .sq.tg::after{content:'';position:absolute;width:30%;height:30%;border-radius:50%;background:rgba(20,110,30,.55);pointer-events:none}
+.chsb .sq.tg.cap::after{width:84%;height:84%;background:none;box-shadow:inset 0 0 0 4px rgba(20,110,30,.65)}
+.chsb.live .sq.can:hover{filter:brightness(1.12)}
+.chsb .fl,.chsb .rk{position:absolute;font:900 9px/1 sans-serif;opacity:.55;pointer-events:none;color:#3a2410}.chsb .fl{right:2px;bottom:2px}.chsb .rk{left:2px;top:2px}
+.cp{position:relative;z-index:1;font-style:normal;font-size:calc(var(--cs)*.8);line-height:1;font-family:"Segoe UI Symbol","Noto Sans Symbols 2","Noto Sans Symbols","DejaVu Sans","Apple Symbols",FreeSerif,serif;pointer-events:none;user-select:none}
+.cp.w{color:#fffdf5;text-shadow:-1.5px 0 #1a1a1a,1.5px 0 #1a1a1a,0 -1.5px #1a1a1a,0 1.5px #1a1a1a,1px 1px #1a1a1a,-1px -1px #1a1a1a,1px -1px #1a1a1a,-1px 1px #1a1a1a,0 3px 0 rgba(0,0,0,.35)}
+.cp.b{color:#1b1b22;text-shadow:-1px 0 #f4ecd8,1px 0 #f4ecd8,0 -1px #f4ecd8,0 1px #f4ecd8,0 3px 0 rgba(0,0,0,.35)}
+.chscard{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:6px 10px;background:#2b2b33;color:#fff;border:4px solid #55556a;box-shadow:0 0 0 2px #000;font-weight:800;min-height:44px;transition:border-color .2s,box-shadow .2s}
+.chscard .chk0{font-size:24px;line-height:1}.chscard.b .chk0{color:#111;text-shadow:-1px 0 #eee,1px 0 #eee,0 -1px #eee,0 1px #eee}.chscard b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:68%}
+.chscard em{font-style:normal;font-size:12px;color:#7dff86}.chscard .chcap{margin-left:auto;font-size:15px;letter-spacing:-1px;opacity:.9;font-family:"Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",serif;white-space:nowrap;overflow:hidden;max-width:40%}
+.chscard.now{border-color:#3ee04a;box-shadow:0 0 0 2px #000,0 0 16px 2px rgba(62,224,74,.85);animation:chsglow 1.2s ease-in-out infinite alternate}
+@keyframes chsglow{to{box-shadow:0 0 0 2px #000,0 0 6px 0 rgba(62,224,74,.5)}}
+.chsmsg{font-weight:900;font-size:18px;color:#fff;background:#c81e1e;padding:4px 14px;box-shadow:0 0 0 3px #000}
+.chsctl{margin-top:2px}
+.chsend{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92%,380px);z-index:5;text-align:center;animation:vilpop .25s ease-out}
+.chsend h2{margin:4px 0 8px}.chsend p{font-weight:800;margin:0 0 8px}.chsbig{font-size:46px}.chsmate{font-size:20px;color:#c81e1e;font-weight:900}.chslose{color:#6b4ad8}
+#app .chswrap{margin-top:8px}
+@media (prefers-reduced-motion:reduce){.chscard.now{animation:none}}
+</style>`);
 /* ============ ГОРОДОК ДОФЫ НА PHASER: река, 5 улиц, площадь с фонтаном, джойстик, камера за дофиком, друзья онлайн ============ */
 /* Картинки берутся из папки sprites/village/ (рядом с игрой и на GitHub). Если Phaser или картинки не загрузились — показываем список. */
 Object.assign(S,{
@@ -5896,6 +6083,11 @@ Object.assign(S,{
  vilCafe:['Кафе — скоро откроется! ☕','Café — opening soon! ☕'],vilCinema:['Кинотеатр — скоро премьера! 🎬','Cinema — premiere soon! 🎬'],vilGift:['Сувенирная лавка — скоро откроется! 🎁','Gift shop — soon! 🎁'],
  vilCottage:['Уютный домик. Здесь живут друзья Дофика 🏡','A cosy cottage 🏡'],
  vilMonument:['Памятник Дофику — самому умному! 🏅','Monument to Dofik — the smartest! 🏅'],vilFountain:['Фонтан желаний ⛲ Загадай желание и реши пример!','Wishing fountain ⛲'],
+ fnTitle:['⛲ Фонтан желаний','⛲ Wishing fountain'],fnInfo:['Брось монетку из кошелька в фонтан и загадай желание!','Toss a coin from your wallet and make a wish!'],
+ fnWallet:['В кошельке: ⚡ {n}','Wallet: ⚡ {n}'],fnThrown:['Брошено в фонтан: ⚡ {n}','Tossed in: ⚡ {n}'],fnNext:['До статуса «{s}» осталось ⚡ {n}','⚡ {n} more to the «{s}» status'],fnMax:['Ты — Аскет! Больше статусов нет, но фонтан всегда рад монеткам ✨','You are an Ascetic! No more statuses, but the fountain always loves coins ✨'],
+ fnToss:['Бросить ⚡ {n}','Toss ⚡ {n}'],fnBtn:['🪙 Бросить монетку','🪙 Toss a coin'],fnNo:['В кошельке не хватает дофы — решай примеры и возвращайся!','Not enough dofa in the wallet — solve problems and come back!'],
+ fnSplash:['Плюх! Желание загадано ✨ (−⚡ {n})','Splash! Wish made ✨ (−⚡ {n})'],fnSt1:['Благодетель','Benefactor'],fnSt2:['Аскет','Ascetic'],fnNew:['Новый статус: {s}!','New status: {s}!'],
+ fnGot1:['Ты бросил в фонтан 100 монет. Твоя щедрость — пример для всех!','You tossed 100 coins into the fountain. Your generosity inspires everyone!'],fnGot2:['1000 монет в фонтане! Тебе не нужны богатства — ты настоящий Аскет!','1000 coins in the fountain! You need no riches — a true Ascetic!'],
  vilFrChat:['💬 Написать','💬 Message'],vilFrPlay:['🎮 Позвать играть','🎮 Invite to play'],vilFrPick:['Во что поиграем?','What shall we play?'],vilFrIn:['в городке','in town'],
 });
 const VIL={pos:null,T:null,B:null,objs:[],sc:null,fr:{},near:null,run:null,img:{},imgOk:false};
@@ -5906,7 +6098,7 @@ const VST=[[9.5,.4,'vilSt20'],[9.5,18.4,'vilSt100'],[29.5,.4,'vilStGames'],[29.5
 const VIL_HOUSES=[
  ['kids',5,1,'u','kids',''],['add20',5,7,'u','play','add20'],['sub20',0,13,'v','play','sub20'],['miss',11,13,'v','play','miss'],['cmp',11,1,'u','play','cmp'],['cafe',11,7,'u','deco','vilCafe'],
  ['add100',5,19,'u','play','add100'],['sub100',5,26,'u','play','sub100'],['mul',0,32,'v','play','mul'],['word',11,32,'v','play','word'],['extra',5,40,'u','play','extra'],['five',5,47,'u','play','five'],['cottage',11,22,'u','deco','vilCottage'],
- ['sd',25,1,'u','mgStart','sd'],['mj',25,7,'u','mgStart','mj'],['mem',31,13,'v','mgStart','mem'],['pz',37,1,'u','mgStart','pz'],['maze',37,7,'u','mgStart','maze'],['bc',37,13,'v','mgStart','bc'],['mp',37,20,'u','mp',''],
+ ['sd',25,1,'u','mgStart','sd'],['mj',25,7,'u','mgStart','mj'],['mem',31,13,'v','mgStart','mem'],['pz',37,1,'u','mgStart','pz'],['maze',37,7,'u','mgStart','maze'],['bc',37,13,'v','mgStart','bc'],['chess',25,13,'u','mgStart','chs'],['mp',37,20,'u','mp',''],
  ['collection',25,19,'u','collection',''],['shop',25,25,'u','collection','shop'],['stats',25,32,'v','stats',''],['donate',31,32,'v','donOpen',''],['leaders',25,40,'u','leaders',''],['friends',25,47,'u','friends',''],
  ['cinema',37,26,'u','deco','vilCinema'],['cafe2',37,32,'v','deco','vilCafe'],['gift',37,40,'u','deco','vilGift'],['monument',37,47,'u','deco','vilMonument'],
 ];
@@ -5956,10 +6148,17 @@ function vilDepth(u,v){const p=vilXY(u,v);let fMax=0,bMin=1e9;
   if(u>=o.u0+o.w-.02||v>=o.v0+o.h-.02){if(zo>fMax)fMax=zo}else if(zo<bMin)bMin=zo}
  let z=fMax?fMax+1:60;if(z>=bMin)z=bMin-1;return Math.max(1,z)}
 function vilName(o){const k=o.k;if(o.act==='play')return mName(o.arg);if(o.act==='deco')return({cafe:'☕ Кафе',cafe2:'🍰 Кафе',cinema:'🎬 Кино',gift:'🎁 Сувениры',monument:'🏅 Памятник',fountain:'⛲ Фонтан',cottage:'🏡 Домик'})[k]||'';
- return({sd:t('gSd'),mj:t('gMj'),mem:t('gMem'),pz:t('gPz'),maze:t('gMaze'),sea:t('g_sea'),bc:t('g_bc'),kids:t('kidsBtn'),mp:t('mpBtn'),stats:t('btnStats'),shop:t('shopT'),collection:t('btnCollection'),leaders:t('allPlayers'),friends:t('friends'),donate:t('donBtn')})[k]||k}
+ return({chess:'♞ '+t('g_chs'),sd:t('gSd'),mj:t('gMj'),mem:t('gMem'),pz:t('gPz'),maze:t('gMaze'),sea:t('g_sea'),bc:t('g_bc'),kids:t('kidsBtn'),mp:t('mpBtn'),stats:t('btnStats'),shop:t('shopT'),collection:t('btnCollection'),leaders:t('allPlayers'),friends:t('friends'),donate:t('donBtn')})[k]||k}
 /* ---------- картинки ---------- */
 function vilLoadImgs(cb){if(VIL.imgOk)return cb(true);let left=VIL_KEYS.length,bad=0;const fin=()=>{if(--left===0){VIL.imgOk=bad<VIL_KEYS.length/2;cb(VIL.imgOk)}};
- VIL_KEYS.forEach(k=>{if(VIL.img[k])return fin();const im=new Image();im.onload=()=>{VIL.img[k]=im;fin()};im.onerror=()=>{bad++;fin()};im.src=VDIR+k+'.png'})}
+ VIL_KEYS.forEach(k=>{if(VIL.img[k])return fin();const im=new Image();im.onload=()=>{VIL.img[k]=im.alt==='alias'?vilAliasImg(k,im):im;fin()};
+  im.onerror=()=>{if(VIL_ALIAS[k]&&im.alt!=='alias'){im.alt='alias';im.src=VDIR+VIL_ALIAS[k]+'.png';return}bad++;fin()};im.src=VDIR+k+'.png'})}
+/* нет своей картинки — берём похожую и перекрашиваем (шахматы: чёрно-белый домик со значком коня) */
+const VIL_ALIAS={chess:'cottage'};
+function vilAliasImg(k,im){if(k!=='chess')return im;try{const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const x=c.getContext('2d');x.drawImage(im,0,0);
+  const d=x.getImageData(0,0,c.width,c.height),a=d.data;for(let i=0;i<a.length;i+=4){if(!a[i+3])continue;const g=a[i]*.3+a[i+1]*.59+a[i+2]*.11,gr=a[i+1]>a[i]+12&&a[i+1]>a[i+2]+12;if(gr)continue;const l=g<110?g*.55:Math.min(255,g*1.08);a[i]=l;a[i+1]=l;a[i+2]=Math.min(255,l*1.04)}x.putImageData(d,0,0);
+  const cx=Math.round(c.width*.37),cy=Math.round(c.height*.49),r=Math.round(c.width*.075);x.fillStyle='#111';x.beginPath();x.arc(cx,cy,r+3,0,7);x.fill();x.fillStyle='#fff';x.beginPath();x.arc(cx,cy,r,0,7);x.fill();
+  x.fillStyle='#111';x.font=`bold ${Math.round(r*1.5)}px "Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",serif`;x.textAlign='center';x.textBaseline='middle';x.fillText('♞\uFE0E',cx,cy+1);return c}catch(e){return im}}
 /* земля — большой холст, порезанный на куски (камера рисует только видимые) */
 function vilGroundCanvas(){const W=(VNU+VNV)*VTW+80,H=(VNU+VNV)*VTH+300,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.imageSmoothingEnabled=false;
  const poly=(pts,col)=>{x.fillStyle=col;x.beginPath();pts.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b));x.closePath();x.fill()};
@@ -5986,7 +6185,7 @@ function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene
  constructor(){super('vils')}
  init(d){this.rd=d.ready;this.dpr=d.dpr||1}
  create(){const sc=this,TX=sc.textures;VIL.sc=sc;
-  VIL_KEYS.forEach(k=>{const im=VIL.img[k],key=k==='dofik'?'vdof':k==='door'?'vdoor':'v_'+k;if(!im||TX.exists(key))return;if(k==='dofik'){TX.addSpriteSheet('vdof',im,{frameWidth:64,frameHeight:64})}else if(k==='door'){TX.addSpriteSheet('vdoor',im,{frameWidth:55,frameHeight:87})}else TX.addImage('v_'+k,im)});
+  VIL_KEYS.forEach(k=>{const im=VIL.img[k],key=k==='dofik'?'vdof':k==='door'?'vdoor':'v_'+k;if(!im||TX.exists(key))return;if(k==='dofik'){TX.addSpriteSheet('vdof',im,{frameWidth:64,frameHeight:64})}else if(k==='door'){TX.addSpriteSheet('vdoor',im,{frameWidth:55,frameHeight:87})}else if(im instanceof HTMLCanvasElement)TX.addCanvas('v_'+k,im);else TX.addImage('v_'+k,im)});
   if(!TX.exists('vground0')){const g=vilGroundCanvas(),CH=1024;let n=0;for(let y=0;y<g.height;y+=CH)for(let x=0;x<g.width;x+=CH){const c=document.createElement('canvas');c.width=Math.min(CH,g.width-x);c.height=Math.min(CH,g.height-y);c.getContext('2d').drawImage(g,-x,-y);TX.addCanvas('vground'+n,c);VIL.gch=VIL.gch||[];VIL.gch[n]=[x,y];n++}}
   (VIL.gch||[]).forEach(([x,y],i)=>sc.add.image(x,y,'vground'+i).setOrigin(0,0).setDepth(0));
   /* дома, деревья, фонари */
@@ -5995,11 +6194,11 @@ function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene
    if(o.kind==='lamp')im=sc.add.image(b.x+12,b.y+8,key).setOrigin(.5,1);else im=sc.add.image(b.x,b.y+(o.kind==='tree'?4:6),key).setOrigin(.5,1);
    im.setDepth(vilZ(o));if(o.dir==='v')im.setFlipX(true);o.sz=[im.width,im.height];o.im=im;
    const locked=o.act==='play'&&SPECIAL.includes(o.arg)&&!p.special;
-   if(o.kind==='house'){const nm=vilName(o);if(nm){const d=vilXY(o.door.u,o.door.v);const lb=sc.add.text(d.x,d.y-4,(locked?'🔒 ':'')+nm,{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'12px',fontStyle:'bold',color:'#ffffff',backgroundColor:'rgba(20,20,30,0.78)',padding:{x:5,y:2}}).setOrigin(.5,1).setDepth(vilZ(o)+.5).setResolution(sc.dpr);o.lb=lb;
-     if(o.act==='play'&&!SPECIAL.includes(o.arg)){const v=Math.min(100,p.modes&&p.modes[o.arg]?p.modes[o.arg].points:0),gr=sc.add.graphics().setDepth(vilZ(o)+.6),w=lb.width,x0=lb.x-w/2,y0=lb.y+1;gr.fillStyle(0x333333,1).fillRect(x0,y0,w,4);gr.fillStyle(0x46e83f,1).fillRect(x0,y0,w*v/100,4)}}}});
+   if(o.kind==='house'){const nm=vilName(o);if(nm){const prog=o.act==='play'&&!SPECIAL.includes(o.arg)?Math.min(100,p.modes&&p.modes[o.arg]?p.modes[o.arg].points:0)/100:null;o.lb=vilLabel(sc,o,(locked?'🔒 ':'')+nm,prog)}}});
+  const fo=VIL.objs.find(o=>o.k==='fountain');if(fo&&fo.im)vilFountainFx(sc,fo);
   VST.forEach(([su,sv,sk])=>{const q=vilXY(su,sv);sc.add.text(q.x,q.y,'🪧 '+t(sk),{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'14px',fontStyle:'bold',color:'#3a2410',backgroundColor:'#e8c88a',padding:{x:8,y:4}}).setOrigin(.5,1).setDepth(89990).setResolution(sc.dpr)});
   /* дофик */
-  const P=VIL.pos||VSPAWN;VIL.pos={u:P.u,v:P.v};const dp=vilXY(P.u,P.v);sc.dof=sc.add.sprite(dp.x,dp.y+6,'vdof',16+2).setOrigin(.5,1);
+  const P=VIL.ret||((VIL.home||!VIL.pos)?VSPAWN:VIL.pos);VIL.ret=null;VIL.home=false;VIL.pos={u:P.u,v:P.v};sc.entering=false;VIL.run=null;const dp=vilXY(P.u,P.v);sc.dof=sc.add.sprite(dp.x,dp.y+6,'vdof',16+2).setOrigin(.5,1);
   sc.door=sc.add.sprite(0,0,'vdoor',0).setOrigin(.5,1).setVisible(false);
   sc.cameras.main.setRoundPixels(true);sc.resizeCam();sc.cameras.main.startFollow(sc.dof,true,.12,.12);sc.cameras.main.centerOn(dp.x,dp.y-30);
   sc.t0=0;sc.fr=0;sc.ft=0;sc.idleK=0;sc.idleT=0;sc.nearT=0;sc.frT=0;
@@ -6007,7 +6206,7 @@ function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene
  resizeCam(){const g=this.game,cam=this.cameras.main,cw=g.canvas.width/this.dpr;const z=Math.max(.55,Math.min(1,cw/620));cam.setZoom(z*this.dpr);cam.setSize(g.canvas.width,g.canvas.height)}
  face(du,dv){return Math.abs(du)>=Math.abs(dv)?(du>0?{row:1,flip:false}:{row:3,flip:true}):(dv>0?{row:2,flip:false}:{row:3,flip:false})}
  put(spr,u,v){const p=vilXY(u,v);spr.setPosition(p.x,p.y+6);spr.setDepth(vilDepth(u,v))}
- update(time,dms){if(typeof pgOrphan==='function')pgOrphan(this);if(!this.sys.isActive())return;const dt=Math.min(.05,dms/1000),sc=this,P=VIL.pos;
+ update(time,dms){if(typeof pgOrphan==='function')pgOrphan(this);if(!this.sys.isActive())return;if(!VIL.pos||this.entering===2)return;const dt=Math.min(.05,dms/1000),sc=this,P=VIL.pos;
   /* джойстик / клавиши */
   let sx=VJ.x,sy=VJ.y;const K=VJ.keys;if(K.l||K.r||K.u||K.d){sx=(K.r?1:0)-(K.l?1:0);sy=(K.d?1:0)-(K.u?1:0);const m=Math.hypot(sx,sy)||1;sx/=m;sy/=m}
   const mag=Math.min(1,Math.hypot(sx,sy));
@@ -6024,17 +6223,18 @@ function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene
   if(sc.jumping)sc.dof.y+=sc.jy;
   /* друзья */
   if(time-sc.frT>2700){sc.frT=time;vilFriends(sc)}vilFrUpdate(sc,dt,time);
-  if(time-sc.nearT>150){sc.nearT=time;vilNearDoor()}}
+  if(time-sc.nearT>150){sc.nearT=time;vilNearDoor();vilLabels(sc)}}
 };return VIL_SC}
 /* ---------- действия ---------- */
 function vilGoTo(T,then){const from={...(VIL.pos||VSPAWN)},pts=vilPathTo(from,T);if(!pts){sndWrong();return}if(!pts.length){VIL.run=null;then&&then();return}const total=pts.reduce((s,q,i)=>{const a=i?pts[i-1]:from;return s+Math.abs(q.u-a.u)+Math.abs(q.v-a.v)},0);
  VIL.run={pts,from,seg:0,f:0,spd:Math.max(5,total/4),then}}
 ACT.vilGo=function(i){const o=VIL.objs[+i];if(!o||!o.door)return;sndTick();vilGoTo(o.door,()=>vilEnter(o))};
-function vilEnter(o){const sc=VIL.sc;if(!sc)return vilAct(o);if(o.act==='deco'){ACT.vilJump();toast(esc(t(o.arg)),2600);return}
+function vilEnter(o){const sc=VIL.sc;if(!sc)return vilAct(o);if(o.k==='fountain')return vilFountainMenu();if(o.act==='deco'){ACT.vilJump();toast(esc(t(o.arg)),2600);return}
+ VIL.ret={u:o.door.u,v:o.door.v};
  sc.entering=true;sc.dof.setFrame(18).setFlipX(false);const p=vilXY(o.door.u,o.door.v);sc.door.setPosition(p.x+26,p.y+4).setDepth(sc.dof.depth-1).setVisible(true).setFrame(0).setScale(.2).setAlpha(0);
  sc.tweens.add({targets:sc.door,scale:1,alpha:1,duration:200});let k=0;const ev=sc.time.addEvent({delay:110,repeat:5,callback:()=>{k++;sc.door.setFrame(Math.min(3,k));if(k===2)try{tone(880,0,.08,'triangle',.05);tone(1320,.08,.1,'triangle',.05)}catch(e){}
   if(k===3)sc.tweens.add({targets:sc.dof,x:sc.dof.x+24,y:sc.dof.y-6,scale:.5,alpha:0,duration:320,ease:'Quad.easeIn'});
-  if(k>=6){sc.entering=false;VIL.pos=null;vilAct(o)}}})}
+  if(k>=6){sc.entering=false;vilAct(o);setTimeout(()=>{if(sc.sys&&sc.sys.isActive()&&sc.dof){sc.tweens.killTweensOf(sc.dof);sc.dof.setAlpha(1).setScale(1);sc.door.setVisible(false);sc.put(sc.dof,VIL.pos.u,VIL.pos.v)}},250)}}})}
 function vilAct(o){const act=o.act,arg=o.arg;
  if(act==='play'&&SPECIAL.includes(arg)&&!cur().special){ACT.locked(arg);setTimeout(()=>{if(SCREEN==='menu')renderMenu()},50);return}
  if(act==='collection'&&arg==='shop'){ACT.collection();setTimeout(()=>{const s=document.querySelector('#app .shop');if(s)s.scrollIntoView({behavior:'smooth'})},60);return}
@@ -6047,7 +6247,7 @@ ACT.vilHome=function(){sndTick();vilGoTo(VSPAWN,()=>ACT.vilJump())};
 function vilNearDoor(){const b=document.getElementById('vilEnter');if(!b)return;const P=VIL.pos||VSPAWN;let best=null,bd=1.3;
  VIL.objs.forEach((o,i)=>{if(!o.door)return;const d=Math.abs(o.door.u-P.u)+Math.abs(o.door.v-P.v);if(d<bd){bd=d;best=i}});
  if(best===null||VIL.run){if(!b.hidden)b.hidden=true;VIL.near=null;return}
- if(VIL.near!==best||b.hidden){VIL.near=best;b.textContent=t('vilEnterBtn',{n:vilName(VIL.objs[best])});b.hidden=false}}
+ if(VIL.near!==best||b.hidden){VIL.near=best;const o=VIL.objs[best];b.textContent=o.k==='fountain'?t('fnBtn'):t('vilEnterBtn',{n:vilName(o)});b.hidden=false}}
 ACT.vilEnterNear=function(){const o=VIL.objs[VIL.near];if(!o)return;sndTick();vilGoTo(o.door,()=>vilEnter(o))};
 /* ---------- нажатия по карте (холст Phaser не ловит ввод — считаем сами) ---------- */
 function vilWorld(ev){const sc=VIL.sc;if(!sc)return null;const cv=sc.game.canvas,r=cv.getBoundingClientRect();if(!r.width)return null;
@@ -6056,11 +6256,11 @@ function vilHit(ev){const sc=VIL.sc,w=vilWorld(ev);if(!w)return null;
  for(const [id,f] of Object.entries(VIL.fr)){if(f.spr&&f.spr.getBounds().contains(w.x,w.y))return{fr:id}}
  if(sc.dof.getBounds().contains(w.x,w.y))return{me:1};
  const hs=VIL.objs.map((o,i)=>[o,i]).filter(([o])=>o.kind==='house'&&o.im).sort((a,b)=>b[0].im.depth-a[0].im.depth);
- for(const [o,i] of hs){if(o.lb&&o.lb.getBounds().contains(w.x,w.y))return{h:i};const im=o.im,bx=im.x-im.width/2,by=im.y-im.height;
+ for(const [o,i] of hs){if(o.lb&&o.lb.visible&&o.lb.getBounds().contains(w.x,w.y))return{h:i};const im=o.im,bx=im.x-im.width/2,by=im.y-im.height;
   if(w.x<bx||w.y<by||w.x>=bx+im.width||w.y>=by+im.height)continue;let a=255;try{const lx=Math.floor(w.x-bx);a=sc.textures.getPixelAlpha(im.flipX?im.width-1-lx:lx,Math.floor(w.y-by),im.texture.key)}catch(e){a=255}if(a===null||a>40)return{h:i}}
  const x=w.x-(VNV*VTW+40),y=w.y-260,u=(y/VTH+x/VTW)/2,v=(y/VTH-x/VTW)/2;return{g:{u,v}}}
 document.addEventListener('click',ev=>{const st=ev.target.closest&&ev.target.closest('#vilStage');if(!st||ev.detail===0)return;const h=vilHit(ev);if(!h)return;ev.stopPropagation();ev.preventDefault();
- if(h.fr)return vilFrMenu(h.fr);if(h.me)return ACT.vilJump();if(h.h!==undefined)return ACT.vilGo(h.h);
+ if(h.fr)return vilFrMenu(h.fr);if(h.me)return ACT.vilJump();if(h.h!==undefined){VIL.tap={i:h.h,until:Date.now()+2800};vilLabels(VIL.sc);return ACT.vilGo(h.h)}
  const u=Math.floor(h.g.u),v=Math.floor(h.g.v);if(!vilWalk(u,v))return;vilGoTo({u:u+.5,v:v+.5})},true);
 /* ---------- друзья онлайн ---------- */
 function vilFrList(){if(typeof SOC==='undefined'||!SESSION)return[];return Object.values(SOC.friends||{}).filter(f=>f.status==='ok').map(otherOf).filter(id=>id&&DB.players[id]&&isOnline(id))}
@@ -6081,7 +6281,7 @@ function vilFrMenu(id){const p=DB.players[id];if(!p)return;sndTick();
   <div class="row"><button class="btn sm" data-act="close">${t('cancel')}</button></div>`)}
 ACT.vilFrChat=function(id){closeModal();ACT.chatOpen(id)};
 ACT.vilFrPlay=function(id){modal(`<h2>${t('vilFrPick')}</h2><div class="mpgrid">${Object.keys(MPG).map(g=>`<button class="btn" data-act="vilFrGame" data-arg="${esc(id)}|${g}"><span>${MPG[g].i}</span>${esc(t('g_'+g))}</button>`).join('')}</div><div class="row"><button class="btn sm" data-act="close">${t('cancel')}</button></div>`)};
-ACT.vilFrGame=async function(a){const [id,g]=String(a).split('|');closeModal();VIL.pos=null;await ACT.mpNew(g);if(RM.id)ACT.mpInvite(id)};
+ACT.vilFrGame=async function(a){const [id,g]=String(a).split('|');closeModal();VIL.home=true;await ACT.mpNew(g);if(RM.id)ACT.mpInvite(id)};
 /* ---------- джойстик и клавиши ---------- */
 const VJ={x:0,y:0,keys:{}};
 document.addEventListener('pointerdown',ev=>{const j=ev.target.closest&&ev.target.closest('#vilJoy');if(!j)return;ev.preventDefault();ev.stopPropagation();
@@ -6113,6 +6313,54 @@ const _renderMenuVIL=renderMenu;renderMenu=function(){const r=_renderMenuVIL.app
  <div class="vilwrap" id="vilWrap"><div class="vilstage" id="vilStage"><div class="vilload" id="vilLoad">${esc(t('vilLoad'))}</div></div>
  <div class="viljoy" id="vilJoy" aria-label="joystick"><i></i></div><button class="viljump" data-act="vilJump" aria-label="${esc(t('vilJump'))}">⤴</button><button class="btn pri vilenter" id="vilEnter" data-act="vilEnterNear" hidden></button></div></section>`);
  requestAnimationFrame(()=>{const top=vilFit();const vh=(window.visualViewport&&visualViewport.height)||innerHeight;if(top>vh*.42&&scrollY<5)try{scrollTo({top:top-Math.round(vh*.42)+4})}catch(e){}vilMount()});return r};
+/* ---------- названия домов: только у двери или по нажатию, в контрастной рамке поверх всего ---------- */
+function vilLabel(sc,o,txt,prog){const d=vilXY(o.door.u,o.door.v);
+ const tx=sc.add.text(0,0,txt,{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'16px',fontStyle:'bold',color:'#14110c'}).setOrigin(.5,.5).setResolution(sc.dpr);
+ const w=Math.ceil(tx.width)+22,h=Math.ceil(tx.height)+12+(prog!=null?7:0),g=sc.add.graphics();
+ g.fillStyle(0x000000,.35).fillRoundedRect(-w/2-3,-h/2+1,w+6,h+6,8);g.fillStyle(0x14110c,1).fillRoundedRect(-w/2-3,-h/2-3,w+6,h+6,8);g.fillStyle(0xfff4c8,1).fillRoundedRect(-w/2,-h/2,w,h,6);
+ g.fillStyle(0x14110c,1).fillTriangle(-9,h/2+2,9,h/2+2,0,h/2+12);g.fillStyle(0xfff4c8,1).fillTriangle(-6,h/2-1,6,h/2-1,0,h/2+7);
+ if(prog!=null){tx.y=-4;const bw=w-18,by=h/2-9;g.fillStyle(0x3a3a3a,1).fillRect(-bw/2,by,bw,5);g.fillStyle(0x2fb52a,1).fillRect(-bw/2,by,Math.round(bw*prog),5)}
+ const c=sc.add.container(d.x,d.y-100,[g,tx]).setDepth(99000).setVisible(false);c.setSize(w+6,h+16);return c}
+function vilLabels(sc){if(!sc||!sc.sys||!sc.sys.isActive())return;const now=Date.now(),tp=VIL.tap&&now<VIL.tap.until?VIL.tap.i:-1;
+ VIL.objs.forEach((o,i)=>{if(!o.lb)return;const on=i===VIL.near||i===tp;if(on===o.lb.visible)return;o.lb.setVisible(on);
+  if(on){o.lb.setScale(.6).setAlpha(0);sc.tweens.add({targets:o.lb,scale:1,alpha:1,duration:160,ease:'Back.easeOut'})}})}
+/* ---------- фонтан: плеск воды и монетки ---------- */
+function vilFxTex(sc){const TX=sc.textures;const mk=(k,w,h,f)=>{if(TX.exists(k))return;const c=document.createElement('canvas');c.width=w;c.height=h;f(c.getContext('2d'));TX.addCanvas(k,c)};
+ mk('vdrop',4,4,x=>{x.fillStyle='#7fd0ff';x.fillRect(0,0,4,4);x.fillStyle='#e8f8ff';x.fillRect(1,1,2,2)});
+ mk('vspk',3,3,x=>{x.fillStyle='rgba(255,255,255,.95)';x.fillRect(1,0,1,3);x.fillRect(0,1,3,1)});
+ mk('vcoin',10,10,x=>{x.fillStyle='#7a4a00';x.beginPath();x.arc(5,5,5,0,7);x.fill();x.fillStyle='#ffc61a';x.beginPath();x.arc(5,5,4,0,7);x.fill();x.fillStyle='#fff3a0';x.fillRect(3,2,2,2);x.fillStyle='#d99a00';x.fillRect(4,4,2,3)})}
+function vilFountainFx(sc,o){vilFxTex(sc);const im=o.im,k=im.width/272,x=im.x,y=im.y,z=im.depth+.3;sc.fnt={x,y,k,z};
+ try{
+  sc.add.particles(x,y-166*k,'vdrop',{speedX:{min:-34,max:34},speedY:{min:-60,max:-18},gravityY:190,lifespan:{min:650,max:900},frequency:40,quantity:1,scale:{start:1,end:.6},alpha:{start:1,end:.35}}).setDepth(z);
+  sc.add.particles(x,y-122*k,'vdrop',{speedX:{min:-46,max:46},speedY:{min:-8,max:14},gravityY:240,lifespan:{min:260,max:420},frequency:55,quantity:1,scale:{start:.9,end:.5},alpha:{start:.95,end:.3}}).setDepth(z);
+  sc.add.particles(x,y-97*k,'vspk',{emitZone:{type:'random',source:new Phaser.Geom.Ellipse(0,0,108*k,34*k)},lifespan:{min:300,max:600},frequency:70,quantity:1,alpha:{start:1,end:0},scale:{start:1,end:.4}}).setDepth(z);
+  sc.fntSplash=sc.add.particles(0,0,'vdrop',{speed:{min:30,max:90},angle:{min:200,max:340},gravityY:260,lifespan:{min:300,max:520},scale:{start:1,end:.5},alpha:{start:1,end:.2},emitting:false}).setDepth(z+.1)}catch(e){}}
+function vilCoins(n){const sc=VIL.sc;if(!sc||!sc.fnt||!sc.dof)return;const F=sc.fnt;ACT.vilJump();
+ for(let i=0;i<n;i++)sc.time.delayedCall(120+i*110,()=>{if(!sc.sys.isActive())return;const c=sc.add.image(sc.dof.x,sc.dof.y-46,'vcoin').setDepth(99500),tx=F.x+(Math.random()*2-1)*42*F.k,ty=F.y-97*F.k+(Math.random()*2-1)*12*F.k,sx=c.x,sy=c.y;
+  try{tone(1568,0,.05,'triangle',.04);tone(2093,.05,.06,'triangle',.03)}catch(e){}
+  sc.tweens.addCounter({from:0,to:1,duration:560,ease:'Sine.easeIn',onUpdate:tw=>{const f=tw.getValue();c.x=sx+(tx-sx)*f;c.y=sy+(ty-sy)*f-Math.sin(Math.PI*f)*90;c.setScale(1-.35*f);c.rotation=f*9},
+   onComplete:()=>{c.destroy();if(sc.fntSplash)sc.fntSplash.explode(10,tx,ty);try{tone(180,0,.12,'sine',.07);tone(420,.02,.08,'triangle',.03)}catch(e){}}})})}
+const fnSt=n=>n>=1000?2:n>=100?1:0;
+function vilFountainMenu(){const p=cur();if(!p)return;const w=shopWallet(p),n=+p.fnt||0,st=fnSt(n);
+ const nx=st===0?t('fnNext',{s:t('fnSt1'),n:100-n}):st===1?t('fnNext',{s:t('fnSt2'),n:1000-n}):t('fnMax'),pr=st===0?n/100:st===1?(n-100)/900:1;
+ modal(`<div style="font-size:54px">⛲</div><h2>${t('fnTitle')}</h2><p style="font-weight:800">${t('fnInfo')}</p>
+  <div class="fnrow"><span class="fnw">${esc(t('fnWallet',{n:w}))}</span><span class="fnw t">${esc(t('fnThrown',{n}))}</span></div>
+  ${st?`<p class="fnst">${st===2?'🧘':'😇'} ${esc(t(st===2?'fnSt2':'fnSt1'))}</p>`:''}<p style="font-weight:800;margin:6px 0 4px">${esc(nx)}</p><div class="fnbar"><i style="width:${Math.round(Math.min(1,pr)*100)}%"></i></div>
+  <div class="row">${[1,10,100].map(k=>`<button class="btn ${k===1?'pri':''}" data-act="fnToss" data-arg="${k}" ${w<k?'disabled':''}>${esc(t('fnToss',{n:k}))}</button>`).join('')}</div>
+  <div class="row"><button class="btn sm" data-act="close">${t('cancel')}</button></div>`)}
+ACT.fnToss=function(k){const p=cur();if(!p)return;k=+k;if(shopWallet(p)<k){sndWrong();return toast(esc(t('fnNo')),3000)}
+ const before=+p.fnt||0;p.spent=(+p.spent||0)+k;p.fnt=before+k;save(p);closeModal();vilCoins(k>=100?12:k>=10?6:1);toast(esc(t('fnSplash',{n:k})),2200);
+ const s0=fnSt(before),s1=fnSt(p.fnt);if(s1>s0)setTimeout(()=>{sndFanfare();try{fireworks(4);rain(60)}catch(e){}const nm=t(s1===2?'fnSt2':'fnSt1');
+  modal(`<div style="font-size:64px">${s1===2?'🧘':'😇'}</div><h2>${esc(t('fnNew',{s:nm}))}</h2><p style="font-weight:800">${esc(t(s1===2?'fnGot2':'fnGot1'))}</p><div class="row"><button class="btn pri big" data-act="close" data-enter>OK</button></div>`)},1700)};
+/* статус у ника: 😇 Благодетель (100 монет в фонтане), 🧘 Аскет (1000) */
+const _pnameFN=pname;pname=p=>{let h=_pnameFN(p);try{const s=fnSt(+(p&&p.fnt)||0);if(s)h+=` <span class="sdtitle fntitle">${s===2?'🧘':'😇'} ${esc(t(s===2?'fnSt2':'fnSt1'))}</span>`}catch(e){}return h};
+/* мини-игры открываются поверх меню и забирают общий холст Phaser — после закрытия возвращаем деревню */
+function vilRemount(){if(SCREEN!=='menu'||SET.vil===false)return;const st=document.getElementById('vilStage');if(!st||document.getElementById('vilLoad'))return;
+ const g=typeof PG!=='undefined'&&PG.g;if(g&&st.contains(g.canvas)&&VIL.sc&&VIL.sc.sys.isActive())return;
+ st.querySelectorAll('.pgshot').forEach(x=>x.remove());st.insertAdjacentHTML('beforeend',`<div class="vilload" id="vilLoad">${esc(t('vilLoad'))}</div>`);
+ const b=document.getElementById('vilEnter');if(b)b.hidden=true;VIL.near=null;if(!VIL.ret)VIL.home=true;vilMount()}
+const _mgCloseVIL=mgClose;mgClose=function(){const r=_mgCloseVIL.apply(this,arguments);setTimeout(vilRemount,40);return r};
+if(typeof rtStop==='function'){const _rtStopVIL=rtStop;rtStop=function(){const r=_rtStopVIL.apply(this,arguments);setTimeout(vilRemount,40);return r}}
 document.head.insertAdjacentHTML('beforeend',`<style>
 .vilhide{display:none!important}
 .vil{padding:8px!important;overflow:hidden}
@@ -6128,6 +6376,8 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .viljump:active{transform:translateY(3px);box-shadow:0 0 0 3px #000,0 2px 0 #1d5a18}
 .vilenter{position:absolute;right:12px;bottom:108px;z-index:6;max-width:58%;white-space:normal;line-height:1.25;text-align:center;font-size:13px!important;padding:8px 10px!important;animation:vilpop .2s ease-out}
 @keyframes vilpop{from{transform:scale(.6);opacity:0}}
+.fnrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0}.fnw{font-family:var(--font-px);font-size:15px;padding:6px 10px;background:#2b2b2b;color:#ffd23f;box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #555}.fnw.t{color:#8fe3ff}
+.fnst{font-weight:900;font-size:20px;margin:6px 0}.fnbar{height:12px;background:#333;box-shadow:0 0 0 2px #000;margin:4px auto 10px;max-width:320px}.fnbar i{display:block;height:100%;background:linear-gradient(90deg,#ffd23f,#ff9a2a)}
 @media (hover:hover) and (pointer:fine){.viljoy{width:100px;height:100px}}
 @media (max-width:560px){.vilhint{display:none}.vilbar2{justify-content:flex-end;margin-bottom:4px}.viljoy{width:104px;height:104px;left:10px;bottom:10px}.viljump{width:66px;height:66px;right:10px;bottom:14px;font-size:26px}.vilenter{bottom:92px}}
 </style>`);
