@@ -6292,19 +6292,27 @@ function vilFrList(){if(typeof SOC==='undefined'||!SESSION)return[];return Objec
 const vilHash=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))%100003;return h};
 function vilFrSpot(seed){for(let i=0;i<60;i++){const u=VM+45+((seed+i*7)%12),v=VM+22+((seed*3+i*5)%14);if(vilWalk(u,v))return{u:u+.5,v:v+.5}}return{...VSPAWN}}
 /* ---------- друзья в городке: настоящие позиции (Firestore vil/{id}), плавное движение ---------- */
-const VNET={sub:null,ids:'',pos:{},last:null,lastT:0,mode:'vil',seen:{},it:null,hit:null,cakeT:0,away:true};
+const VNET={sub:null,offs:[],ids:'',pos:{},last:null,lastT:0,mode:'rt',seen:{},it:null,hit:null,cakeT:0,away:true};
 const vilFresh=x=>x&&!x.away&&Date.now()-(x.rt||0)<20000&&Math.abs(Date.now()-(+x.t||0))<600000;
-function vilNetSub(){const ids=socialOn()?vilFrList().slice(0,10):[],key=VNET.mode+':'+ids.join(',');if(key===VNET.ids&&(VNET.sub||!ids.length))return;
- if(VNET.sub){try{VNET.sub()}catch(e){}VNET.sub=null}VNET.ids=key;if(!ids.length)return;
- try{const fs=STORE.db.fs,pres=VNET.mode!=='vil';VNET.sub=fs.collection(pres?'presence':'vil').where(firebase.firestore.FieldPath.documentId(),'in',ids).onSnapshot(s=>{
-   s.docs.forEach(d=>{const x=pres?(d.data().vp||null):d.data();if(x)vilNetRecv(d.id,x)})},()=>{})}catch(e){}}
+/* позиции — в Realtime Database (g/_vil/{id}): там платят за объём, а не за каждую запись; если не вышло — Firestore */
+const vilRt=()=>(typeof rtdb==='function'?rtdb():Promise.reject()).catch(()=>null);
+function vilNetSub(){const ids=socialOn()?vilFrList().slice(0,10):[],key=VNET.mode+':'+ids.join(',');if(key===VNET.ids)return;VNET.ids=key;
+ (VNET.offs||[]).forEach(f=>{try{f()}catch(e){}});VNET.offs=[];if(!ids.length)return;
+ if(VNET.mode==='rt'){vilRt().then(db=>{if(VNET.ids!==key)return;if(!db){VNET.mode='vil';VNET.ids='';return vilNetSub()}
+   ids.forEach(id=>{const r=db.ref('g/_vil/'+id),cb=s=>{const x=s.val();if(x)vilNetRecv(id,x)};r.on('value',cb,()=>{});VNET.offs.push(()=>r.off('value',cb))})});return}
+ try{const fs=STORE.db.fs,pres=VNET.mode!=='vil';VNET.offs.push(fs.collection(pres?'presence':'vil').where(firebase.firestore.FieldPath.documentId(),'in',ids).onSnapshot(s=>{
+   s.docs.forEach(d=>{const x=pres?(d.data().vp||null):d.data();if(x)vilNetRecv(d.id,x)})},()=>{}))}catch(e){}}
 function vilNetRecv(id,x){x=Object.assign({},x,{rt:Date.now()});VNET.pos[id]=x;const h=x.hit;
  if(h&&h.n){const first=VNET.seen[id]===undefined;if(VNET.seen[id]!==h.n){VNET.seen[id]=h.n;if(!first&&Math.abs(Date.now()-(+h.t||0))<20000)vilHitEvent(id,h.id)}}else if(VNET.seen[id]===undefined)VNET.seen[id]=0}
+function vilNetFail(){if(VNET.mode==='rt')VNET.mode='vil';else if(VNET.mode==='vil')VNET.mode='presence';else return false;VNET.ids='';vilNetSub();return true}
 function vilNetPub(force,away){if(!socialOn()||!SESSION||!VIL.pos)return;const now=Date.now(),P=VIL.pos,L=VNET.last;
- if(!away){const moved=!L||Math.hypot(P.u-L.u,P.v-L.v)>.3;if(!force&&!(moved&&now-VNET.lastT>650)&&now-VNET.lastT<8000)return;if(!force&&!vilFrList().length)return}
+ if(!away){const moved=!L||Math.hypot(P.u-L.u,P.v-L.v)>.25;if(!force&&!(moved&&now-VNET.lastT>(VNET.mode==='rt'?300:650))&&now-VNET.lastT<8000)return;if(!force&&!vilFrList().length)return}
  const d={u:+P.u.toFixed(2),v:+P.v.toFixed(2),t:now,away:!!away};if(VNET.hit)d.hit=VNET.hit;VNET.last={u:P.u,v:P.v};VNET.lastT=now;VNET.away=!!away;
+ const retry=()=>{if(vilNetFail())vilNetPub(true,away)};
+ if(VNET.mode==='rt'){vilRt().then(db=>{if(!db)return retry();const r=db.ref('g/_vil/'+SESSION);if(!VNET.od){VNET.od=1;try{r.onDisconnect().update({away:true})}catch(e){}}
+   r.set(d).catch(retry)});return}
  const fs=STORE.db.fs,pr=VNET.mode==='vil'?fs.collection('vil').doc(SESSION).set(d):fs.collection('presence').doc(SESSION).set({t:now,vp:d},{merge:true});
- pr.catch(err=>{if(VNET.mode==='vil'&&/permission/i.test(String(err&&(err.code||err.message)))){VNET.mode='presence';vilNetSub();vilNetPub(true,away)}})}
+ pr.catch(err=>{if(/permission/i.test(String(err&&(err.code||err.message))))retry()})}
 function vilFriends(sc){vilNetSub();const ids=vilFrList().filter(id=>vilFresh(VNET.pos[id]));
  Object.keys(VIL.fr).forEach(id=>{if(!ids.includes(id)){const f=VIL.fr[id];if(f.spr)f.spr.destroy();if(f.tag)f.tag.destroy();delete VIL.fr[id]}});
  ids.forEach(id=>{if(VIL.fr[id])return;const p=DB.players[id],h=vilHash(id),x=VNET.pos[id],key=vilTint(sc,60+h%240);
