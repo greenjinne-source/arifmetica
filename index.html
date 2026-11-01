@@ -6202,6 +6202,7 @@ function vilTint(sc,hue){const key='vdof'+hue;if(sc.textures.exists(key))return 
 /* текст в сцене: шрифт крупнее в dpr раз и уменьшение — чётко на телефоне (setResolution на Canvas увеличивал надписи вдвое) */
 function vilTx(sc,x,y,s,st){const k=sc.dpr||1,o=Object.assign({},st);const px=n=>Math.round(parseFloat(n)*k)+'px';o.fontSize=px(o.fontSize||'14px');
  if(o.padding)o.padding={x:(o.padding.x||0)*k,y:(o.padding.y||0)*k};if(o.strokeThickness)o.strokeThickness*=k;const t=sc.add.text(x,y,s,o).setScale(1/k);t.bs=1/k;return t}
+const VIL_FONT='system-ui,-apple-system,"Segoe UI","Noto Color Emoji",sans-serif';
 let VIL_SC=null;
 function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene{
  constructor(){super('vils')}
@@ -6219,7 +6220,7 @@ function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene
    const locked=o.act==='play'&&SPECIAL.includes(o.arg)&&!p.special;
    if(o.kind==='house'&&o.k!=='fountain'){const nm=vilName(o);if(nm){const prog=o.act==='play'&&!SPECIAL.includes(o.arg)?Math.min(100,p.modes&&p.modes[o.arg]?p.modes[o.arg].points:0)/100:null;o.lb=vilLabel(sc,o,(locked?'🔒 ':'')+nm,prog)}}});
   const fo=VIL.objs.find(o=>o.k==='fountain');if(fo&&fo.im)vilFountainFx(sc,fo);
-  VST.forEach(([su,sv,sk])=>{const q=vilXY(su+VM,sv+VM);vilTx(sc,q.x,q.y,'🪧 '+t(sk),{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'14px',fontStyle:'bold',color:'#3a2410',backgroundColor:'#e8c88a',padding:{x:8,y:4}}).setOrigin(.5,1).setDepth(89990)});
+  VST.forEach(([su,sv,sk])=>{const q=vilXY(su+VM,sv+VM);vilTx(sc,q.x,q.y,'🪧 '+t(sk),{fontFamily:VIL_FONT,fontSize:'14px',fontStyle:'bold',color:'#3a2410',backgroundColor:'#e8c88a',padding:{x:8,y:4}}).setOrigin(.5,1).setDepth(30)});
   /* дофик */
   const P=VIL.ret||((VIL.home||!VIL.pos)?VSPAWN:VIL.pos);VIL.ret=null;VIL.home=false;VIL.pos={u:P.u,v:P.v};sc.entering=false;VIL.run=null;const dp=vilXY(P.u,P.v);sc.dof=sc.add.sprite(dp.x,dp.y+6,'vdof',16+2).setOrigin(.5,1);
   sc.door=sc.add.sprite(0,0,'vdoor',0).setOrigin(.5,1).setVisible(false);
@@ -6233,19 +6234,19 @@ function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene
   /* джойстик / клавиши */
   let sx=VJ.x,sy=VJ.y;const K=VJ.keys;if(K.l||K.r||K.u||K.d){sx=(K.r?1:0)-(K.l?1:0);sy=(K.d?1:0)-(K.u?1:0);const m=Math.hypot(sx,sy)||1;sx/=m;sy/=m}
   const mag=Math.min(1,Math.hypot(sx,sy));
-  if(mag>.15&&!sc.entering){VIL.run=null;let du=(sx/2+sy)/2,dv=(sy-sx/2)/2;const n=Math.hypot(du,dv)||1,spd=4.8*mag;du=du/n*spd*dt;dv=dv/n*spd*dt;
+  if(mag>.15&&!sc.entering){VIL.run=null;let du=(sx/2+sy)/2,dv=(sy-sx/2)/2;const n=Math.hypot(du,dv)||1,spd=4.8*mag;VIL.face={u:du/n,v:dv/n};du=du/n*spd*dt;dv=dv/n*spd*dt;
    const ok=(u,v)=>{const r=.3;return[[0,0],[r,0],[-r,0],[0,r],[0,-r]].every(([a,b])=>vilWalk(Math.floor(u+a),Math.floor(v+b)))};
    let nu=P.u+du,nv=P.v+dv;if(!ok(nu,nv)){if(ok(nu,P.v))nv=P.v;else if(ok(P.u,nv))nu=P.u;else{nu=P.u;nv=P.v}}
    P.u=nu;P.v=nv;sc.moving=true;const f=sc.face(du,dv);if(time-sc.ft>Math.max(70,150-mag*70)){sc.ft=time;sc.fr=(sc.fr+1)%4}sc.dof.setFrame(f.row*4+sc.fr).setFlipX(f.flip)}
   else if(VIL.run&&!sc.entering){const R=VIL.run;const a=R.seg?R.pts[R.seg-1]:R.from,b=R.pts[R.seg],len=Math.max(.001,Math.abs(b.u-a.u)+Math.abs(b.v-a.v));R.f=Math.min(1,(R.f||0)+dt*R.spd/len);
-   P.u=a.u+(b.u-a.u)*R.f;P.v=a.v+(b.v-a.v)*R.f;const f=sc.face(b.u-a.u,b.v-a.v);if(time-sc.ft>110){sc.ft=time;sc.fr=(sc.fr+1)%4}sc.dof.setFrame(f.row*4+sc.fr).setFlipX(f.flip);
+   P.u=a.u+(b.u-a.u)*R.f;P.v=a.v+(b.v-a.v)*R.f;{const fu=b.u-a.u,fv=b.v-a.v,fn=Math.hypot(fu,fv);if(fn>.01)VIL.face={u:fu/fn,v:fv/fn}}const f=sc.face(b.u-a.u,b.v-a.v);if(time-sc.ft>110){sc.ft=time;sc.fr=(sc.fr+1)%4}sc.dof.setFrame(f.row*4+sc.fr).setFlipX(f.flip);
    if(R.f>=1){R.seg++;R.f=0;if(R.seg>=R.pts.length){VIL.run=null;R.then&&R.then()}}sc.moving=true}
   else if(sc.moving){sc.moving=false;sc.dof.setFrame(0).setFlipX(false)}
   else if(!sc.jumping&&!sc.entering&&time-sc.idleT>450){sc.idleT=time;sc.idleK++;const k=sc.idleK%9;sc.dof.setFrame(k===7?21:k===8?23:(k%2?2:0)).setFlipX(false)}
   if(!sc.entering)sc.put(sc.dof,P.u,P.v);
   if(sc.jumping)sc.dof.y+=sc.jy;
   /* друзья */
-  if(time-sc.frT>2700){sc.frT=time;vilFriends(sc)}vilFrUpdate(sc,dt,time);
+  if(time-sc.frT>1000){sc.frT=time;vilFriends(sc)}vilNetPub();vilFrUpdate(sc,dt,time);
   if(time-sc.nearT>150){sc.nearT=time;vilNearDoor();vilLabels(sc)}
   if(time-(sc.cullT||0)>250){sc.cullT=time;const wv=sc.cameras.main.worldView,m=160;for(const o of VIL.objs)if(o.kind==='tree'&&o.im){const im=o.im,hw=im.displayWidth/2;im.setVisible(im.x+hw>wv.x-m&&im.x-hw<wv.right+m&&im.y>wv.y-m&&im.y-im.displayHeight<wv.bottom+m)}}}
 };return VIL_SC}
@@ -6290,15 +6291,59 @@ document.addEventListener('click',ev=>{const st=ev.target.closest&&ev.target.clo
 function vilFrList(){if(typeof SOC==='undefined'||!SESSION)return[];return Object.values(SOC.friends||{}).filter(f=>f.status==='ok').map(otherOf).filter(id=>id&&DB.players[id]&&isOnline(id))}
 const vilHash=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))%100003;return h};
 function vilFrSpot(seed){for(let i=0;i<60;i++){const u=VM+45+((seed+i*7)%12),v=VM+22+((seed*3+i*5)%14);if(vilWalk(u,v))return{u:u+.5,v:v+.5}}return{...VSPAWN}}
-function vilFriends(sc){const ids=vilFrList();
+/* ---------- друзья в городке: настоящие позиции (Firestore vil/{id}), плавное движение ---------- */
+const VNET={sub:null,ids:'',pos:{},last:null,lastT:0,mode:'vil',seen:{},it:null,hit:null,cakeT:0,away:true};
+const vilFresh=x=>x&&!x.away&&Date.now()-(x.rt||0)<20000&&Math.abs(Date.now()-(+x.t||0))<600000;
+function vilNetSub(){const ids=socialOn()?vilFrList().slice(0,10):[],key=VNET.mode+':'+ids.join(',');if(key===VNET.ids&&(VNET.sub||!ids.length))return;
+ if(VNET.sub){try{VNET.sub()}catch(e){}VNET.sub=null}VNET.ids=key;if(!ids.length)return;
+ try{const fs=STORE.db.fs,pres=VNET.mode!=='vil';VNET.sub=fs.collection(pres?'presence':'vil').where(firebase.firestore.FieldPath.documentId(),'in',ids).onSnapshot(s=>{
+   s.docs.forEach(d=>{const x=pres?(d.data().vp||null):d.data();if(x)vilNetRecv(d.id,x)})},()=>{})}catch(e){}}
+function vilNetRecv(id,x){x=Object.assign({},x,{rt:Date.now()});VNET.pos[id]=x;const h=x.hit;
+ if(h&&h.n){const first=VNET.seen[id]===undefined;if(VNET.seen[id]!==h.n){VNET.seen[id]=h.n;if(!first&&Math.abs(Date.now()-(+h.t||0))<20000)vilHitEvent(id,h.id)}}else if(VNET.seen[id]===undefined)VNET.seen[id]=0}
+function vilNetPub(force,away){if(!socialOn()||!SESSION||!VIL.pos)return;const now=Date.now(),P=VIL.pos,L=VNET.last;
+ if(!away){const moved=!L||Math.hypot(P.u-L.u,P.v-L.v)>.3;if(!force&&!(moved&&now-VNET.lastT>650)&&now-VNET.lastT<8000)return;if(!force&&!vilFrList().length)return}
+ const d={u:+P.u.toFixed(2),v:+P.v.toFixed(2),t:now,away:!!away};if(VNET.hit)d.hit=VNET.hit;VNET.last={u:P.u,v:P.v};VNET.lastT=now;VNET.away=!!away;
+ const fs=STORE.db.fs,pr=VNET.mode==='vil'?fs.collection('vil').doc(SESSION).set(d):fs.collection('presence').doc(SESSION).set({t:now,vp:d},{merge:true});
+ pr.catch(err=>{if(VNET.mode==='vil'&&/permission/i.test(String(err&&(err.code||err.message)))){VNET.mode='presence';vilNetSub();vilNetPub(true,away)}})}
+function vilFriends(sc){vilNetSub();const ids=vilFrList().filter(id=>vilFresh(VNET.pos[id]));
  Object.keys(VIL.fr).forEach(id=>{if(!ids.includes(id)){const f=VIL.fr[id];if(f.spr)f.spr.destroy();if(f.tag)f.tag.destroy();delete VIL.fr[id]}});
- ids.forEach(id=>{if(VIL.fr[id])return;const p=DB.players[id],h=vilHash(id),pos=vilFrSpot(h),key=vilTint(sc,60+h%240);
-  const spr=sc.add.sprite(0,0,key,0).setOrigin(.5,1),tag=vilTx(sc,0,0,(p.avatar||'🙂')+' '+(p.name||''),{fontFamily:'system-ui,sans-serif',fontSize:'13px',fontStyle:'bold',color:'#fff',backgroundColor:'#2c7a3c',padding:{x:6,y:2}}).setOrigin(.5,1).setDepth(89995);
-  VIL.fr[id]={spr,tag,pos,next:sc.time.now+1500+h%3000,run:null,fr:0,ft:0}})}
-function vilFrUpdate(sc,dt,time){Object.entries(VIL.fr).forEach(([id,f])=>{if(!f.run&&time>f.next){const T=vilFrSpot(vilHash(id+time)),pts=vilPathTo(f.pos,T);f.next=time+4000+vilHash(id+time)%5000;if(pts&&pts.length)f.run={pts,from:{...f.pos},seg:0,f:0}}
-  if(f.run){const R=f.run,a=R.seg?R.pts[R.seg-1]:R.from,b=R.pts[R.seg],len=Math.max(.001,Math.abs(b.u-a.u)+Math.abs(b.v-a.v));R.f=Math.min(1,R.f+dt*2.2/len);f.pos={u:a.u+(b.u-a.u)*R.f,v:a.v+(b.v-a.v)*R.f};
-   const fc=sc.face(b.u-a.u,b.v-a.v);if(time-f.ft>130){f.ft=time;f.fr=(f.fr+1)%4}f.spr.setFrame(fc.row*4+f.fr).setFlipX(fc.flip);if(R.f>=1){R.seg++;R.f=0;if(R.seg>=R.pts.length){f.run=null;f.spr.setFrame(0).setFlipX(false)}}}
-  sc.put(f.spr,f.pos.u,f.pos.v);f.tag.setPosition(f.spr.x,f.spr.y-62)})}
+ ids.forEach(id=>{if(VIL.fr[id])return;const p=DB.players[id],h=vilHash(id),x=VNET.pos[id],key=vilTint(sc,60+h%240);
+  const spr=sc.add.sprite(0,0,key,0).setOrigin(.5,1),tag=vilTx(sc,0,0,(p.avatar||'🙂')+' '+(p.name||''),{fontFamily:VIL_FONT,fontSize:'13px',fontStyle:'bold',color:'#fff',backgroundColor:'#2c7a3c',padding:{x:6,y:2}}).setOrigin(.5,1).setDepth(89995);
+  VIL.fr[id]={spr,tag,pos:{u:x.u,v:x.v},fr:0,ft:0,mv:false}})}
+function vilFrUpdate(sc,dt,time){Object.entries(VIL.fr).forEach(([id,f])=>{const x=VNET.pos[id];if(x){const du=x.u-f.pos.u,dv=x.v-f.pos.v,d=Math.hypot(du,dv);
+  if(d>8){f.pos={u:x.u,v:x.v}}else if(d>.04){const st=Math.min(d,Math.max(5.2,d*3)*dt);f.pos={u:f.pos.u+du/d*st,v:f.pos.v+dv/d*st};const fc=sc.face(du,dv);if(time-f.ft>120){f.ft=time;f.fr=(f.fr+1)%4}f.spr.setFrame(fc.row*4+f.fr).setFlipX(fc.flip);f.mv=true}
+  else if(f.mv){f.mv=false;f.spr.setFrame(0).setFlipX(false)}}
+  sc.put(f.spr,f.pos.u,f.pos.v);f.tag.setPosition(f.spr.x,f.spr.y-62)});vilItTag(sc)}
+/* ---------- догонялки: бросаем тортик ---------- */
+Object.assign(S,{vilCakeT:['🎂 Бросить тортик','🎂 Throw a cake'],vilHitYou:['🎂 {n} попал в тебя тортиком! Теперь ты водишь — догоняй!','🎂 {n} hit you with a cake! You are “it” now — chase!'],
+ vilHitThem:['🎂 Попал! {n} теперь водит — убегай!','🎂 Hit! {n} is “it” now — run!'],vilHitOther:['🎂 {a} попал тортиком в {b}','🎂 {a} hit {b} with a cake'],vilIt:['водит','it'],vilMiss:['Мимо!','Missed!']});
+function vilCakeTex(sc){const TX=sc.textures,mk=(k,w,h,f)=>{if(TX.exists(k))return;const c=document.createElement('canvas');c.width=w;c.height=h;f(c.getContext('2d'));TX.addCanvas(k,c)};
+ mk('vcake',20,18,x=>{x.fillStyle='#5a2d14';x.fillRect(1,8,18,9);x.fillStyle='#f6c27a';x.fillRect(2,9,16,7);x.fillStyle='#ff7eb6';x.fillRect(1,5,18,5);x.fillStyle='#fff';x.fillRect(2,5,16,2);[3,7,11,15].forEach(i=>x.fillRect(i,9,2,2));x.fillStyle='#e0182d';x.fillRect(8,1,4,4);x.fillStyle='#ff9aa8';x.fillRect(9,1,1,1)});
+ mk('vcream',5,5,x=>{x.fillStyle='#fff6fb';x.fillRect(0,0,5,5);x.fillStyle='#ffb3d1';x.fillRect(1,1,2,2)});
+ mk('vsplat',44,30,x=>{x.fillStyle='rgba(255,250,252,.97)';[[22,15,12],[10,16,8],[34,14,8],[16,7,7],[29,22,7],[22,24,6]].forEach(([a,b,r])=>{x.beginPath();x.arc(a,b,r,0,7);x.fill()});x.fillStyle='#ff8fbf';[[18,12,3],[28,17,2],[12,18,2]].forEach(([a,b,r])=>{x.beginPath();x.arc(a,b,r,0,7);x.fill()});x.fillStyle='#e0182d';x.fillRect(23,8,4,4)})}
+function vilFly(sc,A,B,cb){vilCakeTex(sc);const a=vilXY(A.u,A.v),b=vilXY(B.u,B.v),sx=a.x,sy=a.y-40,tx=b.x,ty=b.y-30,c=sc.add.image(sx,sy,'vcake').setDepth(99500).setScale(1.3);
+ try{tone(660,0,.05,'square',.04);tone(990,.05,.06,'square',.03)}catch(e){}
+ sc.tweens.addCounter({from:0,to:1,duration:Math.min(700,260+Math.hypot(tx-sx,ty-sy)*1.1),onUpdate:tw=>{const f=tw.getValue();c.x=sx+(tx-sx)*f;c.y=sy+(ty-sy)*f-Math.sin(Math.PI*f)*70;c.rotation=f*6},onComplete:()=>{c.destroy();cb&&cb(tx,ty)}})}
+function vilSplatAt(sc,x,y,big){vilCakeTex(sc);try{const e=sc.add.particles(0,0,'vcream',{speed:{min:40,max:big?150:90},angle:{min:190,max:350},gravityY:300,lifespan:{min:300,max:600},scale:{start:1,end:.4},emitting:false}).setDepth(99600);e.explode(big?18:8,x,y);sc.time.delayedCall(900,()=>e.destroy())}catch(e){}
+ try{tone(150,0,.15,'sine',.08);tone(300,.03,.1,'triangle',.04)}catch(e){}}
+function vilSplatOn(sc,spr){if(!spr)return;vilSplatAt(sc,spr.x,spr.y-40,true);const s=sc.add.image(spr.x,spr.y-38,'vsplat').setDepth(99550).setScale(.4);
+ sc.tweens.add({targets:s,scale:1,duration:140,ease:'Back.easeOut'});const ev=sc.time.addEvent({delay:30,loop:true,callback:()=>{if(spr.active)s.setPosition(spr.x,spr.y-38)}});
+ sc.time.delayedCall(2600,()=>{ev.remove();sc.tweens.add({targets:s,alpha:0,duration:400,onComplete:()=>s.destroy()})})}
+ACT.vilCake=function(){const sc=VIL.sc;if(!sc||!sc.dof||sc.entering||!VIL.pos)return;const now=Date.now();if(now-VNET.cakeT<900)return;VNET.cakeT=now;
+ const P={...VIL.pos};let best=null,bd=7.5;Object.entries(VIL.fr).forEach(([id,f])=>{const d=Math.hypot(f.pos.u-P.u,f.pos.v-P.v);if(d<bd){bd=d;best=id}});
+ const F=VIL.face||{u:1,v:0},T=best?{...VIL.fr[best].pos}:{u:P.u+F.u*4,v:P.v+F.v*4};
+ vilFly(sc,P,T,(x,y)=>{let hit=null,hd=1.15;Object.entries(VIL.fr).forEach(([id,f])=>{const d=Math.hypot(f.pos.u-T.u,f.pos.v-T.v);if(d<hd){hd=d;hit=id}});
+  if(!hit){vilSplatAt(sc,x,y,false);vilPop(sc,x,y-20,t('vilMiss'));return}
+  vilSplatOn(sc,VIL.fr[hit].spr);VNET.it=hit;VNET.hit={id:hit,n:now,t:now};vilNetPub(true);toast(esc(t('vilHitThem',{n:pnm(hit)})),2200)})};
+function vilPop(sc,x,y,s){const tx=vilTx(sc,x,y,s,{fontFamily:VIL_FONT,fontSize:'14px',fontStyle:'bold',color:'#fff',stroke:'#000',strokeThickness:4}).setOrigin(.5,1).setDepth(99700);sc.tweens.add({targets:tx,y:y-30,alpha:0,duration:900,onComplete:()=>tx.destroy()})}
+function vilHitEvent(from,target){const sc=VIL.sc;VNET.it=target;const live=sc&&sc.sys&&sc.sys.isActive();
+ const fs=VIL.fr[from],A=fs?fs.pos:(VNET.pos[from]||null),tgt=target===SESSION?(live&&sc.dof?sc.dof:null):(VIL.fr[target]&&VIL.fr[target].spr);
+ const done=()=>{if(live&&tgt)vilSplatOn(sc,tgt);if(target===SESSION){toast(esc(t('vilHitYou',{n:pnm(from)})),3200);try{if(navigator.vibrate&&!SET.mute)navigator.vibrate(60)}catch(e){}}else toast(esc(t('vilHitOther',{a:pnm(from),b:pnm(target)})),2200)};
+ if(live&&A&&tgt){const B=target===SESSION?VIL.pos:VIL.fr[target].pos;vilFly(sc,A,B,done)}else done()}
+function vilItTag(sc){const id=VNET.it;let spr=null;if(id===SESSION)spr=sc.dof;else if(id&&VIL.fr[id])spr=VIL.fr[id].spr;
+ if(!spr){if(sc.itTag)sc.itTag.setVisible(false);return}
+ if(!sc.itTag)sc.itTag=vilTx(sc,0,0,'🎯 '+t('vilIt'),{fontFamily:VIL_FONT,fontSize:'12px',fontStyle:'bold',color:'#fff',backgroundColor:'#c8142d',padding:{x:5,y:2}}).setOrigin(.5,1).setDepth(99010);
+ sc.itTag.setVisible(true).setPosition(spr.x,spr.y-(id===SESSION?66:84))}
 function vilFrMenu(id){const p=DB.players[id];if(!p)return;sndTick();
  modal(`<div style="font-size:46px">${esc(p.avatar||'🙂')}</div><h2>${esc(p.name)}</h2><p class="muted" style="font-weight:800">🟢 ${esc(t('vilFrIn'))}</p>
   <div class="row"><button class="btn" data-act="vilFrChat" data-arg="${esc(id)}">${t('vilFrChat')}</button><button class="btn pri" data-act="vilFrPlay" data-arg="${esc(id)}">${t('vilFrPlay')}</button></div>
@@ -6315,7 +6360,7 @@ document.addEventListener('pointerdown',ev=>{const j=ev.target.closest&&ev.targe
  j.addEventListener('pointermove',mv);j.addEventListener('pointerup',up);j.addEventListener('pointercancel',up);mv(ev)},true);
 const VKEY={ArrowLeft:'l',ArrowRight:'r',ArrowUp:'u',ArrowDown:'d',a:'l',d:'r',w:'u',s:'d',A:'l',D:'r',W:'u',S:'d','ф':'l','в':'r','ц':'u','ы':'d'};
 addEventListener('keydown',e=>{if(SCREEN!=='menu'||!document.getElementById('vilStage')||document.querySelector('.overlay')||/INPUT|TEXTAREA/.test((e.target&&e.target.tagName)||''))return;
- if(VKEY[e.key]){VJ.keys[VKEY[e.key]]=1;e.preventDefault()}else if(e.key===' '){e.preventDefault();ACT.vilJump()}else if(e.key==='Enter'&&VIL.near!=null){e.preventDefault();ACT.vilEnterNear()}});
+ if(VKEY[e.key]){VJ.keys[VKEY[e.key]]=1;e.preventDefault()}else if(e.key===' '){e.preventDefault();ACT.vilJump()}else if(/^[fFаА]$/.test(e.key)){e.preventDefault();ACT.vilCake()}else if(e.key==='Enter'&&VIL.near!=null){e.preventDefault();ACT.vilEnterNear()}});
 addEventListener('keyup',e=>{if(VKEY[e.key])VJ.keys[VKEY[e.key]]=0});addEventListener('blur',()=>{VJ.keys={}});
 /* ---------- встраивание в меню ---------- */
 ACT.vilToggle=function(){SET.vil=SET.vil===false;try{saveSettings()}catch(e){}renderMenu()};
@@ -6323,8 +6368,8 @@ function vilFit(){const w=document.getElementById('vilWrap');if(!w)return;if(vil
  const top=w.getBoundingClientRect().top+scrollY;const h=Math.round(Math.max(260,Math.min(680,vh-Math.min(top,vh*.42)-10)));w.style.height=h+'px';return top}
 function vilMount(){vilFit();const st=document.getElementById('vilStage');if(!st)return;const cw=st.clientWidth,ch=st.clientHeight;if(cw<20||ch<20)return;const k=Math.min(2,window.devicePixelRatio||1);
  vilLoadImgs(ok=>{if(!st.isConnected)return;if(!ok)return vilFallback();if(!VIL.T)vilBuild();
-  pgLib(okL=>{if(!st.isConnected)return;if(!okL||!window.Phaser)return vilFallback();let C;try{C=vilSceneCls()}catch(e){return vilFallback()}
-  pgMount(st,Math.round(cw*k),Math.round(ch*k),[cw,ch],'vils',C,{dpr:k}).then(sc=>{const ld=document.getElementById('vilLoad');if(ld)ld.remove();if(!sc&&st.isConnected)vilFallback()})})})}
+  vilFontReady(()=>pgLib(okL=>{if(!st.isConnected)return;if(!okL||!window.Phaser)return vilFallback();let C;try{C=vilSceneCls()}catch(e){return vilFallback()}
+  pgMount(st,Math.round(cw*k),Math.round(ch*k),[cw,ch],'vils',C,{dpr:k}).then(sc=>{const ld=document.getElementById('vilLoad');if(ld)ld.remove();if(!sc&&st.isConnected)vilFallback()})}))})}
 function vilFallback(){if(SCREEN!=='menu')return;toast(esc(t('vilFail')),3000);document.querySelectorAll('#app .vilhide').forEach(e=>e.classList.remove('vilhide'));const v=document.querySelector('#app .vil');if(v)v.remove()}
 addEventListener('resize',()=>{vilFit();const sc=VIL.sc,st=document.getElementById('vilStage');if(!sc||!st||!sc.sys.isActive())return;const k=Math.min(2,window.devicePixelRatio||1),cw=st.clientWidth,ch=st.clientHeight;
  sc.game.scale.resize(Math.round(cw*k),Math.round(ch*k));sc.game.canvas.style.width=cw+'px';sc.game.canvas.style.height=ch+'px';sc.dpr=k;sc.resizeCam()});
@@ -6334,13 +6379,16 @@ const _renderMenuVIL=renderMenu;renderMenu=function(){const r=_renderMenuVIL.app
  document.querySelectorAll('#app > h2.on-sky,#app > .modes').forEach(e=>e.classList.add('vilhide'));
  head.insertAdjacentHTML('afterend',`<section class="vil panel blk"><div class="vilbar2"><span class="vilhint">${esc(t('vilHint'))}</span><span class="vilbtns"><button class="btn sm" data-act="vilHome" title="${esc(t('vilHome'))}">${vilIcoLbl(t('vilHome'))}</button><button class="btn sm" data-act="vilToggle" title="${esc(t('vilList'))}">${vilIcoLbl(t('vilList'))}</button><button class="btn sm vilmenub" data-act="vilMenu" title="${esc(t('vilMenuT'))}">${vilIcoLbl('☰ '+t('vilMenuT'))}</button></span></div>
  <div class="vilwrap" id="vilWrap"><div class="vilstage" id="vilStage"><div class="vilload" id="vilLoad">${esc(t('vilLoad'))}</div></div>
- <div class="viljoy" id="vilJoy" aria-label="joystick"><i></i></div><button class="viljump" data-act="vilJump" aria-label="${esc(t('vilJump'))}">⤴</button><button class="btn pri vilenter" id="vilEnter" data-act="vilEnterNear" hidden></button></div></section>`);
+ <div class="viljoy" id="vilJoy" aria-label="joystick"><i></i></div><button class="vilcake" data-act="vilCake" aria-label="${esc(t('vilCakeT'))}" title="${esc(t('vilCakeT'))}">🎂</button><button class="viljump" data-act="vilJump" aria-label="${esc(t('vilJump'))}">⤴</button><button class="btn pri vilenter" id="vilEnter" data-act="vilEnterNear" hidden></button></div></section>`);
  VIL.menuHtml=[...document.querySelectorAll('#app > .row')].map(e=>e.innerHTML).join('');vilFsSync();
  requestAnimationFrame(()=>{const top=vilFit();const vh=(window.visualViewport&&visualViewport.height)||innerHeight;if(top>vh*.42&&scrollY<5)try{scrollTo({top:top-Math.round(vh*.42)+4})}catch(e){}vilMount()});return r};
+/* ---------- цветные значки-эмодзи для всех (на Windows нет флагов и новых эмодзи вроде 🪙 🪧) ---------- */
+document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap"><style>:root{--font-body:"Nunito",system-ui,"Segoe UI","Noto Color Emoji",sans-serif;--font-px:"Press Start 2P","Nunito",system-ui,"Noto Color Emoji",sans-serif}body{font-family:var(--font-body)}</style>');
+function vilFontReady(cb){let done=false;const go=()=>{if(!done){done=true;cb()}};try{if(!document.fonts||!document.fonts.load)return go();Promise.all(['16px "Noto Color Emoji"'].map(f=>document.fonts.load(f,'🪧🪙🧸⛲🇷🇺♞'))).then(go,go);setTimeout(go,2500)}catch(e){go()}}
 /* ---------- деревня на весь экран: компактная плашка сверху, остальное меню — по кнопке ☰ ---------- */
 Object.assign(S,{vilMenuT:['Меню','Menu','Мәзір','Menú','Menü','Menu']});
 const vilIcoLbl=s=>{const m=String(s).match(/^(\S+)\s+(.*)$/);return m?`<span class="vi">${m[1]}</span><span class="vl"> ${esc(m[2])}</span>`:esc(s)};
-function vilFsSync(){const on=SCREEN==='menu'&&!!document.querySelector('#app > section.vil');const b=document.body;b.classList.toggle('vilfs',on);
+function vilFsSync(){const on=SCREEN==='menu'&&!!document.querySelector('#app > section.vil');const b=document.body;if(!on&&b.classList.contains('vilfs')&&!VNET.away)try{vilNetPub(true,true)}catch(e){}b.classList.toggle('vilfs',on);
  const h=document.querySelector('#app > header.top');if(on&&h){const lo=h.querySelector('[data-act="logout"]');if(lo&&!lo.dataset.fs){lo.dataset.fs=1;lo.title=lo.textContent;lo.setAttribute('aria-label',lo.textContent);lo.innerHTML='🚪<span class="vl"> '+esc(lo.textContent)+'</span>'}
   b.style.setProperty('--vhd',Math.ceil(h.getBoundingClientRect().height)+'px')}
  return on}
@@ -6363,7 +6411,7 @@ body.vilfs .vilwrap{position:absolute;inset:0;height:auto!important;box-shadow:n
 body.vilfs .vilbar2{position:absolute;top:8px;right:8px;left:auto;z-index:7;margin:0}body.vilfs .vilhint{display:none}
 body.vilfs .vilbtns .btn{box-shadow:0 0 0 2px #000,0 3px 0 rgba(0,0,0,.35)}
 body.vilfs .vilenter{right:auto;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 132px);max-width:86%}
-body.vilfs .viljoy{bottom:calc(env(safe-area-inset-bottom,0px) + 14px)}body.vilfs .viljump{bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
+body.vilfs .viljoy{bottom:calc(env(safe-area-inset-bottom,0px) + 14px)}body.vilfs .vilcake{bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}body.vilfs .viljump{bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
 body.vilfs #chatDock{bottom:calc(env(safe-area-inset-bottom,0px) + 112px)}
 .vilmenu{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:6px 0 12px}.vilmenu .btn{flex:1 1 140px}
 @media (max-width:560px){.vilbtns .vl{display:none}.vilbtns .btn{min-width:42px}body.vilfs #app>header.top .vl{display:none}body.vilfs .vilenter{bottom:calc(env(safe-area-inset-bottom,0px) + 124px);max-width:calc(100% - 150px)}body.vilfs #chatDock{bottom:calc(env(safe-area-inset-bottom,0px) + 92px)}}
@@ -6371,7 +6419,7 @@ body.vilfs #chatDock{bottom:calc(env(safe-area-inset-bottom,0px) + 112px)}
 /* ---------- названия домов: только у двери или по нажатию, в контрастной рамке поверх всего ---------- */
 function vilLabel(sc,o,txt,prog){const d=vilXY(o.door.u,o.door.v),X=d.x,Y=d.y-100;
  /* текст — отдельным объектом: внутри контейнера на холсте Canvas резкость (resolution) ломает размер */
- const tx=vilTx(sc,X,Y,txt,{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:(sc.dpr>1.5?'20px':'16px'),fontStyle:'bold',color:'#14110c'}).setOrigin(.5,.5).setDepth(99001).setVisible(false);
+ const tx=vilTx(sc,X,Y,txt,{fontFamily:VIL_FONT,fontSize:(sc.dpr>1.5?'20px':'16px'),fontStyle:'bold',color:'#14110c'}).setOrigin(.5,.5).setDepth(99001).setVisible(false);
  const w=Math.ceil(tx.displayWidth)+22,h=Math.ceil(tx.displayHeight)+12+(prog!=null?7:0),g=sc.add.graphics();
  g.fillStyle(0x000000,.35).fillRoundedRect(-w/2-3,-h/2+1,w+6,h+6,8);g.fillStyle(0x14110c,1).fillRoundedRect(-w/2-3,-h/2-3,w+6,h+6,8);g.fillStyle(0xfff4c8,1).fillRoundedRect(-w/2,-h/2,w,h,6);
  g.fillStyle(0x14110c,1).fillTriangle(-9,h/2+2,9,h/2+2,0,h/2+12);g.fillStyle(0xfff4c8,1).fillTriangle(-6,h/2-1,6,h/2-1,0,h/2+7);
@@ -6397,7 +6445,7 @@ function vilCoins(n){const sc=VIL.sc;if(!sc||!sc.fnt||!sc.dof)return;const F=sc.
   sc.tweens.addCounter({from:0,to:1,duration:560,ease:'Sine.easeIn',onUpdate:tw=>{const f=tw.getValue();c.x=sx+(tx-sx)*f;c.y=sy+(ty-sy)*f-Math.sin(Math.PI*f)*90;c.setScale(1-.35*f);c.rotation=f*9},
    onComplete:()=>{c.destroy();if(sc.fntSplash)sc.fntSplash.explode(10,tx,ty);try{tone(180,0,.12,'sine',.07);tone(420,.02,.08,'triangle',.03)}catch(e){}}})})}
 function vilFnCount(n){const sc=VIL.sc;if(!sc||!sc.fnt||!sc.sys.isActive())return;const F=sc.fnt;if(sc.fntTxt)sc.fntTxt.destroy();
- const tx=vilTx(sc,F.x,F.y-175*F.k,'🪙 '+n,{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'15px',fontStyle:'bold',color:'#ffe066',stroke:'#3a2400',strokeThickness:4}).setOrigin(.5,1).setDepth(99400);sc.fntTxt=tx;
+ const tx=vilTx(sc,F.x,F.y-175*F.k,'🪙 '+n,{fontFamily:VIL_FONT,fontSize:'15px',fontStyle:'bold',color:'#ffe066',stroke:'#3a2400',strokeThickness:4}).setOrigin(.5,1).setDepth(99400);sc.fntTxt=tx;
  sc.tweens.add({targets:tx,y:tx.y-36,alpha:{from:1,to:0},delay:500,duration:900,onComplete:()=>{tx.destroy();if(sc.fntTxt===tx)sc.fntTxt=null}})}
 const fnSt=n=>n>=1000?2:n>=100?1:0;
 function vilFountainMenu(){const p=cur();if(!p)return;const w=shopWallet(p),n=+p.fnt||0,st=fnSt(n);
@@ -6432,13 +6480,14 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .viljoy i{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd28a,#ff8a2a 60%,#b44a12);box-shadow:0 0 0 3px #000,0 4px 0 #000;pointer-events:none}
 .viljoy.on{background:rgba(0,0,0,.38)}
 .viljump{position:absolute;right:14px;bottom:18px;width:76px;height:76px;border-radius:50%;z-index:6;font:900 30px/1 sans-serif;background:#46c83f;color:#fff;border:0;box-shadow:0 0 0 3px #000,0 5px 0 #1d5a18;touch-action:none}
+.vilcake{position:absolute;right:104px;bottom:20px;width:62px;height:62px;border-radius:50%;z-index:6;font:28px/1 sans-serif;background:#ff8fbf;border:0;box-shadow:0 0 0 3px #000,0 5px 0 #a8406a;touch-action:none;cursor:pointer}.vilcake:active{transform:translateY(3px);box-shadow:0 0 0 3px #000,0 2px 0 #a8406a}
 .viljump:active{transform:translateY(3px);box-shadow:0 0 0 3px #000,0 2px 0 #1d5a18}
 .vilenter{position:absolute;right:12px;bottom:108px;z-index:6;max-width:58%;white-space:normal;line-height:1.25;text-align:center;font-size:13px!important;padding:8px 10px!important;animation:vilpop .2s ease-out}
 @keyframes vilpop{from{transform:scale(.6);opacity:0}}
 .fnrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0}.fnw{font-family:var(--font-px);font-size:15px;padding:6px 10px;background:#2b2b2b;color:#ffd23f;box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #555}.fnw.t{color:#8fe3ff}
 .fnst{font-weight:900;font-size:20px;margin:6px 0}.fnbar{height:12px;background:#333;box-shadow:0 0 0 2px #000;margin:4px auto 10px;max-width:320px}.fnbar i{display:block;height:100%;background:linear-gradient(90deg,#ffd23f,#ff9a2a)}
 @media (hover:hover) and (pointer:fine){.viljoy{width:100px;height:100px}}
-@media (max-width:560px){.vilhint{display:none}.vilbar2{justify-content:flex-end;margin-bottom:4px}.viljoy{width:104px;height:104px;left:10px;bottom:10px}.viljump{width:66px;height:66px;right:10px;bottom:14px;font-size:26px}.vilenter{bottom:92px}}
+@media (max-width:560px){.vilcake{width:54px;height:54px;right:84px;font-size:24px}.vilhint{display:none}.vilbar2{justify-content:flex-end;margin-bottom:4px}.viljoy{width:104px;height:104px;left:10px;bottom:10px}.viljump{width:66px;height:66px;right:10px;bottom:14px;font-size:26px}.vilenter{bottom:92px}}
 </style>`);
 </script>
 </body></html>
