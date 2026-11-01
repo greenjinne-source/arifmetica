@@ -6295,6 +6295,7 @@ function vilFrSpot(seed){for(let i=0;i<60;i++){const u=VM+45+((seed+i*7)%12),v=V
 const VNET={sub:null,offs:[],ids:'',pos:{},last:null,lastT:0,mode:'rt',seen:{},it:null,hit:null,cakeT:0,away:true};
 const vilFresh=x=>x&&!x.away&&Date.now()-(x.rt||0)<20000&&Math.abs(Date.now()-(+x.t||0))<600000;
 /* позиции — в Realtime Database (g/_vil/{id}): там платят за объём, а не за каждую запись; если не вышло — Firestore */
+const vilNow=()=>{try{return now2()}catch(e){return Date.now()}};
 const vilRt=()=>(typeof rtdb==='function'?rtdb():Promise.reject()).catch(()=>null);
 function vilNetSub(){const ids=socialOn()?vilFrList().slice(0,10):[],key=VNET.mode+':'+ids.join(',');if(key===VNET.ids)return;VNET.ids=key;
  (VNET.offs||[]).forEach(f=>{try{f()}catch(e){}});VNET.offs=[];if(!ids.length)return;
@@ -6303,7 +6304,10 @@ function vilNetSub(){const ids=socialOn()?vilFrList().slice(0,10):[],key=VNET.mo
  try{const fs=STORE.db.fs,pres=VNET.mode!=='vil';VNET.offs.push(fs.collection(pres?'presence':'vil').where(firebase.firestore.FieldPath.documentId(),'in',ids).onSnapshot(s=>{
    s.docs.forEach(d=>{const x=pres?(d.data().vp||null):d.data();if(x)vilNetRecv(d.id,x)})},()=>{}))}catch(e){}}
 function vilNetRecv(id,x){x=Object.assign({},x,{rt:Date.now()});VNET.pos[id]=x;const h=x.hit;
- if(h&&h.n){const first=VNET.seen[id]===undefined;if(VNET.seen[id]!==h.n){VNET.seen[id]=h.n;if(!first&&Math.abs(Date.now()-(+h.t||0))<20000)vilHitEvent(id,h.id)}}else if(VNET.seen[id]===undefined)VNET.seen[id]=0}
+ if(h&&h.n&&VNET.seen[id]!==h.n){VNET.seen[id]=h.n;if(Math.abs(vilNow()-(+h.t||0))<12000)vilHitEvent(id,h.id)}}
+/* кто водит: цель самого свежего броска среди моего и всех друзей (время по серверу, чтобы часы устройств не мешали) */
+function vilItCalc(){let best=VNET.hit;Object.values(VNET.pos).forEach(x=>{const h=x&&x.hit;if(h&&h.n&&(!best||h.n>best.n))best=h});
+ return best&&vilNow()-best.n<20*60000?best.id:null}
 function vilNetFail(){if(VNET.mode==='rt')VNET.mode='vil';else if(VNET.mode==='vil')VNET.mode='presence';else return false;VNET.ids='';vilNetSub();return true}
 function vilNetPub(force,away){if(!socialOn()||!SESSION||!VIL.pos)return;const now=Date.now(),P=VIL.pos,L=VNET.last;
  if(!away){const moved=!L||Math.hypot(P.u-L.u,P.v-L.v)>.25;if(!force&&!(moved&&now-VNET.lastT>(VNET.mode==='rt'?300:650))&&now-VNET.lastT<8000)return;if(!force&&!vilFrList().length)return}
@@ -6342,13 +6346,13 @@ ACT.vilCake=function(){const sc=VIL.sc;if(!sc||!sc.dof||sc.entering||!VIL.pos)re
  const F=VIL.face||{u:1,v:0},T=best?{...VIL.fr[best].pos}:{u:P.u+F.u*4,v:P.v+F.v*4};
  vilFly(sc,P,T,(x,y)=>{let hit=null,hd=1.15;Object.entries(VIL.fr).forEach(([id,f])=>{const d=Math.hypot(f.pos.u-T.u,f.pos.v-T.v);if(d<hd){hd=d;hit=id}});
   if(!hit){vilSplatAt(sc,x,y,false);vilPop(sc,x,y-20,t('vilMiss'));return}
-  vilSplatOn(sc,VIL.fr[hit].spr);VNET.it=hit;VNET.hit={id:hit,n:now,t:now};vilNetPub(true);toast(esc(t('vilHitThem',{n:pnm(hit)})),2200)})};
+  vilSplatOn(sc,VIL.fr[hit].spr);const sn=vilNow();VNET.it=hit;VNET.hit={id:hit,n:sn,t:sn};vilNetPub(true);toast(esc(t('vilHitThem',{n:pnm(hit)})),2200)})};
 function vilPop(sc,x,y,s){const tx=vilTx(sc,x,y,s,{fontFamily:VIL_FONT,fontSize:'14px',fontStyle:'bold',color:'#fff',stroke:'#000',strokeThickness:4}).setOrigin(.5,1).setDepth(99700);sc.tweens.add({targets:tx,y:y-30,alpha:0,duration:900,onComplete:()=>tx.destroy()})}
 function vilHitEvent(from,target){const sc=VIL.sc;VNET.it=target;const live=sc&&sc.sys&&sc.sys.isActive();
  const fs=VIL.fr[from],A=fs?fs.pos:(VNET.pos[from]||null),tgt=target===SESSION?(live&&sc.dof?sc.dof:null):(VIL.fr[target]&&VIL.fr[target].spr);
  const done=()=>{if(live&&tgt)vilSplatOn(sc,tgt);if(target===SESSION){toast(esc(t('vilHitYou',{n:pnm(from)})),3200);try{if(navigator.vibrate&&!SET.mute)navigator.vibrate(60)}catch(e){}}else toast(esc(t('vilHitOther',{a:pnm(from),b:pnm(target)})),2200)};
  if(live&&A&&tgt){const B=target===SESSION?VIL.pos:VIL.fr[target].pos;vilFly(sc,A,B,done)}else done()}
-function vilItTag(sc){const id=VNET.it;let spr=null;if(id===SESSION)spr=sc.dof;else if(id&&VIL.fr[id])spr=VIL.fr[id].spr;
+function vilItTag(sc){const id=vilItCalc();let spr=null;if(id===SESSION)spr=sc.dof;else if(id&&VIL.fr[id])spr=VIL.fr[id].spr;
  if(!spr){if(sc.itTag)sc.itTag.setVisible(false);return}
  if(!sc.itTag)sc.itTag=vilTx(sc,0,0,'🎯 '+t('vilIt'),{fontFamily:VIL_FONT,fontSize:'12px',fontStyle:'bold',color:'#fff',backgroundColor:'#c8142d',padding:{x:5,y:2}}).setOrigin(.5,1).setDepth(99010);
  sc.itTag.setVisible(true).setPosition(spr.x,spr.y-(id===SESSION?66:84))}
