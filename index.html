@@ -6199,6 +6199,9 @@ function vilTint(sc,hue){const key='vdof'+hue;if(sc.textures.exists(key))return 
  for(let i=0;i<a.length;i+=4){if(!a[i+3])continue;const r=a[i],g=a[i+1],b=a[i+2];a[i]=Math.max(0,Math.min(255,m[0]*r+m[1]*g+m[2]*b));a[i+1]=Math.max(0,Math.min(255,m[3]*r+m[4]*g+m[5]*b));a[i+2]=Math.max(0,Math.min(255,m[6]*r+m[7]*g+m[8]*b))}
  x.putImageData(d,0,0);const tx=sc.textures.addCanvas(key,c);for(let i=0;i<24;i++)tx.add(i,0,(i%4)*64,Math.floor(i/4)*64,64,64);return key}catch(e){return'vdof'}}
 /* ---------- сцена ---------- */
+/* текст в сцене: шрифт крупнее в dpr раз и уменьшение — чётко на телефоне (setResolution на Canvas увеличивал надписи вдвое) */
+function vilTx(sc,x,y,s,st){const k=sc.dpr||1,o=Object.assign({},st);const px=n=>Math.round(parseFloat(n)*k)+'px';o.fontSize=px(o.fontSize||'14px');
+ if(o.padding)o.padding={x:(o.padding.x||0)*k,y:(o.padding.y||0)*k};if(o.strokeThickness)o.strokeThickness*=k;const t=sc.add.text(x,y,s,o).setScale(1/k);t.bs=1/k;return t}
 let VIL_SC=null;
 function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene{
  constructor(){super('vils')}
@@ -6216,7 +6219,7 @@ function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene
    const locked=o.act==='play'&&SPECIAL.includes(o.arg)&&!p.special;
    if(o.kind==='house'&&o.k!=='fountain'){const nm=vilName(o);if(nm){const prog=o.act==='play'&&!SPECIAL.includes(o.arg)?Math.min(100,p.modes&&p.modes[o.arg]?p.modes[o.arg].points:0)/100:null;o.lb=vilLabel(sc,o,(locked?'🔒 ':'')+nm,prog)}}});
   const fo=VIL.objs.find(o=>o.k==='fountain');if(fo&&fo.im)vilFountainFx(sc,fo);
-  VST.forEach(([su,sv,sk])=>{const q=vilXY(su+VM,sv+VM);sc.add.text(q.x,q.y,'🪧 '+t(sk),{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'14px',fontStyle:'bold',color:'#3a2410',backgroundColor:'#e8c88a',padding:{x:8,y:4}}).setOrigin(.5,1).setDepth(89990).setResolution(sc.dpr)});
+  VST.forEach(([su,sv,sk])=>{const q=vilXY(su+VM,sv+VM);vilTx(sc,q.x,q.y,'🪧 '+t(sk),{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'14px',fontStyle:'bold',color:'#3a2410',backgroundColor:'#e8c88a',padding:{x:8,y:4}}).setOrigin(.5,1).setDepth(89990)});
   /* дофик */
   const P=VIL.ret||((VIL.home||!VIL.pos)?VSPAWN:VIL.pos);VIL.ret=null;VIL.home=false;VIL.pos={u:P.u,v:P.v};sc.entering=false;VIL.run=null;const dp=vilXY(P.u,P.v);sc.dof=sc.add.sprite(dp.x,dp.y+6,'vdof',16+2).setOrigin(.5,1);
   sc.door=sc.add.sprite(0,0,'vdoor',0).setOrigin(.5,1).setVisible(false);
@@ -6290,7 +6293,7 @@ function vilFrSpot(seed){for(let i=0;i<60;i++){const u=VM+45+((seed+i*7)%12),v=V
 function vilFriends(sc){const ids=vilFrList();
  Object.keys(VIL.fr).forEach(id=>{if(!ids.includes(id)){const f=VIL.fr[id];if(f.spr)f.spr.destroy();if(f.tag)f.tag.destroy();delete VIL.fr[id]}});
  ids.forEach(id=>{if(VIL.fr[id])return;const p=DB.players[id],h=vilHash(id),pos=vilFrSpot(h),key=vilTint(sc,60+h%240);
-  const spr=sc.add.sprite(0,0,key,0).setOrigin(.5,1),tag=sc.add.text(0,0,(p.avatar||'🙂')+' '+(p.name||''),{fontFamily:'system-ui,sans-serif',fontSize:'13px',fontStyle:'bold',color:'#fff',backgroundColor:'#2c7a3c',padding:{x:6,y:2}}).setOrigin(.5,1).setDepth(89995).setResolution(sc.dpr);
+  const spr=sc.add.sprite(0,0,key,0).setOrigin(.5,1),tag=vilTx(sc,0,0,(p.avatar||'🙂')+' '+(p.name||''),{fontFamily:'system-ui,sans-serif',fontSize:'13px',fontStyle:'bold',color:'#fff',backgroundColor:'#2c7a3c',padding:{x:6,y:2}}).setOrigin(.5,1).setDepth(89995);
   VIL.fr[id]={spr,tag,pos,next:sc.time.now+1500+h%3000,run:null,fr:0,ft:0}})}
 function vilFrUpdate(sc,dt,time){Object.entries(VIL.fr).forEach(([id,f])=>{if(!f.run&&time>f.next){const T=vilFrSpot(vilHash(id+time)),pts=vilPathTo(f.pos,T);f.next=time+4000+vilHash(id+time)%5000;if(pts&&pts.length)f.run={pts,from:{...f.pos},seg:0,f:0}}
   if(f.run){const R=f.run,a=R.seg?R.pts[R.seg-1]:R.from,b=R.pts[R.seg],len=Math.max(.001,Math.abs(b.u-a.u)+Math.abs(b.v-a.v));R.f=Math.min(1,R.f+dt*2.2/len);f.pos={u:a.u+(b.u-a.u)*R.f,v:a.v+(b.v-a.v)*R.f};
@@ -6316,7 +6319,7 @@ addEventListener('keydown',e=>{if(SCREEN!=='menu'||!document.getElementById('vil
 addEventListener('keyup',e=>{if(VKEY[e.key])VJ.keys[VKEY[e.key]]=0});addEventListener('blur',()=>{VJ.keys={}});
 /* ---------- встраивание в меню ---------- */
 ACT.vilToggle=function(){SET.vil=SET.vil===false;try{saveSettings()}catch(e){}renderMenu()};
-function vilFit(){const w=document.getElementById('vilWrap');if(!w)return;const vh=(window.visualViewport&&visualViewport.height)||innerHeight;
+function vilFit(){const w=document.getElementById('vilWrap');if(!w)return;if(vilFsSync()){w.style.height='';return 0}const vh=(window.visualViewport&&visualViewport.height)||innerHeight;
  const top=w.getBoundingClientRect().top+scrollY;const h=Math.round(Math.max(260,Math.min(680,vh-Math.min(top,vh*.42)-10)));w.style.height=h+'px';return top}
 function vilMount(){vilFit();const st=document.getElementById('vilStage');if(!st)return;const cw=st.clientWidth,ch=st.clientHeight;if(cw<20||ch<20)return;const k=Math.min(2,window.devicePixelRatio||1);
  vilLoadImgs(ok=>{if(!st.isConnected)return;if(!ok)return vilFallback();if(!VIL.T)vilBuild();
@@ -6329,21 +6332,54 @@ const _renderMenuVIL=renderMenu;renderMenu=function(){const r=_renderMenuVIL.app
  const head=document.querySelector('#app > header.top');if(!head)return r;
  if(SET.vil===false){const h2=document.querySelector('#app > h2.on-sky');if(h2)h2.insertAdjacentHTML('beforebegin',`<div class="row" style="margin:6px 0"><button class="btn sm" data-act="vilToggle">${t('vilMap')}</button></div>`);return r}
  document.querySelectorAll('#app > h2.on-sky,#app > .modes').forEach(e=>e.classList.add('vilhide'));
- head.insertAdjacentHTML('afterend',`<section class="vil panel blk"><div class="vilbar2"><span class="vilhint">${esc(t('vilHint'))}</span><span class="vilbtns"><button class="btn sm" data-act="vilHome">${t('vilHome')}</button><button class="btn sm" data-act="vilToggle">${t('vilList')}</button></span></div>
+ head.insertAdjacentHTML('afterend',`<section class="vil panel blk"><div class="vilbar2"><span class="vilhint">${esc(t('vilHint'))}</span><span class="vilbtns"><button class="btn sm" data-act="vilHome" title="${esc(t('vilHome'))}">${vilIcoLbl(t('vilHome'))}</button><button class="btn sm" data-act="vilToggle" title="${esc(t('vilList'))}">${vilIcoLbl(t('vilList'))}</button><button class="btn sm vilmenub" data-act="vilMenu" title="${esc(t('vilMenuT'))}">${vilIcoLbl('☰ '+t('vilMenuT'))}</button></span></div>
  <div class="vilwrap" id="vilWrap"><div class="vilstage" id="vilStage"><div class="vilload" id="vilLoad">${esc(t('vilLoad'))}</div></div>
  <div class="viljoy" id="vilJoy" aria-label="joystick"><i></i></div><button class="viljump" data-act="vilJump" aria-label="${esc(t('vilJump'))}">⤴</button><button class="btn pri vilenter" id="vilEnter" data-act="vilEnterNear" hidden></button></div></section>`);
+ VIL.menuHtml=[...document.querySelectorAll('#app > .row')].map(e=>e.innerHTML).join('');vilFsSync();
  requestAnimationFrame(()=>{const top=vilFit();const vh=(window.visualViewport&&visualViewport.height)||innerHeight;if(top>vh*.42&&scrollY<5)try{scrollTo({top:top-Math.round(vh*.42)+4})}catch(e){}vilMount()});return r};
+/* ---------- деревня на весь экран: компактная плашка сверху, остальное меню — по кнопке ☰ ---------- */
+Object.assign(S,{vilMenuT:['Меню','Menu','Мәзір','Menú','Menü','Menu']});
+const vilIcoLbl=s=>{const m=String(s).match(/^(\S+)\s+(.*)$/);return m?`<span class="vi">${m[1]}</span><span class="vl"> ${esc(m[2])}</span>`:esc(s)};
+function vilFsSync(){const on=SCREEN==='menu'&&!!document.querySelector('#app > section.vil');const b=document.body;b.classList.toggle('vilfs',on);
+ const h=document.querySelector('#app > header.top');if(on&&h){const lo=h.querySelector('[data-act="logout"]');if(lo&&!lo.dataset.fs){lo.dataset.fs=1;lo.title=lo.textContent;lo.setAttribute('aria-label',lo.textContent);lo.innerHTML='🚪<span class="vl"> '+esc(lo.textContent)+'</span>'}
+  b.style.setProperty('--vhd',Math.ceil(h.getBoundingClientRect().height)+'px')}
+ return on}
+ACT.vilMenu=function(){sndTick();modal(`<h2>☰ ${esc(t('vilMenuT'))}</h2><div class="vilmenu">${VIL.menuHtml||''}</div><div class="row"><button class="btn sm" data-act="close">${t('cancel')}</button></div>`)};
+document.addEventListener('click',ev=>{const b=ev.target.closest&&ev.target.closest('.vilmenu [data-act]');if(b)try{closeModal()}catch(e){}},true);
+new MutationObserver(()=>{if(document.body.classList.contains('vilfs')!==(SCREEN==='menu'&&!!document.querySelector('#app > section.vil')))vilFsSync()}).observe(document.getElementById('app')||document.body,{childList:true});
+addEventListener('resize',()=>{if(document.body.classList.contains('vilfs'))vilFsSync()});
+document.head.insertAdjacentHTML('beforeend',`<style>
+body.vilfs{overflow:hidden;overscroll-behavior:none}
+body.vilfs #app{transform:none!important;filter:none!important;contain:none!important;overflow:visible!important}
+body.vilfs #app>header.top{position:fixed;top:0;left:0;right:0;z-index:60;margin:0!important;padding:4px 8px!important;gap:6px;flex-wrap:nowrap;max-width:none;width:auto;min-height:0;border-radius:0}
+body.vilfs #app>header.top .frame{zoom:.58;flex:none}
+body.vilfs #app>header.top .who{min-width:0;overflow:hidden;line-height:1.15}
+body.vilfs #app>header.top .who>b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+body.vilfs #app>header.top .who .dopa{font-size:12px;white-space:nowrap}body.vilfs #app>header.top .sdtitle{font-size:9px;padding:1px 4px}
+body.vilfs #app>header.top .icon{width:36px;height:36px;min-width:36px;font-size:17px;padding:0}
+body.vilfs #app>header.top .btn.sm{padding:6px 8px!important;font-size:11px;min-height:36px;white-space:nowrap}
+body.vilfs #app>section.vil{position:fixed;top:var(--vhd,52px);left:0;right:0;bottom:0;z-index:5;margin:0!important;padding:0!important;border:0;box-shadow:none;background:#2f6a26;max-width:none;width:auto}
+body.vilfs .vilwrap{position:absolute;inset:0;height:auto!important;box-shadow:none}
+body.vilfs .vilbar2{position:absolute;top:8px;right:8px;left:auto;z-index:7;margin:0}body.vilfs .vilhint{display:none}
+body.vilfs .vilbtns .btn{box-shadow:0 0 0 2px #000,0 3px 0 rgba(0,0,0,.35)}
+body.vilfs .vilenter{right:auto;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 132px);max-width:86%}
+body.vilfs .viljoy{bottom:calc(env(safe-area-inset-bottom,0px) + 14px)}body.vilfs .viljump{bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
+body.vilfs #chatDock{bottom:calc(env(safe-area-inset-bottom,0px) + 112px)}
+.vilmenu{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:6px 0 12px}.vilmenu .btn{flex:1 1 140px}
+@media (max-width:560px){.vilbtns .vl{display:none}.vilbtns .btn{min-width:42px}body.vilfs #app>header.top .vl{display:none}body.vilfs .vilenter{bottom:calc(env(safe-area-inset-bottom,0px) + 124px);max-width:calc(100% - 150px)}body.vilfs #chatDock{bottom:calc(env(safe-area-inset-bottom,0px) + 92px)}}
+</style>`);
 /* ---------- названия домов: только у двери или по нажатию, в контрастной рамке поверх всего ---------- */
-function vilLabel(sc,o,txt,prog){const d=vilXY(o.door.u,o.door.v);
- const tx=sc.add.text(0,0,txt,{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'16px',fontStyle:'bold',color:'#14110c'}).setOrigin(.5,.5).setResolution(sc.dpr);
- const w=Math.ceil(tx.width)+22,h=Math.ceil(tx.height)+12+(prog!=null?7:0),g=sc.add.graphics();
+function vilLabel(sc,o,txt,prog){const d=vilXY(o.door.u,o.door.v),X=d.x,Y=d.y-100;
+ /* текст — отдельным объектом: внутри контейнера на холсте Canvas резкость (resolution) ломает размер */
+ const tx=vilTx(sc,X,Y,txt,{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:(sc.dpr>1.5?'20px':'16px'),fontStyle:'bold',color:'#14110c'}).setOrigin(.5,.5).setDepth(99001).setVisible(false);
+ const w=Math.ceil(tx.displayWidth)+22,h=Math.ceil(tx.displayHeight)+12+(prog!=null?7:0),g=sc.add.graphics();
  g.fillStyle(0x000000,.35).fillRoundedRect(-w/2-3,-h/2+1,w+6,h+6,8);g.fillStyle(0x14110c,1).fillRoundedRect(-w/2-3,-h/2-3,w+6,h+6,8);g.fillStyle(0xfff4c8,1).fillRoundedRect(-w/2,-h/2,w,h,6);
  g.fillStyle(0x14110c,1).fillTriangle(-9,h/2+2,9,h/2+2,0,h/2+12);g.fillStyle(0xfff4c8,1).fillTriangle(-6,h/2-1,6,h/2-1,0,h/2+7);
- if(prog!=null){tx.y=-4;const bw=w-18,by=h/2-9;g.fillStyle(0x3a3a3a,1).fillRect(-bw/2,by,bw,5);g.fillStyle(0x2fb52a,1).fillRect(-bw/2,by,Math.round(bw*prog),5)}
- const c=sc.add.container(d.x,d.y-100,[g,tx]).setDepth(99000).setVisible(false);c.setSize(w+6,h+16);return c}
+ if(prog!=null){tx.y=Y-4;const bw=w-18,by=h/2-9;g.fillStyle(0x3a3a3a,1).fillRect(-bw/2,by,bw,5);g.fillStyle(0x2fb52a,1).fillRect(-bw/2,by,Math.round(bw*prog),5)}
+ const c=sc.add.container(X,Y,[g]).setDepth(99000).setVisible(false);c.setSize(w+6,h+16);c.tx=tx;return c}
 function vilLabels(sc){if(!sc||!sc.sys||!sc.sys.isActive())return;const now=Date.now(),tp=VIL.tap&&now<VIL.tap.until?VIL.tap.i:-1;
- VIL.objs.forEach((o,i)=>{if(!o.lb)return;const on=i===VIL.near||i===tp;if(on===o.lb.visible)return;o.lb.setVisible(on);
-  if(on){o.lb.setScale(.6).setAlpha(0);sc.tweens.add({targets:o.lb,scale:1,alpha:1,duration:160,ease:'Back.easeOut'})}})}
+ VIL.objs.forEach((o,i)=>{if(!o.lb)return;const on=i===VIL.near||i===tp;if(on===o.lb.visible)return;o.lb.setVisible(on);o.lb.tx.setVisible(on);
+  if(on){const L=o.lb,T=L.tx;sc.tweens.addCounter({from:.6,to:1,duration:160,ease:'Back.easeOut',onUpdate:tw=>{const s=tw.getValue();L.setScale(s);T.setScale(s*T.bs);const a=Math.min(1,(s-.6)/.4);L.setAlpha(a);T.setAlpha(a)}})}})}
 /* ---------- фонтан: плеск воды и монетки ---------- */
 function vilFxTex(sc){const TX=sc.textures;const mk=(k,w,h,f)=>{if(TX.exists(k))return;const c=document.createElement('canvas');c.width=w;c.height=h;f(c.getContext('2d'));TX.addCanvas(k,c)};
  mk('vdrop',4,4,x=>{x.fillStyle='#7fd0ff';x.fillRect(0,0,4,4);x.fillStyle='#e8f8ff';x.fillRect(1,1,2,2)});
@@ -6361,7 +6397,7 @@ function vilCoins(n){const sc=VIL.sc;if(!sc||!sc.fnt||!sc.dof)return;const F=sc.
   sc.tweens.addCounter({from:0,to:1,duration:560,ease:'Sine.easeIn',onUpdate:tw=>{const f=tw.getValue();c.x=sx+(tx-sx)*f;c.y=sy+(ty-sy)*f-Math.sin(Math.PI*f)*90;c.setScale(1-.35*f);c.rotation=f*9},
    onComplete:()=>{c.destroy();if(sc.fntSplash)sc.fntSplash.explode(10,tx,ty);try{tone(180,0,.12,'sine',.07);tone(420,.02,.08,'triangle',.03)}catch(e){}}})})}
 function vilFnCount(n){const sc=VIL.sc;if(!sc||!sc.fnt||!sc.sys.isActive())return;const F=sc.fnt;if(sc.fntTxt)sc.fntTxt.destroy();
- const tx=sc.add.text(F.x,F.y-175*F.k,'🪙 '+n,{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'15px',fontStyle:'bold',color:'#ffe066',stroke:'#3a2400',strokeThickness:4}).setOrigin(.5,1).setDepth(99400).setResolution(sc.dpr);sc.fntTxt=tx;
+ const tx=vilTx(sc,F.x,F.y-175*F.k,'🪙 '+n,{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'15px',fontStyle:'bold',color:'#ffe066',stroke:'#3a2400',strokeThickness:4}).setOrigin(.5,1).setDepth(99400);sc.fntTxt=tx;
  sc.tweens.add({targets:tx,y:tx.y-36,alpha:{from:1,to:0},delay:500,duration:900,onComplete:()=>{tx.destroy();if(sc.fntTxt===tx)sc.fntTxt=null}})}
 const fnSt=n=>n>=1000?2:n>=100?1:0;
 function vilFountainMenu(){const p=cur();if(!p)return;const w=shopWallet(p),n=+p.fnt||0,st=fnSt(n);
