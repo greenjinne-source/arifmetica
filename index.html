@@ -6086,57 +6086,74 @@ Object.assign(S,{
  fnTitle:['⛲ Фонтан желаний','⛲ Wishing fountain'],fnInfo:['Брось монетку из кошелька в фонтан и загадай желание!','Toss a coin from your wallet and make a wish!'],
  fnWallet:['В кошельке: ⚡ {n}','Wallet: ⚡ {n}'],fnThrown:['Брошено в фонтан: ⚡ {n}','Tossed in: ⚡ {n}'],fnNext:['До статуса «{s}» осталось ⚡ {n}','⚡ {n} more to the «{s}» status'],fnMax:['Ты — Аскет! Больше статусов нет, но фонтан всегда рад монеткам ✨','You are an Ascetic! No more statuses, but the fountain always loves coins ✨'],
  fnToss:['Бросить ⚡ {n}','Toss ⚡ {n}'],fnBtn:['🪙 Бросить монетку','🪙 Toss a coin'],fnNo:['В кошельке не хватает дофы — решай примеры и возвращайся!','Not enough dofa in the wallet — solve problems and come back!'],
- fnSplash:['Плюх! Желание загадано ✨ (−⚡ {n})','Splash! Wish made ✨ (−⚡ {n})'],fnSt1:['Благодетель','Benefactor'],fnSt2:['Аскет','Ascetic'],fnNew:['Новый статус: {s}!','New status: {s}!'],
+ fnSplash:['Плюх! ✨ −⚡1 · в фонтане: {n}','Splash! ✨ −⚡1 · in the fountain: {n}'],fnSt1:['Благодетель','Benefactor'],fnSt2:['Аскет','Ascetic'],fnNew:['Новый статус: {s}!','New status: {s}!'],
  fnGot1:['Ты бросил в фонтан 100 монет. Твоя щедрость — пример для всех!','You tossed 100 coins into the fountain. Your generosity inspires everyone!'],fnGot2:['1000 монет в фонтане! Тебе не нужны богатства — ты настоящий Аскет!','1000 coins in the fountain! You need no riches — a true Ascetic!'],
  vilFrChat:['💬 Написать','💬 Message'],vilFrPlay:['🎮 Позвать играть','🎮 Invite to play'],vilFrPick:['Во что поиграем?','What shall we play?'],vilFrIn:['в городке','in town'],
 });
 const VIL={pos:null,T:null,B:null,objs:[],sc:null,fr:{},near:null,run:null,img:{},imgOk:false};
-const VNU=46,VNV=56,VTW=32,VTH=16,VSPAWN={u:33.5,v:30.5},VDIR='sprites/village/';
-/* вывески улиц: [u,v,ключ] */
-const VST=[[9.5,.4,'vilSt20'],[9.5,18.4,'vilSt100'],[29.5,.4,'vilStGames'],[29.5,18.4,'vilStFriends'],[41.5,18.4,'vilStPark']];
-/* дома: [картинка, u0, v0, вход ('u' — дверь справа, на улицу вдоль v; 'v' — дом отражён, дверь слева, на поперечную улицу), действие, аргумент] */
+/* город внутри леса: VM — ширина леса по краю, внутренние координаты сдвигаются на VM */
+const VM=6,VIW=63,VIH=68,VNU=VIW+2*VM,VNV=VIH+2*VM,VTW=32,VTH=16,VDIR='sprites/village/';
+const VSPAWN={u:VM+50.5,v:VM+34.5};
+/* вывески улиц: [u,v,ключ] (внутренние координаты) */
+const VST=[[5.5,.4,'vilSt20'],[17.5,.4,'vilSt100'],[37.5,.4,'vilStGames'],[49.5,.4,'vilStFriends'],[61.5,.4,'vilStPark']];
+/* дома: [картинка, u0, v0, вход ('u' — дверь справа, на проспект; 'v' — дом отражён, дверь слева, на поперечную улицу), действие, аргумент]
+   колонки домов u0 = 1, 13, 33, 45, 57 (проспекты на u0+4), ряды v0 = 2, 12 … 62 (через 10 клеток — дома не заслоняют друг друга) */
 const VIL_HOUSES=[
- ['kids',5,1,'u','kids',''],['add20',5,7,'u','play','add20'],['sub20',0,13,'v','play','sub20'],['miss',11,13,'v','play','miss'],['cmp',11,1,'u','play','cmp'],['cafe',11,7,'u','deco','vilCafe'],
- ['add100',5,19,'u','play','add100'],['sub100',5,26,'u','play','sub100'],['mul',0,32,'v','play','mul'],['word',11,32,'v','play','word'],['extra',5,40,'u','play','extra'],['five',5,47,'u','play','five'],['cottage',11,22,'u','deco','vilCottage'],
- ['sd',25,1,'u','mgStart','sd'],['mj',25,7,'u','mgStart','mj'],['mem',31,13,'v','mgStart','mem'],['pz',37,1,'u','mgStart','pz'],['maze',37,7,'u','mgStart','maze'],['bc',37,13,'v','mgStart','bc'],['chess',25,13,'u','mgStart','chs'],['mp',37,20,'u','mp',''],
- ['collection',25,19,'u','collection',''],['shop',25,25,'u','collection','shop'],['stats',25,32,'v','stats',''],['donate',31,32,'v','donOpen',''],['leaders',25,40,'u','leaders',''],['friends',25,47,'u','friends',''],
- ['cinema',37,26,'u','deco','vilCinema'],['cafe2',37,32,'v','deco','vilCafe'],['gift',37,40,'u','deco','vilGift'],['monument',37,47,'u','deco','vilMonument'],
+ ['kids',1,2,'u','kids',''],['add20',1,12,'v','play','add20'],['sub20',1,22,'u','play','sub20'],['miss',1,32,'v','play','miss'],['cmp',1,42,'u','play','cmp'],['cafe',1,52,'v','deco','vilCafe'],
+ ['add100',13,2,'u','play','add100'],['sub100',13,12,'v','play','sub100'],['mul',13,22,'u','play','mul'],['word',13,32,'u','play','word'],['extra',13,42,'u','play','extra'],['five',13,52,'v','play','five'],
+ ['sd',33,2,'u','mgStart','sd'],['mj',33,12,'v','mgStart','mj'],['mem',33,22,'u','mgStart','mem'],['chess',33,32,'u','mgStart','chs'],['pz',33,42,'u','mgStart','pz'],['maze',33,52,'v','mgStart','maze'],['bc',33,62,'u','mgStart','bc'],
+ ['collection',45,2,'u','collection',''],['shop',45,12,'u','collection','shop'],['stats',45,42,'u','stats',''],['donate',45,52,'v','donOpen',''],['leaders',45,62,'u','leaders',''],
+ ['friends',57,2,'u','friends',''],['mp',57,12,'v','mp',''],['cinema',57,22,'u','deco','vilCinema'],['cafe2',57,32,'v','deco','vilCafe'],['gift',57,42,'u','deco','vilGift'],['monument',57,52,'u','deco','vilMonument'],['cottage',57,62,'u','deco','vilCottage'],
 ];
-const VIL_KEYS=['dofik','door','grass1','grass2','grass3','tree','lantern','fir','fountain','sea'].concat(VIL_HOUSES.map(h=>h[0]));
+const VIL_FIRS=['fir1','fir2','fir3'];
+const VIL_KEYS=['dofik','door','grass1','grass2','grass3','tree','lantern','fountain','sea'].concat(VIL_FIRS,VIL_HOUSES.map(h=>h[0]));
 const vilXY=(u,v)=>({x:(u-v)*VTW+VNV*VTW+40,y:(u+v)*VTH+260});
-const rc=v=>19.5+Math.sin(v/6)*1.5;
-function vilBuild(){const T=[],B=[];for(let u=0;u<VNU;u++){T.push([]);B.push([]);for(let v=0;v<VNV;v++){T[u].push('g');B[u].push(0)}}
- for(let v=0;v<VNV;v++)for(let u=0;u<VNU;u++)if(Math.abs(u+.5-rc(v))<=1.6){T[u][v]='w';B[u][v]=1}
- const path=(u1,v1,u2,v2)=>{for(let u=Math.min(u1,u2);u<=Math.max(u1,u2);u++)for(let v=Math.min(v1,v2);v<=Math.max(v1,v2);v++){if(u<0||v<0||u>=VNU||v>=VNV)continue;if(T[u][v]==='w'){T[u][v]='b';B[u][v]=0}else if(T[u][v]!=='b')T[u][v]='p'}};
- /* проспекты вдоль v */
- path(9,0,9,55);path(29,0,29,55);path(41,0,41,55);path(15,0,15,36);
- /* поперечные улицы (через реку — мостики) */
- path(0,17,45,17);path(0,36,45,36);path(0,53,45,53);path(9,0,15,0);path(29,0,41,0);
- /* площадь и озеро */
- for(let u=30;u<=36;u++)for(let v=20;v<=31;v++)T[u][v]='s';
- for(let u=0;u<=3;u++)for(let v=40;v<=50;v++)if(!((u===0||u===3)&&(v===40||v===50))){T[u][v]='w';B[u][v]=1}
+const rc=v=>VM+24.5+Math.sin(v/7)*1.1;
+const vilIn=(u,v)=>u>=VM&&v>=VM&&u<VM+VIW&&v<VM+VIH;
+const vilH=(u,v)=>{let h=(u*73856093)^(v*19349663);h=(h^(h>>>13))*1274126177;return ((h^(h>>>16))>>>0)/4294967296};
+function vilBuild(){const T=[],B=[];for(let u=0;u<VNU;u++){T.push([]);B.push([]);for(let v=0;v<VNV;v++){T[u].push(vilIn(u,v)?'g':'f');B[u].push(vilIn(u,v)?0:1)}}
+ const O=VM;
+ for(let v=O;v<O+VIH;v++)for(let u=O;u<O+VIW;u++)if(Math.abs(u+.5-rc(v))<=1.6){T[u][v]='w';B[u][v]=1}
+ const path=(u1,v1,u2,v2)=>{for(let u=Math.min(u1,u2)+O;u<=Math.max(u1,u2)+O;u++)for(let v=Math.min(v1,v2)+O;v<=Math.max(v1,v2)+O;v++){if(!vilIn(u,v))continue;if(T[u][v]==='w'){T[u][v]='b';B[u][v]=0}else if(T[u][v]!=='b')T[u][v]='p'}};
+ /* проспекты вдоль v и поперечные улицы (через реку — мостики), причал к маяку */
+ [5,17,37,49,61].forEach(a=>path(a,0,a,VIH-1));[0,16,36,56,VIH-1].forEach(b=>path(5,b,61,b));path(17,64,22,64);
+ /* площадь с фонтаном и озеро */
+ for(let u=45;u<=56;u++)for(let v=22;v<=35;v++)T[u+O][v+O]='s';
+ for(let u=1;u<=4;u++)for(let v=62;v<=66;v++)if(!((u===1||u===4)&&(v===62||v===66))){T[u+O][v+O]='w';B[u+O][v+O]=1}
  const objs=[];
- VIL_HOUSES.forEach(([k,u0,v0,dir,act,arg])=>objs.push({k,kind:'house',u0,v0,w:4,h:4,dir,act,arg,door:dir==='v'?{u:u0+2,v:v0+4.5}:{u:u0+4.5,v:v0+2}}));
- objs.push({k:'sea',kind:'house',u0:17,v0:24,w:4,h:4,dir:'u',act:'mgStart',arg:'sea',door:{u:15.5,v:26},water:1});
- objs.push({k:'fountain',kind:'house',u0:32,v0:24,w:4,h:4,dir:'u',act:'deco',arg:'vilFountain',door:{u:34,v:28.5}});
- const free=(u,v,n,gap)=>{for(let a=-gap;a<n+gap;a++)for(let b=-gap;b<n+gap;b++){const x=u+a,y=v+b,inner=a>=0&&b>=0&&a<n&&b<n;if(x<0||y<0||x>=VNU||y>=VNV){if(inner)return false;continue}
-   if(inner&&(T[x][y]!=='g'||B[x][y]))return false;if(!inner&&B[x][y]===2)return false}return true};
+ VIL_HOUSES.forEach(([k,u0,v0,dir,act,arg])=>{u0+=O;v0+=O;objs.push({k,kind:'house',u0,v0,w:4,h:4,dir,act,arg,door:dir==='v'?{u:u0+2,v:v0+4.5}:{u:u0+4.5,v:v0+2}})});
+ objs.push({k:'sea',kind:'house',u0:O+23,v0:O+62,w:4,h:4,dir:'u',act:'mgStart',arg:'sea',door:{u:O+22.5,v:O+64.5},water:1});
+ objs.push({k:'fountain',kind:'house',u0:O+48,v0:O+25,w:4,h:4,dir:'u',act:'deco',arg:'vilFountain',door:{u:O+50,v:O+29.5}});
  const mark=(o,val)=>{for(let u=Math.floor(o.u0);u<o.u0+o.w;u++)for(let v=Math.floor(o.v0);v<o.v0+o.h;v++)if(B[u]&&B[u][v]!==undefined)B[u][v]=val||1};
  objs.forEach(o=>mark(o,2));
- /* ели и деревья — по свободной траве, не вплотную к домам */
- let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
- for(let u=0;u<VNU-1;u+=2)for(let v=0;v<VNV-1;v+=2){const r=rnd(),du=Math.floor(rnd()*2),dv=Math.floor(rnd()*2);if(r<.5&&free(u+du,v+dv,2,1)){const o={k:'fir',kind:'tree',u0:u+du,v0:v+dv,w:2,h:2};objs.push(o);mark(o)}}
- for(let u=0;u<VNU;u+=3)for(let v=1;v<VNV;v+=3){if(rnd()<.35&&free(u,v,1,1)){const o={k:'tree',kind:'tree',u0:u,v0:v,w:1,h:1};objs.push(o);mark(o)}}
- [[30.2,20.2],[36.6,20.2],[30.2,31.6],[36.6,31.6]].forEach(([u,v])=>objs.push({k:'lantern',kind:'lamp',u0:u,v0:v,w:.3,h:.3}));
+ /* экранные прямоугольники домов: деревья не ставим перед домом (чтобы каждый дом был виден целиком) */
+ const amask=k=>{VIL.am=VIL.am||{};if(k in VIL.am)return VIL.am[k];let m=null;try{const im=VIL.img[k],c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);const d=x.getImageData(0,0,c.width,c.height).data;m={w:c.width,h:c.height,a:d}}catch(e){}return VIL.am[k]=m};
+ const R=objs.map(o=>{const im=VIL.img[o.k],b=vilXY(o.u0+o.w,o.v0+o.h),w=im?im.width:300,h=im?im.height:340;return {x0:b.x-w/2,x1:b.x+w/2,y0:b.y+6-h,y1:b.y+6,z:vilZ(o),m:amask(o.k),fl:o.dir==='v'}});
+ /* дерево заслоняет дом? сначала прямоугольники, потом (если браузер разрешил) — по непрозрачным пикселям */
+ const hides=(o,w,h)=>{const c=vilXY(o.u0+o.w/2,o.v0+o.h/2),x0=c.x-w/2,x1=c.x+w/2,y1=c.y+8,y0=y1-h,z=vilZ(o),tm=amask(o.k);
+  return R.some(r=>{if(!(z>r.z&&x0<r.x1&&x1>r.x0&&y0<r.y1&&y1>r.y0))return false;if(!r.m||!tm)return true;
+   const X0=Math.max(x0,r.x0),X1=Math.min(x1,r.x1),Y0=Math.max(y0,r.y0),Y1=Math.min(y1,r.y1);let hit=0;
+   for(let y=Y0;y<Y1;y+=3)for(let x=X0;x<X1;x+=3){let hx=Math.floor(x-r.x0);if(r.fl)hx=r.m.w-1-hx;const hy=Math.floor(y-r.y0),tx=Math.floor((x-x0)/w*tm.w),ty=Math.floor((y-y0)/h*tm.h);
+    if(r.m.a[(hy*r.m.w+hx)*4+3]>40&&tm.a[(ty*tm.w+tx)*4+3]>40&&++hit>3)return true}return false})};
+ const free=(u,v,n,gap,forest)=>{for(let a=-gap;a<n+gap;a++)for(let b=-gap;b<n+gap;b++){const x=u+a,y=v+b,inner=a>=0&&b>=0&&a<n&&b<n;if(x<0||y<0||x>=VNU||y>=VNV){if(inner)return false;continue}
+   if(inner&&(forest?T[x][y]!=='f'||B[x][y]===2||B[x][y]===3:(T[x][y]!=='g'||B[x][y])))return false;if(!inner&&B[x][y]===2)return false}return true};
+ const fsz=k=>{const im=VIL.img[k];return im?[im.width,im.height]:[120,185]};
+ /* лес по краю: дубы, берёзы и ели из кубиков */
+ for(let u=0;u<VNU-1;u+=2)for(let v=0;v<VNV-1;v+=2){const r=vilH(u,v),du=vilH(v,u)<.5?0:1,dv=vilH(u+7,v)<.5?0:1,U=u+du,V=v+dv;if(r>.86||!free(U,V,2,0,1))continue;
+  const k=VIL_FIRS[Math.floor(vilH(U*3,V)*3)],o={k,kind:'tree',anc:'c',u0:U,v0:V,w:2,h:2,sc:.85+vilH(V,U*5)*.3},s=fsz(k);if(hides(o,s[0]*o.sc,s[1]*o.sc))continue;objs.push(o);mark(o,3)}
+ /* в городе — редкие кубические деревья и кусты */
+ for(let u=VM;u<VM+VIW-1;u+=3)for(let v=VM;v<VM+VIH-1;v+=3){const r=vilH(u*11,v*7);if(r<.55&&free(u,v,2,1)){const k=VIL_FIRS[Math.floor(vilH(u,v*13)*3)],o={k,kind:'tree',anc:'c',u0:u,v0:v,w:2,h:2,sc:.7+vilH(v,u)*.2},s=fsz(k);if(hides(o,s[0]*o.sc,s[1]*o.sc))continue;objs.push(o);mark(o)}
+  else if(r>.8&&free(u+1,v+1,1,1)){const o={k:'tree',kind:'tree',u0:u+1,v0:v+1,w:1,h:1},im=VIL.img.tree;if(hides(o,im?im.width:82,im?im.height:94))continue;objs.push(o);mark(o)}}
+ [[45.2,22.2],[56.6,22.2],[45.2,35.6],[56.6,35.6]].forEach(([u,v])=>objs.push({k:'lantern',kind:'lamp',u0:u+O,v0:v+O,w:.3,h:.3}));
  VIL.T=T;VIL.B=B;VIL.objs=objs}
 const vilWalk=(u,v)=>u>=0&&v>=0&&u<VNU&&v<VNV&&!VIL.B[u][v];
 /* путь по клеткам: дорожки «дешевле» травы */
 function vilPathTo(P,T){const su=Math.floor(P.u),sv=Math.floor(P.v),tu=Math.floor(T.u),tv=Math.floor(T.v);if(!vilWalk(tu,tv))return null;
- const K=(u,v)=>u*64+v,dist=new Map([[K(su,sv),0]]),prev=new Map([[K(su,sv),-1]]),open=[[0,su,sv]];
+ const K=(u,v)=>u*256+v,dist=new Map([[K(su,sv),0]]),prev=new Map([[K(su,sv),-1]]),open=[[0,su,sv]];
  while(open.length){let bi=0;for(let i=1;i<open.length;i++)if(open[i][0]<open[bi][0])bi=i;const [d,u,v]=open.splice(bi,1)[0];if(u===tu&&v===tv)break;if(d>dist.get(K(u,v)))continue;
   for(const [du,dv] of [[1,0],[-1,0],[0,1],[0,-1]]){const nu=u+du,nv=v+dv;if(!vilWalk(nu,nv))continue;const c=d+(VIL.T[nu][nv]==='g'?1.6:1),k=K(nu,nv);
    if(!dist.has(k)||c<dist.get(k)){dist.set(k,c);prev.set(k,K(u,v));open.push([c,nu,nv])}}}
- if(!prev.has(K(tu,tv)))return null;const pts=[];for(let k=K(tu,tv);k!==-1;k=prev.get(k))pts.unshift({u:Math.floor(k/64)+.5,v:k%64+.5});
+ if(!prev.has(K(tu,tv)))return null;const pts=[];for(let k=K(tu,tv);k!==-1;k=prev.get(k))pts.unshift({u:Math.floor(k/256)+.5,v:k%256+.5});
  pts[0]={u:P.u,v:P.v};pts[pts.length-1]={u:T.u,v:T.v};
  const out=[pts[0]];for(let i=1;i<pts.length;i++){const a=out[out.length-1],p=pts[i],b=pts[i+1];if(b&&((Math.abs(a.u-p.u)<1e-6&&Math.abs(p.u-b.u)<1e-6)||(Math.abs(a.v-p.v)<1e-6&&Math.abs(p.v-b.v)<1e-6)))continue;out.push(p)}
  const c0={u:su+.5,v:sv+.5};if(Math.abs(c0.u-P.u)+Math.abs(c0.v-P.v)>.05)out.splice(1,0,c0);return out.slice(1)}
@@ -6159,20 +6176,22 @@ function vilAliasImg(k,im){if(k!=='chess')return im;try{const c=document.createE
   const d=x.getImageData(0,0,c.width,c.height),a=d.data;for(let i=0;i<a.length;i+=4){if(!a[i+3])continue;const g=a[i]*.3+a[i+1]*.59+a[i+2]*.11,gr=a[i+1]>a[i]+12&&a[i+1]>a[i+2]+12;if(gr)continue;const l=g<110?g*.55:Math.min(255,g*1.08);a[i]=l;a[i+1]=l;a[i+2]=Math.min(255,l*1.04)}x.putImageData(d,0,0);
   const cx=Math.round(c.width*.37),cy=Math.round(c.height*.49),r=Math.round(c.width*.075);x.fillStyle='#111';x.beginPath();x.arc(cx,cy,r+3,0,7);x.fill();x.fillStyle='#fff';x.beginPath();x.arc(cx,cy,r,0,7);x.fill();
   x.fillStyle='#111';x.font=`bold ${Math.round(r*1.5)}px "Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",serif`;x.textAlign='center';x.textBaseline='middle';x.fillText('♞\uFE0E',cx,cy+1);return c}catch(e){return im}}
-/* земля — большой холст, порезанный на куски (камера рисует только видимые) */
-function vilGroundCanvas(){const W=(VNU+VNV)*VTW+80,H=(VNU+VNV)*VTH+300,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.imageSmoothingEnabled=false;
+/* земля — рисуем сразу кусками 1024×1024 (большой холст целиком не помещается в память телефона) */
+const VG={W:(VNU+VNV)*VTW+80,H:(VNU+VNV)*VTH+300,CH:1024};
+function vilGroundChunk(cx,cy){const c=document.createElement('canvas'),CW=Math.min(VG.CH,VG.W-cx),CHh=Math.min(VG.CH,VG.H-cy);c.width=CW;c.height=CHh;const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.translate(-cx,-cy);let n=0;
  const poly=(pts,col)=>{x.fillStyle=col;x.beginPath();pts.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b));x.closePath();x.fill()};
- const dia=(X,Y,col)=>poly([[X,Y],[X+32,Y+16],[X,Y+32],[X-32,Y+16]],col);let seed=11;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;const T=VIL.T,G=[VIL.img.grass1,VIL.img.grass2,VIL.img.grass3];
- x.fillStyle='#4f9a3a';x.fillRect(0,0,W,H);
- for(let s=0;s<VNU+VNV-1;s++)for(let u=0;u<VNU;u++){const v=s-u;if(v<0||v>=VNV)continue;const p=vilXY(u,v),X=Math.round(p.x),Y=Math.round(p.y),t=T[u][v],r=rnd();
-  if(t==='g'){const im=G[r<.6?0:r<.8?1:2];if(im)x.drawImage(im,X-32,Y);else dia(X,Y,'#5aa04a');if(r>.93){x.fillStyle=['#ff6b8b','#ffe14d','#ffffff','#8ad0ff'][Math.floor(r*100)%4];x.fillRect(X-6+Math.round(rnd()*12),Y+12+Math.round(rnd()*6),3,3)}}
+ const dia=(X,Y,col)=>poly([[X,Y],[X+32,Y+16],[X,Y+32],[X-32,Y+16]],col);let seed=1;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;const T=VIL.T,G=[VIL.img.grass1,VIL.img.grass2,VIL.img.grass3];
+ x.fillStyle='#2f6a26';x.fillRect(cx,cy,CW,CHh);
+ for(let s=0;s<VNU+VNV-1;s++)for(let u=0;u<VNU;u++){const v=s-u;if(v<0||v>=VNV)continue;const p=vilXY(u,v),X=Math.round(p.x),Y=Math.round(p.y);
+  if(X+34<cx||X-34>cx+CW||Y+48<cy||Y-8>cy+CHh)continue;n++;seed=1+Math.floor(vilH(u,v)*2147483000);rnd();const t=T[u][v],r=rnd();
+  if(t==='g'||t==='f'){const im=G[r<.6?0:r<.8?1:2];if(im)x.drawImage(im,X-32,Y);else dia(X,Y,'#5aa04a');if(t==='f'){dia(X,Y,'rgba(10,50,10,.30)')}else if(r>.93){x.fillStyle=['#ff6b8b','#ffe14d','#ffffff','#8ad0ff'][Math.floor(r*100)%4];x.fillRect(X-6+Math.round(rnd()*12),Y+12+Math.round(rnd()*6),3,3)}}
   else if(t==='p'){dia(X,Y,r<.5?'#d8b47c':'#d2ad74');x.fillStyle='rgba(120,80,40,.28)';for(let i=0;i<4;i++){const a=rnd()*2-1,b=rnd()*2-1;x.fillRect(Math.round(X+(a-b)*14),Math.round(Y+16+(a+b)*7),2,2)}}
   else if(t==='s'){dia(X,Y,(u+v)%2?'#a4a7ad':'#b3b6bc');x.strokeStyle='rgba(60,60,70,.3)';x.lineWidth=1;x.beginPath();x.moveTo(X-16,Y+8);x.lineTo(X+16,Y+24);x.moveTo(X+16,Y+8);x.lineTo(X-16,Y+24);x.stroke()}
   else{dia(X,Y+4,'#2f7fd0');dia(X,Y+6,'#3b8fe0');x.fillStyle='#8ccaff';for(let i=0;i<2;i++){const a=rnd()*2-1,b=rnd()*2-1;x.fillRect(Math.round(X+(a-b)*12),Math.round(Y+18+(a+b)*6),6,2)}
    [[-1,0,[X,Y],[X-32,Y+16]],[0,-1,[X,Y],[X+32,Y+16]]].forEach(([du,dv,a,b])=>{const nu=u+du,nv=v+dv;if(nu>=0&&nv>=0&&T[nu][nv]!=='w'&&T[nu][nv]!=='b'){x.strokeStyle='#e8d29a';x.lineWidth=4;x.beginPath();x.moveTo(a[0],a[1]+2);x.lineTo(b[0],b[1]+2);x.stroke()}});
    if(t==='b'){dia(X,Y-3,'#8a5a2a');x.strokeStyle='#5a3418';x.lineWidth=2;x.beginPath();for(let i=1;i<4;i++){const f=i/4;x.moveTo(X+32*f-32*0,Y+16*f);x.lineTo(X-32+32*f,Y+16+16*f-3)}x.stroke();
     x.fillStyle='#4a2a10';[[X-30,Y+16],[X+28,Y+16],[X-1,Y-1],[X-1,Y+31]].forEach(([a,b])=>x.fillRect(a,b-10,3,10))}}}
- return c}
+ return n?c:null}
 /* дофики друзей — перекрашиваем лист кадров (на диске браузер может запретить — тогда без перекраски) */
 function vilTint(sc,hue){const key='vdof'+hue;if(sc.textures.exists(key))return key;try{const im=VIL.img.dofik,c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);
  const d=x.getImageData(0,0,c.width,c.height),a=d.data,cos=Math.cos(hue*Math.PI/180),sin=Math.sin(hue*Math.PI/180);
@@ -6186,17 +6205,18 @@ function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene
  init(d){this.rd=d.ready;this.dpr=d.dpr||1}
  create(){const sc=this,TX=sc.textures;VIL.sc=sc;
   VIL_KEYS.forEach(k=>{const im=VIL.img[k],key=k==='dofik'?'vdof':k==='door'?'vdoor':'v_'+k;if(!im||TX.exists(key))return;if(k==='dofik'){TX.addSpriteSheet('vdof',im,{frameWidth:64,frameHeight:64})}else if(k==='door'){TX.addSpriteSheet('vdoor',im,{frameWidth:55,frameHeight:87})}else if(im instanceof HTMLCanvasElement)TX.addCanvas('v_'+k,im);else TX.addImage('v_'+k,im)});
-  if(!TX.exists('vground0')){const g=vilGroundCanvas(),CH=1024;let n=0;for(let y=0;y<g.height;y+=CH)for(let x=0;x<g.width;x+=CH){const c=document.createElement('canvas');c.width=Math.min(CH,g.width-x);c.height=Math.min(CH,g.height-y);c.getContext('2d').drawImage(g,-x,-y);TX.addCanvas('vground'+n,c);VIL.gch=VIL.gch||[];VIL.gch[n]=[x,y];n++}}
+  if(!TX.exists('vground0')){let n=0;VIL.gch=[];for(let y=0;y<VG.H;y+=VG.CH)for(let x=0;x<VG.W;x+=VG.CH){const c=vilGroundChunk(x,y);if(!c)continue;TX.addCanvas('vground'+n,c);VIL.gch[n]=[x,y];n++}}
+  sc.cameras.main.setBackgroundColor('#2f6a26');
   (VIL.gch||[]).forEach(([x,y],i)=>sc.add.image(x,y,'vground'+i).setOrigin(0,0).setDepth(0));
   /* дома, деревья, фонари */
   const p=cur()||{modes:{}};sc.objs=[];
   VIL.objs.forEach((o,i)=>{const key='v_'+o.k;if(!TX.exists(key))return;const b=vilXY(o.u0+o.w,o.v0+o.h);let im;
-   if(o.kind==='lamp')im=sc.add.image(b.x+12,b.y+8,key).setOrigin(.5,1);else im=sc.add.image(b.x,b.y+(o.kind==='tree'?4:6),key).setOrigin(.5,1);
+   if(o.kind==='lamp')im=sc.add.image(b.x+12,b.y+8,key).setOrigin(.5,1);else if(o.anc==='c'){const c=vilXY(o.u0+o.w/2,o.v0+o.h/2);im=sc.add.image(c.x,c.y+8,key).setOrigin(.5,1).setScale(o.sc||1)}else im=sc.add.image(b.x,b.y+(o.kind==='tree'?4:6),key).setOrigin(.5,1);
    im.setDepth(vilZ(o));if(o.dir==='v')im.setFlipX(true);o.sz=[im.width,im.height];o.im=im;
    const locked=o.act==='play'&&SPECIAL.includes(o.arg)&&!p.special;
    if(o.kind==='house'){const nm=vilName(o);if(nm){const prog=o.act==='play'&&!SPECIAL.includes(o.arg)?Math.min(100,p.modes&&p.modes[o.arg]?p.modes[o.arg].points:0)/100:null;o.lb=vilLabel(sc,o,(locked?'🔒 ':'')+nm,prog)}}});
   const fo=VIL.objs.find(o=>o.k==='fountain');if(fo&&fo.im)vilFountainFx(sc,fo);
-  VST.forEach(([su,sv,sk])=>{const q=vilXY(su,sv);sc.add.text(q.x,q.y,'🪧 '+t(sk),{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'14px',fontStyle:'bold',color:'#3a2410',backgroundColor:'#e8c88a',padding:{x:8,y:4}}).setOrigin(.5,1).setDepth(89990).setResolution(sc.dpr)});
+  VST.forEach(([su,sv,sk])=>{const q=vilXY(su+VM,sv+VM);sc.add.text(q.x,q.y,'🪧 '+t(sk),{fontFamily:'system-ui,-apple-system,Segoe UI,sans-serif',fontSize:'14px',fontStyle:'bold',color:'#3a2410',backgroundColor:'#e8c88a',padding:{x:8,y:4}}).setOrigin(.5,1).setDepth(89990).setResolution(sc.dpr)});
   /* дофик */
   const P=VIL.ret||((VIL.home||!VIL.pos)?VSPAWN:VIL.pos);VIL.ret=null;VIL.home=false;VIL.pos={u:P.u,v:P.v};sc.entering=false;VIL.run=null;const dp=vilXY(P.u,P.v);sc.dof=sc.add.sprite(dp.x,dp.y+6,'vdof',16+2).setOrigin(.5,1);
   sc.door=sc.add.sprite(0,0,'vdoor',0).setOrigin(.5,1).setVisible(false);
@@ -6223,13 +6243,14 @@ function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene
   if(sc.jumping)sc.dof.y+=sc.jy;
   /* друзья */
   if(time-sc.frT>2700){sc.frT=time;vilFriends(sc)}vilFrUpdate(sc,dt,time);
-  if(time-sc.nearT>150){sc.nearT=time;vilNearDoor();vilLabels(sc)}}
+  if(time-sc.nearT>150){sc.nearT=time;vilNearDoor();vilLabels(sc)}
+  if(time-(sc.cullT||0)>250){sc.cullT=time;const wv=sc.cameras.main.worldView,m=160;for(const o of VIL.objs)if(o.kind==='tree'&&o.im){const im=o.im,hw=im.displayWidth/2;im.setVisible(im.x+hw>wv.x-m&&im.x-hw<wv.right+m&&im.y>wv.y-m&&im.y-im.displayHeight<wv.bottom+m)}}}
 };return VIL_SC}
 /* ---------- действия ---------- */
 function vilGoTo(T,then){const from={...(VIL.pos||VSPAWN)},pts=vilPathTo(from,T);if(!pts){sndWrong();return}if(!pts.length){VIL.run=null;then&&then();return}const total=pts.reduce((s,q,i)=>{const a=i?pts[i-1]:from;return s+Math.abs(q.u-a.u)+Math.abs(q.v-a.v)},0);
  VIL.run={pts,from,seg:0,f:0,spd:Math.max(5,total/4),then}}
 ACT.vilGo=function(i){const o=VIL.objs[+i];if(!o||!o.door)return;sndTick();vilGoTo(o.door,()=>vilEnter(o))};
-function vilEnter(o){const sc=VIL.sc;if(!sc)return vilAct(o);if(o.k==='fountain')return vilFountainMenu();if(o.act==='deco'){ACT.vilJump();toast(esc(t(o.arg)),2600);return}
+function vilEnter(o){const sc=VIL.sc;if(!sc)return vilAct(o);if(o.k==='fountain')return ACT.fnToss(1);if(o.act==='deco'){ACT.vilJump();toast(esc(t(o.arg)),2600);return}
  VIL.ret={u:o.door.u,v:o.door.v};
  sc.entering=true;sc.dof.setFrame(18).setFlipX(false);const p=vilXY(o.door.u,o.door.v);sc.door.setPosition(p.x+26,p.y+4).setDepth(sc.dof.depth-1).setVisible(true).setFrame(0).setScale(.2).setAlpha(0);
  sc.tweens.add({targets:sc.door,scale:1,alpha:1,duration:200});let k=0;const ev=sc.time.addEvent({delay:110,repeat:5,callback:()=>{k++;sc.door.setFrame(Math.min(3,k));if(k===2)try{tone(880,0,.08,'triangle',.05);tone(1320,.08,.1,'triangle',.05)}catch(e){}
@@ -6265,7 +6286,7 @@ document.addEventListener('click',ev=>{const st=ev.target.closest&&ev.target.clo
 /* ---------- друзья онлайн ---------- */
 function vilFrList(){if(typeof SOC==='undefined'||!SESSION)return[];return Object.values(SOC.friends||{}).filter(f=>f.status==='ok').map(otherOf).filter(id=>id&&DB.players[id]&&isOnline(id))}
 const vilHash=s=>{let h=7;for(const c of String(s))h=(h*31+c.charCodeAt(0))%100003;return h};
-function vilFrSpot(seed){for(let i=0;i<60;i++){const u=30+((seed+i*7)%7),v=20+((seed*3+i*5)%12);if(vilWalk(u,v))return{u:u+.5,v:v+.5}}return{u:33.5,v:30.5}}
+function vilFrSpot(seed){for(let i=0;i<60;i++){const u=VM+45+((seed+i*7)%12),v=VM+22+((seed*3+i*5)%14);if(vilWalk(u,v))return{u:u+.5,v:v+.5}}return{...VSPAWN}}
 function vilFriends(sc){const ids=vilFrList();
  Object.keys(VIL.fr).forEach(id=>{if(!ids.includes(id)){const f=VIL.fr[id];if(f.spr)f.spr.destroy();if(f.tag)f.tag.destroy();delete VIL.fr[id]}});
  ids.forEach(id=>{if(VIL.fr[id])return;const p=DB.players[id],h=vilHash(id),pos=vilFrSpot(h),key=vilTint(sc,60+h%240);
@@ -6298,8 +6319,7 @@ ACT.vilToggle=function(){SET.vil=SET.vil===false;try{saveSettings()}catch(e){}re
 function vilFit(){const w=document.getElementById('vilWrap');if(!w)return;const vh=(window.visualViewport&&visualViewport.height)||innerHeight;
  const top=w.getBoundingClientRect().top+scrollY;const h=Math.round(Math.max(260,Math.min(680,vh-Math.min(top,vh*.42)-10)));w.style.height=h+'px';return top}
 function vilMount(){vilFit();const st=document.getElementById('vilStage');if(!st)return;const cw=st.clientWidth,ch=st.clientHeight;if(cw<20||ch<20)return;const k=Math.min(2,window.devicePixelRatio||1);
- if(!VIL.T)vilBuild();
- vilLoadImgs(ok=>{if(!st.isConnected)return;if(!ok)return vilFallback();
+ vilLoadImgs(ok=>{if(!st.isConnected)return;if(!ok)return vilFallback();if(!VIL.T)vilBuild();
   pgLib(okL=>{if(!st.isConnected)return;if(!okL||!window.Phaser)return vilFallback();let C;try{C=vilSceneCls()}catch(e){return vilFallback()}
   pgMount(st,Math.round(cw*k),Math.round(ch*k),[cw,ch],'vils',C,{dpr:k}).then(sc=>{const ld=document.getElementById('vilLoad');if(ld)ld.remove();if(!sc&&st.isConnected)vilFallback()})})})}
 function vilFallback(){if(SCREEN!=='menu')return;toast(esc(t('vilFail')),3000);document.querySelectorAll('#app .vilhide').forEach(e=>e.classList.remove('vilhide'));const v=document.querySelector('#app .vil');if(v)v.remove()}
@@ -6349,7 +6369,7 @@ function vilFountainMenu(){const p=cur();if(!p)return;const w=shopWallet(p),n=+p
   <div class="row">${[1,10,100].map(k=>`<button class="btn ${k===1?'pri':''}" data-act="fnToss" data-arg="${k}" ${w<k?'disabled':''}>${esc(t('fnToss',{n:k}))}</button>`).join('')}</div>
   <div class="row"><button class="btn sm" data-act="close">${t('cancel')}</button></div>`)}
 ACT.fnToss=function(k){const p=cur();if(!p)return;k=+k;if(shopWallet(p)<k){sndWrong();return toast(esc(t('fnNo')),3000)}
- const before=+p.fnt||0;p.spent=(+p.spent||0)+k;p.fnt=before+k;save(p);closeModal();vilCoins(k>=100?12:k>=10?6:1);toast(esc(t('fnSplash',{n:k})),2200);
+ const before=+p.fnt||0;p.spent=(+p.spent||0)+k;p.fnt=before+k;save(p);vilCoins(k>=100?12:k>=10?6:1);toast(esc(t('fnSplash',{n:p.fnt})),1400);
  const s0=fnSt(before),s1=fnSt(p.fnt);if(s1>s0)setTimeout(()=>{sndFanfare();try{fireworks(4);rain(60)}catch(e){}const nm=t(s1===2?'fnSt2':'fnSt1');
   modal(`<div style="font-size:64px">${s1===2?'🧘':'😇'}</div><h2>${esc(t('fnNew',{s:nm}))}</h2><p style="font-weight:800">${esc(t(s1===2?'fnGot2':'fnGot1'))}</p><div class="row"><button class="btn pri big" data-act="close" data-enter>OK</button></div>`)},1700)};
 /* статус у ника: 😇 Благодетель (100 монет в фонтане), 🧘 Аскет (1000) */
