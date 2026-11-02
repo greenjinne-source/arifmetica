@@ -6106,7 +6106,7 @@ const VIL_HOUSES=[
  ['friends',57,2,'u','friends',''],['mp',57,12,'v','mp',''],['cinema',57,22,'u','deco','vilCinema'],['cafe2',57,32,'v','deco','vilCafe'],['gift',57,42,'u','deco','vilGift'],['monument',57,52,'u','deco','vilMonument'],['cottage',57,62,'u','deco','vilCottage'],
 ];
 const VIL_FIRS=['fir1','fir2','fir3'];
-const VIL_KEYS=['dofik','door','grass1','grass2','grass3','tree','lantern','fountain','sea'].concat(VIL_FIRS,VIL_HOUSES.map(h=>h[0]));
+const VIL_KEYS=['dofik','door','grass1','grass2','grass3','tree','lantern','fountain','sea','fence'].concat(VIL_FIRS,VIL_HOUSES.map(h=>h[0]));
 const vilXY=(u,v)=>({x:(u-v)*VTW+VNV*VTW+40,y:(u+v)*VTH+260});
 const rc=v=>VM+24.5+Math.sin(v/7)*1.1;
 const vilIn=(u,v)=>u>=VM&&v>=VM&&u<VM+VIW&&v<VM+VIH;
@@ -6125,10 +6125,13 @@ function vilBuild(){const T=[],B=[];for(let u=0;u<VNU;u++){T.push([]);B.push([])
  objs.push({k:'sea',kind:'house',u0:O+23,v0:O+62,w:4,h:4,dir:'u',act:'mgStart',arg:'sea',door:{u:O+22.5,v:O+64.5},water:1});
  objs.push({k:'fountain',kind:'house',u0:O+48,v0:O+25,w:4,h:4,dir:'u',act:'deco',arg:'vilFountain',door:{u:O+50,v:O+29.5}});
  const mark=(o,val)=>{for(let u=Math.floor(o.u0);u<o.u0+o.w;u++)for(let v=Math.floor(o.v0);v<o.v0+o.h;v++)if(B[u]&&B[u][v]!==undefined)B[u][v]=val||1};
+ /* забор по краю города (отрезки по 4 клетки): вдоль v — как на картинке, вдоль u — отражённый */
+ if(VIL.img.fence){for(let k=0;k<VIH;k+=4){[VM-1,VM+VIW].forEach(u=>objs.push({k:'fence',kind:'fence',u0:u,v0:VM+k,w:1,h:Math.min(4,VIH-k),ax:'v'}))}
+  for(let k=0;k<VIW;k+=4){[VM-1,VM+VIH].forEach(v=>objs.push({k:'fence',kind:'fence',u0:VM+k,v0:v,w:Math.min(4,VIW-k),h:1,ax:'u'}))}}
  objs.forEach(o=>mark(o,2));
  /* экранные прямоугольники домов: деревья не ставим перед домом (чтобы каждый дом был виден целиком) */
  const amask=k=>{VIL.am=VIL.am||{};if(k in VIL.am)return VIL.am[k];let m=null;try{const im=VIL.img[k],c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);const d=x.getImageData(0,0,c.width,c.height).data;m={w:c.width,h:c.height,a:d}}catch(e){}return VIL.am[k]=m};
- const R=objs.map(o=>{const im=VIL.img[o.k],b=vilXY(o.u0+o.w,o.v0+o.h),w=im?im.width:300,h=im?im.height:340;return {x0:b.x-w/2,x1:b.x+w/2,y0:b.y+6-h,y1:b.y+6,z:vilZ(o),m:amask(o.k),fl:o.dir==='v'}});
+ const R=objs.filter(o=>o.kind==='house').map(o=>{const im=VIL.img[o.k],b=vilXY(o.u0+o.w,o.v0+o.h),w=im?im.width:300,h=im?im.height:340;return {x0:b.x-w/2,x1:b.x+w/2,y0:b.y+6-h,y1:b.y+6,z:vilZ(o),m:amask(o.k),fl:o.dir==='v'}});
  /* дерево заслоняет дом? сначала прямоугольники, потом (если браузер разрешил) — по непрозрачным пикселям */
  const hides=(o,w,h)=>{const c=vilXY(o.u0+o.w/2,o.v0+o.h/2),x0=c.x-w/2,x1=c.x+w/2,y1=c.y+8,y0=y1-h,z=vilZ(o),tm=amask(o.k);
   return R.some(r=>{if(!(z>r.z&&x0<r.x1&&x1>r.x0&&y0<r.y1&&y1>r.y0))return false;if(!r.m||!tm)return true;
@@ -6215,7 +6218,7 @@ function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene
   /* дома, деревья, фонари */
   const p=cur()||{modes:{}};sc.objs=[];
   VIL.objs.forEach((o,i)=>{const key='v_'+o.k;if(!TX.exists(key))return;const b=vilXY(o.u0+o.w,o.v0+o.h);let im;
-   if(o.kind==='lamp')im=sc.add.image(b.x+12,b.y+8,key).setOrigin(.5,1);else if(o.anc==='c'){const c=vilXY(o.u0+o.w/2,o.v0+o.h/2);im=sc.add.image(c.x,c.y+8,key).setOrigin(.5,1).setScale(o.sc||1)}else im=sc.add.image(b.x,b.y+(o.kind==='tree'?4:6),key).setOrigin(.5,1);
+   if(o.kind==='fence'){const s=128/120;if(o.ax==='v'){const P=vilXY(o.u0+.5,o.v0+o.h);im=sc.add.image(P.x,P.y+4,key).setOrigin(5/127,112/114).setScale(s*o.h/4,s)}else{const P=vilXY(o.u0+o.w,o.v0+.5);im=sc.add.image(P.x,P.y+4,key).setOrigin(122/127,112/114).setFlipX(true).setScale(s*o.w/4,s)}}else if(o.kind==='lamp')im=sc.add.image(b.x+12,b.y+8,key).setOrigin(.5,1);else if(o.anc==='c'){const c=vilXY(o.u0+o.w/2,o.v0+o.h/2);im=sc.add.image(c.x,c.y+8,key).setOrigin(.5,1).setScale(o.sc||1)}else im=sc.add.image(b.x,b.y+(o.kind==='tree'?4:6),key).setOrigin(.5,1);
    im.setDepth(vilZ(o));if(o.dir==='v')im.setFlipX(true);o.sz=[im.width,im.height];o.im=im;
    const locked=o.act==='play'&&SPECIAL.includes(o.arg)&&!p.special;
    if(o.kind==='house'&&o.k!=='fountain'){const nm=vilName(o);if(nm){const prog=o.act==='play'&&!SPECIAL.includes(o.arg)?Math.min(100,p.modes&&p.modes[o.arg]?p.modes[o.arg].points:0)/100:null;o.lb=vilLabel(sc,o,(locked?'🔒 ':'')+nm,prog)}}});
@@ -6247,8 +6250,8 @@ function vilSceneCls(){if(VIL_SC)return VIL_SC;VIL_SC=class extends Phaser.Scene
   if(sc.jumping)sc.dof.y+=sc.jy;
   /* друзья */
   if(time-sc.frT>1000){sc.frT=time;vilFriends(sc)}vilNetPub();vilFrUpdate(sc,dt,time);
-  if(time-sc.nearT>150){sc.nearT=time;vilNearDoor();vilLabels(sc)}
-  if(time-(sc.cullT||0)>250){sc.cullT=time;const wv=sc.cameras.main.worldView,m=160;for(const o of VIL.objs)if(o.kind==='tree'&&o.im){const im=o.im,hw=im.displayWidth/2;im.setVisible(im.x+hw>wv.x-m&&im.x-hw<wv.right+m&&im.y>wv.y-m&&im.y-im.displayHeight<wv.bottom+m)}}}
+  if(time-sc.nearT>150){sc.nearT=time;vilNearDoor();vilLabels(sc);vilFnBoard(sc)}
+  if(time-(sc.cullT||0)>250){sc.cullT=time;const wv=sc.cameras.main.worldView,m=160;for(const o of VIL.objs)if((o.kind==='tree'||o.kind==='fence')&&o.im){const im=o.im,hw=im.displayWidth/2;im.setVisible(im.x+hw>wv.x-m&&im.x-hw<wv.right+m&&im.y>wv.y-m&&im.y-im.displayHeight<wv.bottom+m)}}}
 };return VIL_SC}
 /* ---------- действия ---------- */
 function vilGoTo(T,then){const from={...(VIL.pos||VSPAWN)},pts=vilPathTo(from,T);if(!pts){sndWrong();return}if(!pts.length){VIL.run=null;then&&then();return}const total=pts.reduce((s,q,i)=>{const a=i?pts[i-1]:from;return s+Math.abs(q.u-a.u)+Math.abs(q.v-a.v)},0);
@@ -6456,6 +6459,26 @@ function vilCoins(n){const sc=VIL.sc;if(!sc||!sc.fnt||!sc.dof)return;const F=sc.
   try{tone(1568,0,.05,'triangle',.04);tone(2093,.05,.06,'triangle',.03)}catch(e){}
   sc.tweens.addCounter({from:0,to:1,duration:560,ease:'Sine.easeIn',onUpdate:tw=>{const f=tw.getValue();c.x=sx+(tx-sx)*f;c.y=sy+(ty-sy)*f-Math.sin(Math.PI*f)*90;c.setScale(1-.35*f);c.rotation=f*9},
    onComplete:()=>{c.destroy();if(sc.fntSplash)sc.fntSplash.explode(10,tx,ty);try{tone(180,0,.12,'sine',.07);tone(420,.02,.08,'triangle',.03)}catch(e){}}})})}
+/* ---------- над фонтаном: топ-10 тех, кто больше всех бросил монет (при наведении мышью или когда дофик рядом) ---------- */
+Object.assign(S,{fnTop:['🏆 Щедрые сердца','🏆 Most generous'],fnTopNone:['Пока никто не бросал монетки — будь первым!','No coins yet — be the first!']});
+function vilFnTopHtml(){const L=Object.entries(DB.players||{}).map(([id,p])=>[id,p,+(p&&p.fnt)||0]).filter(x=>x[2]>0).sort((a,b)=>b[2]-a[2]).slice(0,10);
+ if(!L.length)return [t('fnTop'),t('fnTopNone')];
+ return [t('fnTop')].concat(L.map(([id,p,n],i)=>`${i<3?['🥇','🥈','🥉'][i]:(i+1)+'.'} ${String(p.name||'?').slice(0,14)}${id===SESSION?' ⭐':''}  🪙 ${n}`))}
+function vilFnBoard(sc){if(!sc||!sc.fnt)return;const fo=VIL.objs.find(o=>o.k==='fountain'),near=VIL.near!=null&&VIL.objs[VIL.near]===fo,show=!!(VIL.fnHover||near);
+ const B=sc.fnBoard;if(!show){if(B&&B.c.visible){B.c.setVisible(false);B.tx.setVisible(false)}return}
+ const lines=vilFnTopHtml(),key=lines.join('|');
+ if(!B||B.key!==key){if(B){B.c.destroy();B.tx.destroy()}const F=sc.fnt;
+  const tx=vilTx(sc,0,0,lines.join('\n'),{fontFamily:VIL_FONT,fontSize:'14px',fontStyle:'bold',color:'#14110c',lineSpacing:3}).setOrigin(.5,1).setDepth(99101);
+  const w=Math.ceil(tx.displayWidth)+26,h=Math.ceil(tx.displayHeight)+18,g=sc.add.graphics(),X=F.x,Y=F.y-182*F.k;
+  g.fillStyle(0x000000,.35).fillRoundedRect(-w/2-3,-h+1,w+6,h+6,9);g.fillStyle(0x14110c,1).fillRoundedRect(-w/2-3,-h-3,w+6,h+6,9);g.fillStyle(0xfff4c8,1).fillRoundedRect(-w/2,-h,w,h,7);
+  g.fillStyle(0xffd23f,1).fillRect(-w/2+8,-h+8+Math.ceil(tx.displayHeight/lines.length),w-16,2);
+  g.fillStyle(0x14110c,1).fillTriangle(-9,2,9,2,0,12);g.fillStyle(0xfff4c8,1).fillTriangle(-6,-1,6,-1,0,7);
+  const c=sc.add.container(X,Y,[g]).setDepth(99100);tx.setPosition(X,Y-9);sc.fnBoard={c,tx,key};return}
+ if(!B.c.visible){B.c.setVisible(true);B.tx.setVisible(true)}}
+document.addEventListener('pointermove',ev=>{if(ev.pointerType==='touch')return;const st=ev.target.closest&&ev.target.closest('#vilStage');const sc=VIL.sc;
+ if(!st||!sc||!sc.sys||!sc.sys.isActive()){if(VIL.fnHover){VIL.fnHover=false;if(sc)vilFnBoard(sc)}return}
+ const fo=VIL.objs.find(o=>o.k==='fountain'),w=vilWorld(ev);const on=!!(fo&&fo.im&&w&&fo.im.getBounds().contains(w.x,w.y));
+ if(on!==!!VIL.fnHover){VIL.fnHover=on;vilFnBoard(sc)}},{passive:true});
 function vilFnCount(n){const sc=VIL.sc;if(!sc||!sc.fnt||!sc.sys.isActive())return;const F=sc.fnt;if(sc.fntTxt)sc.fntTxt.destroy();
  const tx=vilTx(sc,F.x,F.y-175*F.k,'🪙 '+n,{fontFamily:VIL_FONT,fontSize:'15px',fontStyle:'bold',color:'#ffe066',stroke:'#3a2400',strokeThickness:4}).setOrigin(.5,1).setDepth(99400);sc.fntTxt=tx;
  sc.tweens.add({targets:tx,y:tx.y-36,alpha:{from:1,to:0},delay:500,duration:900,onComplete:()=>{tx.destroy();if(sc.fntTxt===tx)sc.fntTxt=null}})}
@@ -6468,7 +6491,7 @@ function vilFountainMenu(){const p=cur();if(!p)return;const w=shopWallet(p),n=+p
   <div class="row">${[1,10,100].map(k=>`<button class="btn ${k===1?'pri':''}" data-act="fnToss" data-arg="${k}" ${w<k?'disabled':''}>${esc(t('fnToss',{n:k}))}</button>`).join('')}</div>
   <div class="row"><button class="btn sm" data-act="close">${t('cancel')}</button></div>`)}
 ACT.fnToss=function(k){const p=cur();if(!p)return;k=+k;if(shopWallet(p)<k){sndWrong();return toast(esc(t('fnNo')),3000)}
- const before=+p.fnt||0;p.spent=(+p.spent||0)+k;p.fnt=before+k;save(p);vilCoins(k>=100?12:k>=10?6:1);vilFnCount(p.fnt);
+ const before=+p.fnt||0;p.spent=(+p.spent||0)+k;p.fnt=before+k;save(p);vilCoins(k>=100?12:k>=10?6:1);vilFnCount(p.fnt);if(VIL.sc)vilFnBoard(VIL.sc);
  const s0=fnSt(before),s1=fnSt(p.fnt);if(s1>s0)setTimeout(()=>{sndFanfare();try{fireworks(4);rain(60)}catch(e){}const nm=t(s1===2?'fnSt2':'fnSt1');
   modal(`<div style="font-size:64px">${s1===2?'🧘':'😇'}</div><h2>${esc(t('fnNew',{s:nm}))}</h2><p style="font-weight:800">${esc(t(s1===2?'fnGot2':'fnGot1'))}</p><div class="row"><button class="btn pri big" data-act="close" data-enter>OK</button></div>`)},1700)};
 /* статус у ника: 😇 Благодетель (100 монет в фонтане), 🧘 Аскет (1000) */
