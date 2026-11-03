@@ -1332,7 +1332,7 @@ function refreshAudio(){const m=document.querySelector('.overlay .modal.audm');i
 /* ============ СТАРТ ============ */
 document.body.dataset.lvl=0;
 loadSettings();buildScene();if(!SC.reduce)requestAnimationFrame(sceneTick);
-render();initStore();
+render();if(typeof legalGate==="function")legalGate(initStore);else initStore();
 /* ============ ТЕКСТЫ: ДРУЗЬЯ, ЧАТ, МАДЖОНГ ============ */
 Object.assign(S,{
  friends:['👥 Друзья','👥 Friends','👥 Достар','👥 Amigos','👥 Freunde','👥 Amis'],
@@ -5442,13 +5442,14 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 /* ============ БЛАГОДАРНОСТЬ АВТОРУ, СТАТУС «МЕЦЕНАТ», ПОЧТА ДЛЯ ВОССТАНОВЛЕНИЯ ПАРОЛЯ ============ */
 const DON_URL='https://yoomoney.ru/to/4100119668958145';
 const DON_ADMINS=['pmv6td4a06ya5'];
+const AUTHOR_MAIL='jin.ne@mail.ru';
 Object.assign(S,{
  donBtn:['💛 Поблагодарить автора','💛 Thank the author'],
  donTitle:['Поблагодарить автора','Thank the author'],
- donText:['Игра бесплатная и без рекламы. Если она вам нравится, вы можете поддержать автора любой суммой. После перевода загрузите чек — и игрок получит статус «Меценат» 💛','The game is free and ad-free. If you like it, you can support the author with any amount. After paying, upload the receipt and the player gets the «Patron» status 💛'],
+ donText:['Игра бесплатная и без рекламы. Если она вам нравится, вы можете поддержать автора любой суммой. После перевода укажите сумму и дату — и игрок получит статус «Меценат» 💛','The game is free and ad-free. If you like it, you can support the author with any amount. After paying, enter the amount and date and the player gets the «Patron» status 💛'],
  donAdult:['Этот раздел — для взрослых','This section is for adults'],
  donWallet:['💳 Открыть кошелёк ЮMoney','💳 Open YooMoney wallet'],
- donUpload:['🧾 Загрузить чек','🧾 Upload receipt'],
+ donUpload:['🧾 Сообщить о переводе','🧾 Report the transfer'],
  donPin:['🔒 PIN взрослого','🔒 Parent PIN'],
  donMec:['Меценат','Patron'],
  donStWait:['⏳ Чек на проверке у автора','⏳ The receipt is being checked'],
@@ -5467,9 +5468,15 @@ Object.assign(S,{
  donPinSaved:['PIN сохранён','PIN saved'],
  donSum:['Сумма, ₽','Amount, ₽'],
  donDate:['Дата перевода','Payment date'],
+ donCmt:['При переводе в комментарии укажите ник «{n}» — по нему автор найдёт платёж. Фото чека не нужно','In the transfer comment write the nickname «{n}» — the author will find the payment by it. No receipt photo needed'],
+ donPurge:['🧹 Удалить фото старых чеков','🧹 Delete old receipt photos'],
+ donPurged:['Удалено фото: {n}','Photos deleted: {n}'],
+ admPw:['🔑 Сбросить пароль игрока','🔑 Reset player password'],
+ admPwDone:['Новый пароль для «{n}». Отправьте его родителю:','New password for «{n}». Send it to the parent:'],
+ pwHelp:['Попросите взрослого написать автору на {m}: ник «{n}» и когда играли последний раз. Автор пришлёт новый пароль','Ask an adult to email the author at {m}: nickname «{n}» and when you last played. The author will send a new password'],
  donFile:['Фото или скриншот чека','Photo or screenshot of the receipt'],
  donSend:['Отправить','Send'],
- donNeed:['Укажите сумму, дату и картинку чека','Enter the amount, date and receipt image'],
+ donNeed:['Укажите сумму и дату перевода','Enter the amount and date of the transfer'],
  donSent:['Чек отправлен автору. Статус появится после проверки','Receipt sent. The status will appear after the check'],
  donOnline:['Нужен интернет (онлайн-версия игры)','Internet is required (online version)'],
  donAdm:['🧾 Чеки на проверку','🧾 Receipts to check'],
@@ -5554,19 +5561,18 @@ ACT.donUp=function(){donGate(()=>{if(!donOnline())return modal(`<p style="font-w
  modal(`<h2>${t('donUpload')}</h2>
   <label class="donlbl">${t('donSum')}<input type="number" inputmode="decimal" min="1" step="1" id="dnSum" class="inp"></label>
   <label class="donlbl">${t('donDate')}<input type="date" id="dnDate" class="inp" value="${ds}" max="${ds}"></label>
-  <label class="donlbl">${t('donFile')}<input type="file" id="dnFile" accept="image/*" class="inp"></label><img id="dnPrev" class="donprev" alt="" hidden>
+  <p class="donst">${esc(t('donCmt',{n:cur().name}))}</p>
   <div class="err" id="err"></div>
   <div class="row"><button class="btn" data-act="donOpen">←</button><button class="btn pri" data-act="donSend" id="dnGo">${t('donSend')}</button></div>`);
- const f=document.getElementById('dnFile');f.addEventListener('change',async()=>{const im=document.getElementById('dnPrev');DON_IMG=null;if(!f.files[0])return;
-  try{DON_IMG=await donShrink(f.files[0]);im.src=DON_IMG;im.hidden=false}catch(e){document.getElementById('err').textContent='⚠️ '+t('donNeed')}})})};
+})};
 let DON_IMG=null;
 function donShrink(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file),im=new Image();im.onload=()=>{URL.revokeObjectURL(url);
   let s=Math.min(1,1400/Math.max(im.width,im.height)),q=.75,out='';const c=document.createElement('canvas');
   for(let k=0;k<8;k++){c.width=Math.max(1,Math.round(im.width*s));c.height=Math.max(1,Math.round(im.height*s));const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
    out=c.toDataURL('image/jpeg',q);if(out.length<560000)break;if(q>.5)q-=.1;else s*=.8}res(out)};im.onerror=()=>{URL.revokeObjectURL(url);rej()};im.src=url})}
 ACT.donSend=async function(){const p=cur(),sum=Math.round(+document.getElementById('dnSum').value),date=document.getElementById('dnDate').value,err=document.getElementById('err');
- if(!(sum>0)||!date||!DON_IMG)return err.textContent=t('donNeed');const b=document.getElementById('dnGo');if(b)b.disabled=true;
- try{const ref=STORE.db.fs.collection('receipts').doc();await ref.set({pid:p.id,name:String(p.name).slice(0,40),amount:sum,date,img:DON_IMG,t:Date.now(),st:'new'});
+ if(!(sum>0)||!date)return err.textContent=t('donNeed');const b=document.getElementById('dnGo');if(b)b.disabled=true;
+ try{const ref=STORE.db.fs.collection('receipts').doc();await ref.set({pid:p.id,name:String(p.name).slice(0,40),amount:sum,date,t:Date.now(),st:'new'});
   p.don={st:'wait',t:Date.now(),id:ref.id};save(p);DON_IMG=null;closeModal();toast(t('donSent'),5000)}
  catch(e){if(b)b.disabled=false;err.textContent='⚠️ '+((e&&e.message)||'error')}};
 
@@ -5578,14 +5584,25 @@ ACT.donAdm=async function(){if(!donIsAdmin()||!donOnline())return;modal(`<h2>${t
    <div class="row"><button class="btn" data-act="close">${t('cancel')}</button><button class="btn pri" data-act="mailSend" data-arg="admin">${t('donSend')}</button></div>`);
   modal(`<p>⚠️ ${esc((e&&e.message)||'error')}</p><div class="row"><button class="btn" data-act="close">OK</button></div>`)}};
 function donAdmRender(){const L=DON_ADM.list;
- modal(`<h2>${t('donAdm')}</h2>${L.length?L.map(r=>{const p=DB.players[r.pid];return `<div class="donrc blk"><img src="${esc(r.img||'')}" alt="" data-act="donZoom" data-arg="${esc(r.id)}">
-  <div><b>${p?pname(norm(p)):esc(r.name||r.pid)}</b><br>💰 ${+r.amount||0} ₽ · 📅 ${esc(r.date||'')}<br><small>${new Date(r.t||0).toLocaleString(loc())}</small>
+ modal(`<h2>${t('donAdm')}</h2>${L.length?L.map(r=>{const p=DB.players[r.pid];return `<div class="donrc blk"><div><b>${p?pname(norm(p)):esc(r.name||r.pid)}</b><br>💰 ${+r.amount||0} ₽ · 📅 ${esc(r.date||'')}<br><small>${new Date(r.t||0).toLocaleString(loc())}</small>
   <div class="row"><button class="btn sm" data-act="donDecide" data-arg="no:${esc(r.id)}">${t('donAdmNo')}</button><button class="btn sm pri" data-act="donDecide" data-arg="ok:${esc(r.id)}">${t('donAdmOk')}</button></div></div></div>`}).join(''):`<p style="font-weight:800">${t('donAdmNone')}</p>`}
+  <div class="row"><button class="btn sm" data-act="donImgPurge">${t('donPurge')}</button><button class="btn sm" data-act="admPwReset">${t('admPw')}</button></div>
   <div class="row"><button class="btn" data-act="close">OK</button></div>`,false,'donadm')}
 ACT.donZoom=function(id){const r=DON_ADM.list.find(x=>x.id===id);if(!r)return;modal(`<img src="${esc(r.img)}" alt="" style="max-width:100%"><div class="row"><button class="btn" data-act="donAdmBack">←</button></div>`,false,'donadm')};
 ACT.donAdmBack=donAdmRender;
+/* удалить фото из всех старых чеков (в них были ФИО и данные плательщика) */
+ACT.donImgPurge=async function(){if(!donIsAdmin())return;let n=0;
+ try{const q=await STORE.db.fs.collection('receipts').limit(500).get();for(const d of q.docs){if(d.data().img){await d.ref.update({img:firebase.firestore.FieldValue.delete()});n++}}toast(t('donPurged',{n}),5000)}
+ catch(e){toast('⚠️ '+((e&&e.message)||'error'),5000)}};
+/* сброс пароля игрока автором (вместо почты) */
+ACT.admPwReset=function(){if(!donIsAdmin())return;const L=Object.values(DB.players).map(norm).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+ modal(`<h2>${t('admPw')}</h2><select id="apPid" class="inp">${L.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select><div class="err" id="err"></div>
+  <div class="row"><button class="btn" data-act="donAdmBack">←</button><button class="btn pri" data-act="admPwGo">OK</button></div>`,false,'donadm')};
+ACT.admPwGo=function(){if(!donIsAdmin())return;const id=document.getElementById('apPid').value,p=DB.players[id];if(!p)return;
+ const code=String(100000+Math.floor(Math.random()*900000));p.hv=2;p.pass=hash('dofa2:'+p.id+':'+code);save(p);
+ modal(`<h2>${t('admPw')}</h2><p style="font-weight:800">${esc(t('admPwDone',{n:p.name}))}</p><p class="dongq">${code}</p><div class="row"><button class="btn" data-act="donAdmBack">←</button></div>`,false,'donadm')};
 ACT.donDecide=async function(a){const [d,id]=a.split(':'),r=DON_ADM.list.find(x=>x.id===id);if(!r)return;
- try{await STORE.db.fs.collection('receipts').doc(id).update({st:d,by:SESSION,at:Date.now()});
+ try{await STORE.db.fs.collection('receipts').doc(id).update({st:d,by:SESSION,at:Date.now(),img:firebase.firestore.FieldValue.delete()});
   const p=DB.players[r.pid];if(p){if(d==='ok'){const m=p.mecenat||{sum:0};p.mecenat={t:Date.now(),sum:(+m.sum||0)+(+r.amount||0),seen:false}}p.don={st:d,t:Date.now()};save(p)}
   DON_ADM.list=DON_ADM.list.filter(x=>x.id!==id);donAdmRender()}catch(e){toast('⚠️ '+((e&&e.message)||'error'),5000)}};
 
@@ -5603,12 +5620,8 @@ const mailBase=()=>location.origin+location.pathname;
 const mailErrTxt=e=>{const c=(e&&e.code)||'';return /operation-not-allowed|unauthorized|admin-restricted|no-fb/.test(c)?t('mailOff'):/invalid-email|missing-email/.test(c)?t('mailBad'):/invalid-action|expired/.test(c)?t('mailLinkBad'):'⚠️ '+((e&&e.message)||c||'error')};
 const mailValid=e=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
 /* в профиле (статистика) */
-const _renderStatsMAIL=renderStats;renderStats=function(){const r=_renderStatsMAIL.apply(this,arguments);const p=cur();if(!p)return r;
- const del=document.querySelector('#app [data-act="delAsk"]'),row=del&&del.closest('.row');
- const html=`<section class="panel blk" id="mailSec"><h2>${t('mailSec')}</h2><p style="font-weight:800">${t('mailNote')}</p>
-  ${p.mailHint?`<p class="donst ok">${esc(t('mailBound',{m:p.mailHint}))}</p>`:''}
-  ${donOnline()?`<div class="mailrow"><input type="email" id="mlIn" class="inp" placeholder="${esc(t('mailPh'))}" autocomplete="email"><button class="btn pri" data-act="mailSend" data-arg="bind">${p.mailHint?t('mailChange'):t('mailBind')}</button></div><div class="err" id="err"></div>`:`<p class="muted" style="font-weight:800">${t('donOnline')}</p>`}</section>`;
- if(row)row.insertAdjacentHTML('beforebegin',html);else document.getElementById('app').insertAdjacentHTML('beforeend',html);return r};
+/* почта игроков больше не собирается (закон о персональных данных и запрет входа через иностранные сервисы) — старые следы удаляем */
+const _renderStatsMAIL=renderStats;renderStats=function(){const p=cur();if(p&&(p.mailHint||p.uid||p.mailPend)){delete p.mailHint;delete p.uid;delete p.mailPend;save(p)}return _renderStatsMAIL.apply(this,arguments)};
 /* отправка письма со ссылкой: bind — привязать почту к профилю, reset — новый пароль, admin — вход автора */
 ACT.mailSend=async function(kind,b){const inp=document.getElementById('mlIn'),err=document.getElementById('err'),e=(inp&&inp.value||'').trim();
  if(!mailValid(e)){if(err)err.textContent=t('mailBad');return}const pid=kind==='reset'?MAIL_PID:SESSION;
@@ -5623,15 +5636,14 @@ ACT.mailSend=async function(kind,b){const inp=document.getElementById('mlIn'),er
 let MAIL_PID=null;
 const _pickPlayerMAIL=ACT.pickPlayer;ACT.pickPlayer=function(id){_pickPlayerMAIL.call(ACT,id);const m=document.querySelector('.overlay .modal');
  if(m&&!m.querySelector('[data-act="mailForgot"]'))m.insertAdjacentHTML('beforeend',`<button class="btn sm linkbtn" data-act="mailForgot" data-arg="${esc(id)}">${t('mailForgot')}</button>`)};
-ACT.mailForgot=function(id){const p=DB.players[id];if(!p)return;MAIL_PID=id;
- if(!p.mailHint||!donOnline())return modal(`<h2>${t('mailForgotT')}</h2><p style="font-weight:800">${donOnline()?t('mailNoBind'):t('donOnline')}</p><div class="row"><button class="btn" data-act="pickPlayer" data-arg="${esc(id)}">←</button></div>`);
- modal(`<h2>${t('mailForgotT')}</h2><p style="font-weight:800">${esc(t('mailForgotTx',{m:p.mailHint}))}</p><input type="email" id="mlIn" class="inp" autocomplete="email" value="${esc(mailLS('email')||'')}"><div class="err" id="err"></div>
-  <div class="row"><button class="btn" data-act="pickPlayer" data-arg="${esc(id)}">←</button><button class="btn pri" data-act="mailSend" data-arg="reset" data-enter>${t('donSend')}</button></div>`)};
+ACT.mailForgot=function(id){const p=DB.players[id];if(!p)return;
+ modal(`<h2>${t('mailForgotT')}</h2><p style="font-weight:800">${esc(t('pwHelp',{n:p.name,m:AUTHOR_MAIL}))}</p><div class="row"><button class="btn" data-act="pickPlayer" data-arg="${esc(id)}">←</button></div>`)};
 /* открыли ссылку из письма */
 const MAILIN={u:null,kind:'',pid:''};
 async function mailLanding(){const q=new URLSearchParams(location.search),kind=q.get('mail');if(!kind||!/[?&]oobCode=/.test(location.search))return;
  for(let i=0;i<150&&!(STORE.ready&&window.firebase&&firebase.apps&&firebase.apps.length);i++)await new Promise(r=>setTimeout(r,200));
  let A;try{A=await mailAuth()}catch(e){return}if(!A.isSignInWithEmailLink(location.href))return;
+ if(kind!=='admin'){mailClean();return modal(`<h2>📧</h2><p style="font-weight:800">${t('mailLinkBad')}</p><div class="row"><button class="btn" data-act="close">OK</button></div>`)}
  MAILIN.kind=kind;MAILIN.pid=q.get('pid')||'';const e=mailLS('email');if(e)return mailFinish(e);
  modal(`<h2>📧</h2><p style="font-weight:800">${t('mailAsk')}</p><input type="email" id="mlIn" class="inp" autocomplete="email"><div class="err" id="err"></div>
   <div class="row"><button class="btn pri" data-act="mailConfirm" data-enter>OK</button></div>`,true)}
@@ -6537,6 +6549,72 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .fnst{font-weight:900;font-size:20px;margin:6px 0}.fnbar{height:12px;background:#333;box-shadow:0 0 0 2px #000;margin:4px auto 10px;max-width:320px}.fnbar i{display:block;height:100%;background:linear-gradient(90deg,#ffd23f,#ff9a2a)}
 @media (hover:hover) and (pointer:fine){.viljoy{width:100px;height:100px}}
 @media (max-width:560px){.vilcake{width:54px;height:54px;right:84px;font-size:24px}.vilhint{display:none}.vilbar2{justify-content:flex-end;margin-bottom:4px}.viljoy{width:104px;height:104px;left:10px;bottom:10px}.viljump{width:66px;height:66px;right:10px;bottom:14px;font-size:26px}.vilenter{bottom:92px}}
+</style>`);
+
+/* ============ ЗАКОН: возрастной знак 6+, политика конфиденциальности, согласие родителя ============ */
+const LEGAL={ver:'v1',date:'3 ноября 2026 г.',op:'Евгений (автор игры, самозанятый)',opD:'Евгению (автору игры, самозанятому)',mail:'jin.ne@mail.ru'};
+Object.assign(S,{
+ age6:['6+','6+'],
+ polLink:['Политика конфиденциальности','Privacy policy'],
+ cnsT:['Для родителей','For parents'],
+ cnsTx:['Игра для детей, возрастная категория 6+. Чтобы играть онлайн (друзья, общий городок, рейтинги), на сервере хранятся: ник, аватар, флаг страны, игровые очки и результаты, список друзей, положение дофика в городке и сообщения из готовых фраз. Имя, телефон, почту и фото мы не собираем.',
+  'A game for children, age rating 6+. To play online (friends, the shared village, leaderboards) the server stores: nickname, avatar, country flag, game scores and results, friends list, the character’s position in the village and messages made of ready-made phrases. We do not collect real names, phone numbers, e-mail or photos.'],
+ cnsChk:['Я — родитель (законный представитель) ребёнка и даю согласие {op} на обработку перечисленных данных ребёнка для работы онлайн-игры на условиях Политики конфиденциальности. Согласие можно отозвать в любой момент.',
+  'I am the parent (legal guardian) of the child and consent to {op} processing the listed data of the child for the online game under the Privacy policy. The consent can be withdrawn at any time.'],
+ cnsOn:['✅ Согласен — играть онлайн','✅ I agree — play online'],
+ cnsOff:['📴 Играть без интернета','📴 Play offline'],
+ cnsNeed:['Отметьте согласие или выберите игру без интернета','Tick the consent or choose offline play'],
+ cnsState:['Ваш выбор: {s}','Your choice: {s}'],
+ cnsSOn:['согласие на онлайн-игру дано','consent to online play given'],
+ cnsSOff:['игра без интернета','offline play'],
+ cnsChange:['Изменить решение / отозвать согласие','Change the decision / withdraw consent'],
+ cnsWithdrawTx:['Чтобы удалить уже сохранённые данные ребёнка с сервера, удалите профиль в разделе «Профиль» или напишите автору на {m}.','To delete data already stored on the server, delete the profile in «Profile» or e-mail the author at {m}.']
+});
+const lsL=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
+function legalOffline(){STORE.mode='local';STORE.db=null;loadLocal();STORE.ready=true;render()}
+function legalGate(next){setTimeout(()=>{const c=lsL('dofa_consent');if(c===LEGAL.ver)return next();if(c==='off')return legalOffline();legalAsk(next)},0)}
+let LEGAL_NEXT=null;
+function legalAsk(next){LEGAL_NEXT=next;
+ modal(`<div class="age6 big">6+</div><h2>👨‍👩‍👧 ${t('cnsT')}</h2><p class="lgtx">${t('cnsTx')}</p>
+  <label class="lgchk"><input type="checkbox" id="cnsBox"> <span>${esc(t('cnsChk',{op:LANG==='ru'?LEGAL.opD:'Evgeniy (the author)'}))}</span></label>
+  <p><button class="btn sm linkbtn" data-act="policy" data-arg="ask">📄 ${t('polLink')}</button></p><div class="err" id="err"></div>
+  <div class="col"><button class="btn pri big" data-act="cnsYes">${t('cnsOn')}</button><button class="btn" data-act="cnsNo">${t('cnsOff')}</button></div>`,true,'lgmodal')}
+ACT.cnsYes=function(){const b=document.getElementById('cnsBox');if(!b||!b.checked){const e=document.getElementById('err');if(e)e.textContent=t('cnsNeed');return}
+ lsL('dofa_consent',LEGAL.ver);lsL('dofa_consent_t',new Date().toISOString());closeModal();const n=LEGAL_NEXT;LEGAL_NEXT=null;if(n)n()};
+ACT.cnsNo=function(){lsL('dofa_consent','off');closeModal();LEGAL_NEXT=null;legalOffline()};
+ACT.cnsReset=function(){lsL('dofa_consent',null);location.reload()};
+ACT.policy=function(from){const c=lsL('dofa_consent');
+ modal(`<div class="lgpol">${LEGAL_POLICY()}</div>
+  ${from==='ask'?`<div class="row"><button class="btn pri" data-act="cnsBack">←</button></div>`:
+  `<p class="donst">${esc(t('cnsState',{s:c===LEGAL.ver?t('cnsSOn'):c==='off'?t('cnsSOff'):'—'}))}</p><p style="font-weight:800">${esc(t('cnsWithdrawTx',{m:LEGAL.mail}))}</p>
+   <div class="row"><button class="btn" data-act="cnsReset">${t('cnsChange')}</button><button class="btn pri" data-act="close">OK</button></div>`}`,from==='ask','lgmodal')};
+ACT.cnsBack=function(){legalAsk(LEGAL_NEXT)};
+function LEGAL_POLICY(){const M=`<a href="mailto:${LEGAL.mail}">${LEGAL.mail}</a>`;return `
+<h2>Политика конфиденциальности игры «Арифметика ДОФА»</h2><p class="muted">Редакция от ${LEGAL.date}</p>
+<h3>1. Кто обрабатывает данные</h3><p>Оператор персональных данных — ${LEGAL.op}. Связь: ${M}. Политика составлена по Федеральному закону № 152-ФЗ «О персональных данных».</p>
+<h3>2. Какие данные</h3><p>Только для онлайн-режима: игровой ник (придуманное имя), выбранный аватар и рамка, флаг страны, игровые очки, результаты и достижения, список друзей, отметка «в сети», положение персонажа в общем городке, сообщения из готовых фраз и смайликов, хэш пароля (сам пароль не хранится). Для статуса «Меценат» — сумма и дата перевода автору. Мы <b>не собираем</b> настоящие имена, телефоны, адреса, электронную почту, фото, геолокацию; рекламы и сторонней аналитики в игре нет.</p>
+<h3>3. Зачем</h3><p>Чтобы сохранять прогресс ребёнка, показывать рейтинги, друзей и других игроков в городке, проводить онлайн-матчи и отмечать благодарности автору.</p>
+<h3>4. Основание</h3><p>Согласие родителя (законного представителя), которое даётся отдельно при первом запуске. Без согласия можно играть без интернета — тогда данные хранятся только на устройстве.</p>
+<h3>5. Где и сколько хранятся</h3><p>Данные хранятся в облачной базе Google Firebase (серверы в Европейском союзе). Они хранятся, пока существует профиль, и удаляются при удалении профиля или по запросу. На устройстве игра хранит настройки (язык, звук, выбор по согласию) — без файлов cookie для рекламы.</p>
+<h3>6. Кому передаются</h3><p>Никому не продаются и не передаются, кроме хостинг-провайдера базы данных (Google Firebase), который только хранит их. Ник, аватар и очки видят другие игроки. Переводы автору проходят через сервис ЮMoney; данные карт и платёжные реквизиты автор не получает.</p>
+<h3>7. Права родителя</h3><p>Родитель может узнать, какие данные хранятся, исправить или удалить их, отозвать согласие: кнопкой «Удалить игрока» в профиле или письмом на ${M}. Ответ — в течение 10 рабочих дней. Отзыв согласия — кнопкой «Изменить решение» ниже.</p>
+<h3>8. Защита</h3><p>Доступ к базе ограничен правилами безопасности, соединение шифруется (HTTPS), пароли хранятся только в виде хэша.</p>
+<h3>9. Возраст</h3><p>Возрастная категория игры — 6+ (Федеральный закон № 436-ФЗ).</p>`}
+/* знак 6+ и ссылка на политику — на экране входа и в меню */
+const legalFoot=()=>`<div class="lgfoot"><span class="age6">6+</span><button class="btn sm linkbtn" data-act="policy">${t('polLink')}</button></div>`;
+const _renderLoginLG=renderLogin;renderLogin=function(){const r=_renderLoginLG.apply(this,arguments);const a=document.getElementById('app');
+ if(a&&!a.querySelector('.lgfoot'))a.insertAdjacentHTML('beforeend',legalFoot());const lw=a&&a.querySelector('.logo-wrap');if(lw&&!lw.querySelector('.age6'))lw.insertAdjacentHTML('afterbegin','<span class="age6 logo6">6+</span>');return r};
+const _renderMenuLG=renderMenu;renderMenu=function(){const r=_renderMenuLG.apply(this,arguments);const a=document.getElementById('app');if(a&&!a.querySelector('.lgfoot'))a.insertAdjacentHTML('beforeend',legalFoot());return r};
+document.head.insertAdjacentHTML('beforeend',`<style>
+.age6{display:inline-block;font-family:var(--font-px,inherit);font-weight:900;font-size:14px;line-height:1;padding:5px 6px;background:#fff;color:#000;box-shadow:0 0 0 2px #000;border-radius:3px}
+.age6.big{font-size:20px;float:right}.logo-wrap{position:relative}.logo6{position:absolute;top:0;right:0}
+.lgfoot{display:flex;gap:10px;align-items:center;justify-content:center;margin:18px 0 8px;flex-wrap:wrap}
+.lgfoot .linkbtn{margin:0;color:inherit}
+.lgmodal{max-width:640px;text-align:left;max-height:92vh;overflow:auto}.lgmodal h2,.lgmodal .lgtx,.lgchk span{text-align:left}.lgtx{font-weight:700;line-height:1.4}
+@media (max-width:600px){.lgmodal{font-size:14px}.lgmodal .lgtx,.lgchk{font-size:13px}}
+.lgchk{display:flex;gap:8px;align-items:flex-start;font-weight:800;line-height:1.4;padding:8px;background:#fff3c4;color:#3a2400;box-shadow:0 0 0 2px #000}
+.lgchk input{width:22px;height:22px;flex:none;margin-top:2px}
+.lgpol{max-height:60vh;overflow:auto;text-align:left;line-height:1.45;padding-right:6px}.lgpol h3{margin:12px 0 4px;font-size:16px}.lgpol p{margin:0 0 6px}
 </style>`);
 </script>
 </body></html>
