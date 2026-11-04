@@ -6112,7 +6112,7 @@ const VST=[[6.5,.6,'vilSt20'],[18.5,.6,'vilSt100'],[38.5,.6,'vilStGames'],[50.5,
    колонки домов u0 = 1, 13, 33, 45, 57 (проспекты на u0+4), ряды v0 = 2, 12 … 62 (через 10 клеток — дома не заслоняют друг друга) */
 const VIL_HOUSES=[
  ['kids',1,2,'u','kids',''],['add20',1,12,'v','play','add20'],['sub20',1,22,'u','play','sub20'],['miss',1,32,'v','play','miss'],['cmp',1,42,'u','play','cmp'],['cafe',1,52,'v','deco','vilCafe'],
- ['add100',13,2,'u','play','add100'],['sub100',13,12,'v','play','sub100'],['mul',13,22,'u','play','mul'],['word',13,32,'u','play','word'],['extra',13,42,'u','play','extra'],['five',13,52,'v','play','five'],
+ ['add100',13,2,'u','play','add100'],['sub100',13,12,'v','play','sub100'],['mul',13,22,'u','play','mul'],['word',13,32,'u','play','word'],['extra',13,42,'u','play','extra'],['five',13,52,'v','play','five'],['clock',13,62,'u','timeOpen',''],
  ['sd',33,2,'u','mgStart','sd'],['mj',33,12,'v','mgStart','mj'],['mem',33,22,'u','mgStart','mem'],['chess',33,32,'u','mgStart','chs'],['pz',33,42,'u','mgStart','pz'],['maze',33,52,'v','mgStart','maze'],['bc',33,62,'u','mgStart','bc'],
  ['collection',45,2,'u','collection',''],['shop',45,12,'u','collection','shop'],['stats',45,42,'u','stats',''],['donate',45,52,'v','donOpen',''],['leaders',45,62,'u','leaders',''],
  ['friends',57,2,'u','friends',''],['mp',57,12,'v','mp',''],['cinema',57,22,'u','deco','vilCinema'],['cafe2',57,32,'v','deco','vilCafe'],['gift',57,42,'u','deco','vilGift'],['monument',57,52,'u','deco','vilMonument'],['cottage',57,62,'u','deco','vilCottage'],
@@ -6188,7 +6188,7 @@ function vilDepth(u,v){const p=vilXY(u,v);let fMax=0,bMin=1e9;
   if(u>=o.u0+o.w-.02||v>=o.v0+o.h-.02){if(zo>fMax)fMax=zo}else if(zo<bMin)bMin=zo}
  let z=fMax?fMax+1:60;if(z>=bMin)z=bMin-1;return Math.max(1,z)}
 function vilName(o){const k=o.k;if(o.act==='play')return mName(o.arg);if(o.act==='deco')return({cafe:'☕ Кафе',cafe2:'🍰 Кафе',cinema:'🎬 Кино',gift:'🎁 Сувениры',monument:'🏅 Памятник',fountain:'⛲ Фонтан',cottage:'🏡 Домик'})[k]||'';
- return({chess:'♞ '+t('g_chs'),sd:t('gSd'),mj:t('gMj'),mem:t('gMem'),pz:t('gPz'),maze:t('gMaze'),sea:t('g_sea'),bc:t('g_bc'),kids:t('kidsBtn'),mp:t('mpBtn'),stats:t('btnStats'),shop:t('shopT'),collection:t('btnCollection'),leaders:t('allPlayers'),friends:t('friends'),donate:t('donBtn')})[k]||k}
+ return({chess:'♞ '+t('g_chs'),sd:t('gSd'),mj:t('gMj'),mem:t('gMem'),pz:t('gPz'),maze:t('gMaze'),sea:t('g_sea'),bc:t('g_bc'),kids:t('kidsBtn'),clock:t('tmT'),mp:t('mpBtn'),stats:t('btnStats'),shop:t('shopT'),collection:t('btnCollection'),leaders:t('allPlayers'),friends:t('friends'),donate:t('donBtn')})[k]||k}
 /* ---------- картинки ---------- */
 function vilLoadImgs(cb){if(VIL.imgOk)return cb(true);let left=VIL_KEYS.length,bad=0;const fin=()=>{if(--left===0){VIL.imgOk=bad<VIL_KEYS.length/2;cb(VIL.imgOk)}};
  VIL_KEYS.forEach(k=>{if(VIL.img[k])return fin();const im=new Image();im.onload=()=>{VIL.img[k]=im.alt==='alias'?vilAliasImg(k,im):im;fin()};
@@ -6549,6 +6549,330 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .fnst{font-weight:900;font-size:20px;margin:6px 0}.fnbar{height:12px;background:#333;box-shadow:0 0 0 2px #000;margin:4px auto 10px;max-width:320px}.fnbar i{display:block;height:100%;background:linear-gradient(90deg,#ffd23f,#ff9a2a)}
 @media (hover:hover) and (pointer:fine){.viljoy{width:100px;height:100px}}
 @media (max-width:560px){.vilcake{width:54px;height:54px;right:84px;font-size:24px}.vilhint{display:none}.vilbar2{justify-content:flex-end;margin-bottom:4px}.viljoy{width:104px;height:104px;left:10px;bottom:10px}.viljump{width:66px;height:66px;right:10px;bottom:14px;font-size:26px}.vilenter{bottom:92px}}
+</style>`);
+
+/* ============ ВРЕМЯ: часы со стрелками → электронные часы → дни недели → месяцы → времена года (по 3 месяца) → экзамен ============ */
+Object.assign(S,{
+ tmT:['⏰ Время','⏰ Time'],
+ tmIntro:['Учимся понимать часы и календарь. Сначала урок, потом задания. Проходи уровни по порядку!','Learn clocks and the calendar. First a lesson, then tasks. Pass the levels in order!'],
+ tmLesson:['📖 Урок','📖 Lesson'],tmTasks:['✏️ Задания','✏️ Tasks'],tmToTasks:['К заданиям ▶','To the tasks ▶'],
+ tmLocked:['Сначала пройди предыдущий уровень','Pass the previous level first'],
+ tmNext:['Дальше ▶','Next ▶'],tmCheck:['Проверить','Check'],tmRight:['Верно! +{n} ⚡','Correct! +{n} ⚡'],tmWrongA:['Правильно: {a}','Correct answer: {a}'],
+ tmDone:['Верно {n} из {t}','{n} of {t} correct'],tmPass:['Уровень пройден! 🎉','Level passed! 🎉'],tmFail:['Нужно 7 верных ответов. Повтори урок и попробуй ещё!','You need 7 correct answers. Review the lesson and try again!'],
+ tmAgain:['🔁 Ещё раз','🔁 Again'],tmNextLv:['Следующий уровень ▶','Next level ▶'],tmHome:['К урокам','To lessons'],tmGain:['Заработано: ⚡ {n}','Earned: ⚡ {n}'],
+ tmFirst:['Бонус за первое прохождение: +{n} ⚡','First pass bonus: +{n} ⚡'],tmPerfect:['Бонус за 3 звезды: +{n} ⚡','3-star bonus: +{n} ⚡'],
+ tmExamOk:['Ты — Знаток времени! Новый статус и рамка «Часовая»','You are a Time expert! New status and the «Clock» frame'],
+ tmH:['+1 ч','+1 h'],tmHm:['−1 ч','−1 h'],tmM:['+5 мин','+5 min'],tmMm:['−5 мин','−5 min'],
+ tm_clk1:['Часы со стрелками','Analog clock'],tm_clk2:['Электронные часы','Digital clock'],tm_week:['Дни недели','Days of the week'],tm_month:['Месяцы','Months'],tm_seas:['Времена года','Seasons'],tm_exam:['Экзамен времени','Time exam'],
+});
+const TM_LV=[['clk1','🕒'],['clk2','📟'],['week','📅'],['month','🗓️'],['seas','🍂'],['exam','🎓']];
+const TM={view:'home',lv:null,slide:0,q:null,n:0,total:10,ok:0,res:[],gain:0,busy:false,set:null,mg:false};
+const tmL=(ru,en)=>LANG==='ru'?ru:en;
+const tmP=p=>{p.tm=p.tm||{};p.tm.lv=p.tm.lv||{};return p.tm};
+const tmBest=(p,k)=>{const r=tmP(p).lv[k];return r?+r.best||0:0};
+const tmStars=n=>n>=10?3:n>=8?2:n>=7?1:0;
+const tmOpen=(p,i)=>i===0||tmBest(p,TM_LV[i-1][0])>=7;
+const pad2=n=>String(n).padStart(2,'0');
+const hm=(h,m)=>h+':'+pad2(m);
+
+/* ---------- картинки: часы со стрелками, электронные часы, неделя, год ---------- */
+function tmClock(h,m,sz=200,cls=''){const ha=((h%12)+m/60)*30,ma=m*6;let tk='';
+ for(let i=0;i<60;i++){const a=i*6*Math.PI/180,big=i%5===0,r1=big?80:85,r2=91;tk+=`<line x1="${100+r1*Math.sin(a)}" y1="${100-r1*Math.cos(a)}" x2="${100+r2*Math.sin(a)}" y2="${100-r2*Math.cos(a)}" stroke="#3a2410" stroke-width="${big?3.5:1.4}"/>`}
+ let nums='';for(let i=1;i<=12;i++){const a=i*30*Math.PI/180;nums+=`<text x="${100+67*Math.sin(a)}" y="${100-67*Math.cos(a)+7}" text-anchor="middle" font-size="20" font-weight="900" fill="#2b1a08" font-family="Nunito,Arial,sans-serif">${i}</text>`}
+ return `<svg class="tmclock ${cls}" viewBox="0 0 200 200" width="${sz}" height="${sz}" role="img" aria-label="${hm(h,m)}"><circle cx="100" cy="100" r="96" fill="#ffd23f"/><circle cx="100" cy="100" r="92" fill="#fffbe8" stroke="#3a2410" stroke-width="5"/>${tk}${nums}
+  <line x1="100" y1="100" x2="${100+48*Math.sin(ha*Math.PI/180)}" y2="${100-48*Math.cos(ha*Math.PI/180)}" stroke="#e5482f" stroke-width="10" stroke-linecap="round" class="hh"/>
+  <line x1="100" y1="100" x2="${100+76*Math.sin(ma*Math.PI/180)}" y2="${100-76*Math.cos(ma*Math.PI/180)}" stroke="#2f6fe5" stroke-width="6" stroke-linecap="round" class="mh"/>
+  <circle cx="100" cy="100" r="7" fill="#3a2410"/></svg>`}
+const tmDig=(h,m)=>`<span class="tmdig">${pad2(h)}<i>:</i>${pad2(m)}</span>`;
+const WD_RU=['понедельник','вторник','среда','четверг','пятница','суббота','воскресенье'],WD_EN=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const WD_G=['понедельника','вторника','среды','четверга','пятницы','субботы','воскресенья'],WD_I=['понедельником','вторником','средой','четвергом','пятницей','субботой','воскресеньем'],WD_A=['понедельник','вторник','среду','четверг','пятницу','субботу','воскресенье'];
+const MO_RU=['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'],MO_EN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MO_G=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'],MO_P=['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'],MO_I=['январём','февралём','мартом','апрелем','маем','июнем','июлем','августом','сентябрём','октябрём','ноябрём','декабрём'];
+const MO_D=[31,28,31,30,31,30,31,31,30,31,30,31];
+const SE_RU=['зима','весна','лето','осень'],SE_G=['зимы','весны','лета','осени'],SE_EN=['winter','spring','summer','autumn'],SE_E=['❄️','🌷','☀️','🍂'],SE_C=['#7fc8ff','#7fdc6a','#ffcf3f','#ff9a3d'];
+const seOf=mo=>mo===11||mo<2?0:mo<5?1:mo<8?2:3;
+const SE_M=[[11,0,1],[2,3,4],[5,6,7],[8,9,10]];
+const tmWd=i=>tmL(WD_RU,WD_EN)[(i+7)%7],tmMo=i=>tmL(MO_RU,MO_EN)[(i+12)%12],tmSe=i=>tmL(SE_RU,SE_EN)[i];
+const tmCap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function tmWeek(hl={}){return `<div class="tmweek">${tmL(WD_RU,WD_EN).map((d,i)=>`<span class="${i>4?'we':''} ${hl[i]||''}"><b>${i+1}</b>${esc(LANG==='ru'?['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][i]:tmCap(d).slice(0,3))}</span>`).join('')}</div>`}
+function tmYear(hl={}){return `<div class="tmyear">${tmL(MO_RU,MO_EN).map((d,i)=>`<span style="--c:${SE_C[seOf(i)]}" class="${hl[i]||''}"><b>${i+1}</b>${esc(tmCap(d).slice(0,3))}</span>`).join('')}</div>`}
+const HR_G=['','первого','второго','третьего','четвёртого','пятого','шестого','седьмого','восьмого','девятого','десятого','одиннадцатого','двенадцатого'];
+const HR_N=['','час','два','три','четыре','пять','шесть','семь','восемь','девять','десять','одиннадцать','двенадцать'];
+const h12=h=>((h-1+12)%12)+1;
+function tmWords(h,m){h=h12(h);const nx=h%12+1;if(LANG!=='ru')return m===0?`${h} o'clock`:m===30?`half past ${h}`:m===15?`quarter past ${h}`:m===45?`quarter to ${nx}`:hm(h,m);
+ return m===0?`ровно ${HR_N[h]==='час'?'час':HR_N[h]}`:m===30?`половина ${HR_G[nx]}`:m===15?`четверть ${HR_G[nx]}`:m===45?`без четверти ${HR_N[nx]}`:hm(h,m)}
+
+/* ---------- уроки ---------- */
+function tmSlides(k){
+ if(k==='clk1')return [
+  [tmClock(3,0),tmL('У часов две стрелки. <b class="cr">Короткая красная</b> показывает <b>часы</b>, <b class="cb">длинная синяя</b> — <b>минуты</b>.','A clock has two hands. The <b class="cr">short red</b> one shows <b>hours</b>, the <b class="cb">long blue</b> one shows <b>minutes</b>.')],
+  [tmClock(3,0)+tmClock(9,0),tmL('Если длинная стрелка смотрит прямо вверх, на <b>12</b>, — время <b>ровно</b>. Смотрим на короткую: 3 часа, 9 часов.','When the long hand points straight up at <b>12</b>, it is <b>o’clock</b>. Look at the short hand: 3 o’clock, 9 o’clock.')],
+  [tmClock(4,30),tmL('Длинная стрелка на <b>6</b> — прошло полчаса, <b>30 минут</b>. Короткая уже между 4 и 5. Это <b>4:30 — половина пятого</b>.','Long hand at <b>6</b> — half an hour, <b>30 minutes</b>. The short hand is between 4 and 5. It is <b>4:30 — half past four</b>.')],
+  [tmClock(2,15)+tmClock(2,45),tmL('На <b>3</b> — 15 минут, <b>четверть</b>: 2:15 — четверть третьего. На <b>9</b> — 45 минут: 2:45 — без четверти три.','At <b>3</b> — 15 minutes, a <b>quarter</b>: 2:15. At <b>9</b> — 45 minutes: 2:45 — a quarter to three.')],
+  [tmClock(7,20),tmL('Каждая цифра для длинной стрелки — это <b>5 минут</b>: 1 → 5, 2 → 10, 4 → 20… Считай пятёрками! Здесь <b>7:20</b>. В часе <b>60 минут</b>.','For the long hand every number means <b>5 minutes</b>: 1 → 5, 2 → 10, 4 → 20… Count by fives! This is <b>7:20</b>. An hour has <b>60 minutes</b>.')]];
+ if(k==='clk2')return [
+  [tmDig(7,45)+tmClock(7,45,150),tmL('Электронные часы показывают время цифрами: слева <b>часы</b>, после двоеточия — <b>минуты</b>. 07:45 — это 7 часов 45 минут.','Digital clocks show time with digits: <b>hours</b> on the left, <b>minutes</b> after the colon. 07:45 is 7 hours 45 minutes.')],
+  [tmDig(12,0)+' '+tmDig(15,0),tmL('В сутках <b>24 часа</b>. После 12 часов дня считают дальше: 13, 14, 15… <b>15:00</b> — это <b>3 часа дня</b> (15 − 12 = 3).','A day has <b>24 hours</b>. After 12 noon we keep counting: 13, 14, 15… <b>15:00</b> is <b>3 pm</b> (15 − 12 = 3).')],
+  [tmDig(0,0)+' '+tmDig(12,0),tmL('<b>00:00</b> — полночь, начинаются новые сутки. <b>12:00</b> — полдень. Утро — с 6 до 12, день — с 12 до 18, вечер — с 18 до 23, ночь — с 23 до 6.','<b>00:00</b> is midnight, a new day starts. <b>12:00</b> is noon. Morning 6–12, afternoon 12–18, evening 18–23, night 23–6.')],
+  [tmDig(10,30)+' → '+tmDig(12,30),tmL('Чтобы узнать, сколько будет через 2 часа, прибавь 2 к часам: 10:30 + 2 часа = <b>12:30</b>. Минуты не меняются.','To find the time in 2 hours, add 2 to the hours: 10:30 + 2 hours = <b>12:30</b>. Minutes stay the same.')]];
+ if(k==='week')return [
+  [tmWeek(),tmL('В неделе <b>7 дней</b>. Они всегда идут по порядку: понедельник, вторник, среда, четверг, пятница, суббота, воскресенье.','A week has <b>7 days</b> in a fixed order: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday.')],
+  [tmWeek({5:'hl',6:'hl'}),tmL('Суббота и воскресенье — <b>выходные</b>. Остальные 5 дней — <b>будни</b>, в эти дни ходят в школу и на работу.','Saturday and Sunday are the <b>weekend</b>. The other 5 days are <b>weekdays</b>.')],
+  [tmWeek({1:'pv',2:'hl',3:'nx'}),tmL('Если сегодня <b>среда</b>, то вчера был вторник, а завтра будет четверг. <b>Послезавтра</b> — через 2 дня, <b>позавчера</b> — 2 дня назад.','If today is <b>Wednesday</b>, yesterday was Tuesday and tomorrow is Thursday. <b>The day after tomorrow</b> is in 2 days.')],
+  [tmWeek({6:'hl',0:'nx'}),tmL('После воскресенья снова начинается <b>понедельник</b> — неделя идёт по кругу.','After Sunday comes <b>Monday</b> again — the week goes round in a circle.')]];
+ if(k==='month')return [
+  [tmYear(),tmL('В году <b>12 месяцев</b>: январь, февраль, март, апрель, май, июнь, июль, август, сентябрь, октябрь, ноябрь, декабрь.','A year has <b>12 months</b>: January, February, March, April, May, June, July, August, September, October, November, December.')],
+  [tmYear({0:'hl'}),tmL('Год начинается <b>1 января</b>, сразу после 31 декабря — это Новый год!','The year starts on <b>January 1</b>, right after December 31 — New Year!')],
+  [`<div class="tmfist">✊✊</div>`,tmL('В месяцах 30 или 31 день. Сожми кулачки: на косточках — месяцы по <b>31 дню</b>, в ямках — по <b>30</b>. Февраль короткий: <b>28 дней</b>, а раз в 4 года — 29.','Months have 30 or 31 days. Make fists: knuckles are <b>31-day</b> months, gaps are <b>30</b>. February is short: <b>28 days</b>, 29 every 4 years.')],
+  [tmYear({4:'hl'}),tmL('У каждого месяца есть номер: май — <b>5-й</b> месяц, поэтому дату 9 мая пишут <b>09.05</b>.','Each month has a number: May is the <b>5th</b> month.')]];
+ if(k==='seas')return [
+  [`<div class="tmseas">${[0,1,2,3].map(s=>`<span style="--c:${SE_C[s]}"><big>${SE_E[s]}</big><b>${esc(tmCap(tmSe(s)))}</b><small>${SE_M[s].map(m=>esc(tmMo(m))).join(', ')}</small></span>`).join('')}</div>`,
+   tmL('Год делится на <b>4 времени года</b>, в каждом — по <b>3 месяца</b>.','The year has <b>4 seasons</b>, <b>3 months</b> each.')],
+  [tmYear({11:'hl',0:'hl',1:'hl'}),tmL('Зима начинается в <b>декабре</b> и заканчивается в феврале. Весна — март, апрель, май. Лето — июнь, июль, август. Осень — сентябрь, октябрь, ноябрь.','Winter starts in <b>December</b> and ends in February. Spring — March, April, May. Summer — June, July, August. Autumn — September, October, November.')],
+  [`<div class="tmfist">🏫</div>`,tmL('Учебный год начинается <b>1 сентября</b>. Его делят на части: <b>триместры</b> (3 части) или <b>четверти</b> (4 части). А год из 12 месяцев делится на 4 части по 3 месяца.','The school year starts on <b>September 1</b>. It is split into <b>terms</b>. The 12-month year splits into 4 parts of 3 months.')]];
+ return [[`<div class="tmfist">🎓</div>`,tmL('Экзамен: задания из всех уроков — часы, электронные часы, дни недели, месяцы и времена года. Ответь верно на 8 из 10 — и получишь статус «Знаток времени»!','Exam: tasks from all lessons. Get 8 of 10 right to earn the «Time expert» status!')]]}
+
+/* ---------- задания ---------- */
+function tmOpts(ans,pool,n=4){const s=[ans];for(const x of pool.sort(()=>Math.random()-.5)){if(s.length>=n)break;if(!s.includes(x))s.push(x)}
+ const o=s.sort(()=>Math.random()-.5);return{opts:o,a:o.indexOf(ans)}}
+function qRead(h,m,lvlMin){const ans=hm(h,m),nh=h12(h+1),ph=h12(h-1),sw=h12(Math.round(m/5)||12);
+ const pool=[hm(nh,m),hm(ph,m),hm(sw,(h%12)*5),hm(h,(m+30)%60),hm(h,(m+15)%60),hm(h12(h+(m>=30?1:0)),m===0?30:0)];
+ return Object.assign({q:tmL('Который час на часах?','What time is it?'),body:tmClock(h,m),exp:tmL(`Короткая стрелка — ${m>=30?'между '+h+' и '+nh:'на '+h}, длинная на ${m/5||12} → ${ans}`,`Short hand ${m>=30?'between '+h+' and '+nh:'at '+h}, long hand at ${m/5||12} → ${ans}`)},tmOpts(ans,pool))}
+function qSet(h,m){return {q:tmL(`Поставь стрелки: ${hm(h,m)}`,`Set the clock to ${hm(h,m)}`),set:{h,m},exp:hm(h,m)}}
+function genClk1(i){const h=rnd(1,12);const m=i<3?0:i<6?30:i<8?pick([15,45]):pick([5,10,20,25,35,40,50,55]);
+ if(i===2||i===5||i===9)return qSet(h,m);
+ if(i===4&&LANG==='ru'){const ans=hm(h,30);return Object.assign({q:`«${tmCap(tmWords(h,30))}» — это сколько?`,exp:`Половина следующего часа: ${ans}`},tmOpts(ans,[hm(h12(h+1),30),hm(h12(h+1),0),hm(h,0),hm(h12(h-1),30)]))}
+ if(i===7){const k=pick([['60',tmL('Сколько минут в одном часе?','How many minutes in an hour?'),['30','100','12','24']],['30',tmL('Полчаса — это сколько минут?','Half an hour is how many minutes?'),['50','15','60','20']],['15',tmL('Четверть часа — это сколько минут?','A quarter of an hour is how many minutes?'),['25','4','30','45']]]);return Object.assign({q:k[1],exp:k[0]},tmOpts(k[0],k[2]))}
+ return qRead(h,m)}
+const partOf=h=>h>=6&&h<12?0:h>=12&&h<18?1:h>=18&&h<23?2:3;
+const PARTS=()=>tmL(['утро','день','вечер','ночь'],['morning','afternoon','evening','night']);
+function genClk2(i){const k=i%6;
+ if(k===0){const h=rnd(1,12),m=pick([0,15,30,45,10,20,40,50]),ans=pad2(h)+':'+pad2(m);
+  return Object.assign({q:tmL('Как это время выглядит на электронных часах?','How does this time look on a digital clock?'),body:tmClock(h,m),exp:ans},tmOpts(ans,[pad2(h12(h+1))+':'+pad2(m),pad2(h)+':'+pad2((m+30)%60),pad2(h12(Math.round(m/5)||12))+':'+pad2((h%12)*5),pad2(h12(h-1))+':'+pad2(m)]))}
+ if(k===1){const h=rnd(13,23),ans=String(h-12);return Object.assign({q:tmL(`На электронных часах ${pad2(h)}:00. Сколько это часов дня или вечера?`,`The digital clock shows ${pad2(h)}:00. What is it in pm?`),body:tmDig(h,0),exp:`${h} − 12 = ${h-12}`},tmOpts(ans,[String(h-10),String(h-12+1),String(h-12-1),String(h)].filter(x=>+x>0)))}
+ if(k===2){const h=rnd(6,20),m=pick([0,15,30,45]),d=pick([1,2,3]),ans=pad2(h+d)+':'+pad2(m);
+  return Object.assign({q:tmL(`Сейчас ${pad2(h)}:${pad2(m)}. Сколько будет через ${d} ${d===1?'час':'часа'}?`,`It is ${pad2(h)}:${pad2(m)} now. What time will it be in ${d} hour${d>1?'s':''}?`),body:tmDig(h,m),exp:tmL(`${h} + ${d} = ${h+d}, минуты те же`,`${h} + ${d} = ${h+d}, minutes stay`)},
+   tmOpts(ans,[pad2(h+d+1)+':'+pad2(m),pad2(h)+':'+pad2((m+d*10)%60),pad2(h+d-1)+':'+pad2(m),pad2(h+d)+':'+pad2((m+30)%60)]))}
+ if(k===3){const h=pick([7,9,10,13,15,16,19,20,21,23,1,3]),P=PARTS(),ans=P[partOf(h)];return Object.assign({q:tmL(`${pad2(h)}:00 — это какое время суток?`,`${pad2(h)}:00 — what part of the day?`),body:tmDig(h,0),exp:ans},tmOpts(ans,P))}
+ if(k===4){const x=pick([['24',tmL('Сколько часов в сутках?','How many hours in a day?'),['12','60','7','30']],['12:00',tmL('Как на электронных часах выглядит полдень?','How does noon look on a digital clock?'),['00:00','24:00','06:00','18:00']],['00:00',tmL('Как на электронных часах выглядит полночь?','How does midnight look on a digital clock?'),['12:00','06:00','24:30','01:00']]]);return Object.assign({q:x[1],exp:x[0]},tmOpts(x[0],x[2]))}
+ const h=rnd(1,12),m=pick([0,15,30,45,20,40]),ans=tmClock(h,m,92,'mini'),pool=[tmClock(h12(h+1),m,92,'mini'),tmClock(h12(Math.round(m/5)||12),(h%12)*5,92,'mini'),tmClock(h,(m+30)%60,92,'mini'),tmClock(h12(h-1),m,92,'mini')];
+ return Object.assign({q:tmL('Найди часы со стрелками, которые показывают то же время','Find the analog clock showing the same time'),body:tmDig(h,m),exp:hm(h,m),html:1},tmOpts(ans,pool))}
+function genWeek(i){const d=rnd(0,6),k=i%7;
+ if(LANG!=='ru'){const x=pick([[1,'tomorrow'],[-1,'yesterday'],[2,'the day after tomorrow']]);const ans=tmWd(d+x[0]);return Object.assign({q:`Today is ${tmWd(d)}. What day is ${x[1]}?`,body:tmWeek({[d]:'hl'}),exp:ans},tmOpts(ans,[tmWd(d+x[0]+1),tmWd(d+x[0]-1),tmWd(d),tmWd(d-x[0])]))}
+ if(k===0){const ans=tmCap(WD_RU[(d+1)%7]);return Object.assign({q:`Какой день недели идёт после ${WD_G[d]}?`,body:tmWeek(),exp:ans},tmOpts(ans,[tmCap(WD_RU[(d+6)%7]),tmCap(WD_RU[(d+2)%7]),tmCap(WD_RU[d])]))}
+ if(k===1){const ans=tmCap(WD_RU[(d+6)%7]);return Object.assign({q:`Какой день недели идёт перед ${WD_I[d]}?`,body:tmWeek(),exp:ans},tmOpts(ans,[tmCap(WD_RU[(d+1)%7]),tmCap(WD_RU[(d+5)%7]),tmCap(WD_RU[d])]))}
+ if(k===2){const x=pick([[1,'завтра','будет'],[-1,'вчера','был'],[2,'послезавтра','будет'],[-2,'позавчера','был']]),ans=tmCap(WD_RU[(d+x[0]+7)%7]);
+  return Object.assign({q:`Сегодня ${WD_RU[d]}. Какой день ${x[2]} ${x[1]}?`,body:tmWeek({[d]:'hl'}),exp:ans},tmOpts(ans,[tmCap(WD_RU[(d-x[0]+7)%7]),tmCap(WD_RU[(d+x[0]+8)%7]),tmCap(WD_RU[(d+x[0]+6)%7]),tmCap(WD_RU[d])]))}
+ if(k===3){const ans=String(d+1);return Object.assign({q:`Какой по счёту день недели — ${WD_RU[d]}?`,exp:ans},tmOpts(ans,['1','2','3','4','5','6','7']))}
+ if(k===4){const n=rnd(3,5),ans=tmCap(WD_RU[(d+n)%7]);return Object.assign({q:`Сегодня ${WD_RU[d]}. Какой день будет через ${n} ${n<5?'дня':'дней'}?`,body:tmWeek({[d]:'hl'}),exp:ans},tmOpts(ans,[tmCap(WD_RU[(d+n+1)%7]),tmCap(WD_RU[(d+n-1)%7]),tmCap(WD_RU[(d+7-n)%7])]))}
+ if(k===5)return Object.assign({q:'Какие дни недели — выходные?',exp:'Суббота и воскресенье'},tmOpts('Суббота и воскресенье',['Пятница и суббота','Понедельник и вторник','Воскресенье и понедельник']));
+ const x=pick([['7','Сколько дней в неделе?',['5','10','12','6']],['14','Сколько дней в двух неделях?',['12','10','21','7']],['5','Сколько будних дней в неделе?',['7','2','4','6']]]);return Object.assign({q:x[1],exp:x[0]},tmOpts(x[0],x[2]))}
+function genMonth(i){const m=rnd(0,11),k=i%7;
+ if(LANG!=='ru'){const x=pick([[1,'after'],[-1,'before']]);const ans=tmMo(m+x[0]);return Object.assign({q:`Which month comes ${x[1]} ${tmMo(m)}?`,body:tmYear(),exp:ans},tmOpts(ans,[tmMo(m-x[0]),tmMo(m+2*x[0]),tmMo(m)]))}
+ if(k===0){const ans=tmCap(MO_RU[(m+1)%12]);return Object.assign({q:`Какой месяц идёт после ${MO_G[m]}?`,body:tmYear(),exp:ans},tmOpts(ans,[tmCap(MO_RU[(m+11)%12]),tmCap(MO_RU[(m+2)%12]),tmCap(MO_RU[m])]))}
+ if(k===1){const ans=tmCap(MO_RU[(m+11)%12]);return Object.assign({q:`Какой месяц идёт перед ${MO_I[m]}?`,body:tmYear(),exp:ans},tmOpts(ans,[tmCap(MO_RU[(m+1)%12]),tmCap(MO_RU[(m+10)%12]),tmCap(MO_RU[m])]))}
+ if(k===2){const ans=String(m+1);return Object.assign({q:`Какой по счёту месяц — ${MO_RU[m]}?`,exp:ans},tmOpts(ans,[String(m),String(m+2),String((m+6)%12+1),String(12-m)].filter(x=>+x>0&&+x<=12)))}
+ if(k===3){const mm=pick([0,2,3,4,5,6,7,8,9,10,11]),ans=String(MO_D[mm]);return Object.assign({q:`Сколько дней в ${MO_P[mm]}?`,body:`<div class="tmfist">✊✊</div>`,exp:`${tmCap(MO_RU[mm])} — ${ans} ${MO_D[mm]===31?'день':'дней'}`},tmOpts(ans,['30','31','28','29']))}
+ if(k===4){const n=rnd(2,4),ans=tmCap(MO_RU[(m+n)%12]);return Object.assign({q:`Сейчас ${MO_RU[m]}. Какой месяц будет через ${n} ${n<5?'месяца':'месяцев'}?`,body:tmYear({[m]:'hl'}),exp:ans},tmOpts(ans,[tmCap(MO_RU[(m+n+1)%12]),tmCap(MO_RU[(m+n-1)%12]),tmCap(MO_RU[(m+12-n)%12])]))}
+ if(k===5){const ans=tmCap(MO_RU[m]);return Object.assign({q:`Какой месяц ${m+1}-й по счёту?`,exp:ans},tmOpts(ans,[tmCap(MO_RU[(m+1)%12]),tmCap(MO_RU[(m+11)%12]),tmCap(MO_RU[(m+6)%12])]))}
+ const x=pick([['12','Сколько месяцев в году?',['10','7','24','11']],['Декабрь','После какого месяца наступает Новый год?',['Январь','Ноябрь','Февраль']],['Февраль','Какой месяц самый короткий?',['Январь','Апрель','Ноябрь']]]);return Object.assign({q:x[1],exp:x[0]},tmOpts(x[0],x[2]))}
+function genSeas(i){const m=rnd(0,11),s=seOf(m),k=i%6;
+ if(k===0||LANG!=='ru'){const ans=tmCap(tmSe(s));return Object.assign({q:tmL(`Какое время года в ${MO_P[m]}?`,`What season is ${tmMo(m)}?`),body:tmYear({[m]:'hl'}),exp:ans},tmOpts(ans,[0,1,2,3].map(x=>tmCap(tmSe(x)))))}
+ if(k===1){const S0=rnd(0,3),f=x=>SE_M[x].map(y=>tmCap(MO_RU[y])).join(', '),ans=f(S0);
+  return Object.assign({q:`Какие месяцы — ${SE_RU[S0]}?`,exp:ans},tmOpts(ans,[f((S0+1)%4),f((S0+3)%4),[SE_M[S0][1],SE_M[S0][2],SE_M[(S0+1)%4][0]].map(y=>tmCap(MO_RU[y])).join(', ')]))}
+ if(k===2){const S0=rnd(0,3),w=pick([0,2]),ans=tmCap(MO_RU[SE_M[S0][w]]);return Object.assign({q:`Какой месяц — ${w?'последний':'первый'} месяц ${SE_G[S0]}?`,exp:ans},tmOpts(ans,SE_M[S0].concat(SE_M[(S0+1)%4]).map(y=>tmCap(MO_RU[y]))))}
+ if(k===3){const S0=rnd(0,3),ans=tmCap(SE_RU[(S0+1)%4]);return Object.assign({q:`Какое время года наступает после ${SE_G[S0]}?`,exp:ans},tmOpts(ans,[0,1,2,3].map(x=>tmCap(SE_RU[x]))))}
+ if(k===4){const x=pick([['3','Сколько месяцев в одном времени года?',['4','2','12','6']],['4','Сколько времён года в году?',['3','12','2','6']],['Осенью','Когда начинается учебный год — 1 сентября?',['Зимой','Весной','Летом']]]);return Object.assign({q:x[1],exp:x[0]},tmOpts(x[0],x[2]))}
+ const ans=tmCap(tmSe(s));return Object.assign({q:`${pick(['Таня','Миша','Дофа','Ваня'])} родился ${rnd(1,28)} ${MO_G[m]}. Какое это время года?`,body:tmYear({[m]:'hl'}),exp:ans},tmOpts(ans,[0,1,2,3].map(x=>tmCap(SE_RU[x]))))}
+const TM_GEN={clk1:genClk1,clk2:genClk2,week:genWeek,month:genMonth,seas:genSeas,exam:i=>[genClk1,genClk2,genWeek,genMonth,genSeas][i%5](rnd(0,9))};
+
+/* ---------- экраны ---------- */
+const tmHead=(p,title)=>`<header class="top blk"><button class="icon" data-act="${TM.view==='home'?'back':'tmHome'}" aria-label="←">⬅</button><h2 style="margin:0">${title}</h2><div class="sp"></div><span class="dopa">⚡ <b id="dopaVal">${p.dopa}</b></span></header>`;
+function renderTime(){SCREEN='time';const p=cur();if(!p){SCREEN='login';return render()}const P=tmP(p);
+ if(TM.view==='home'){app.innerHTML=tmHead(p,t('tmT'))+`<p class="on-sky" style="font-weight:900;text-align:center;max-width:620px;margin:6px auto 12px">${t('tmIntro')}</p>
+  <div class="tmlvls">${TM_LV.map(([k,ic],i)=>{const op=tmOpen(p,i),b=tmBest(p,k),st=tmStars(b);
+   return `<button class="mode blk tmlv ${op?'':'locked'}" style="--c:${['#ff7a3d','#3d9bff','#5fd03a','#b65cff','#ffc21a','#ff4f9a'][i]}" data-act="${op?'tmLv':'tmLock'}" data-arg="${k}"><span class="mi slotbox">${op?ic:'🔒'}</span><b>${i+1}. ${t('tm_'+k)}</b>
+    <span class="tmst">${'⭐'.repeat(st)}${'☆'.repeat(3-st)}</span><small>${b?esc(t('tmDone',{n:b,t:10})):''}</small></button>`}).join('')}</div>`;return}
+ const lv=TM.lv,name=t('tm_'+lv);
+ if(TM.view==='lesson'){const S=tmSlides(lv),i=Math.min(TM.slide,S.length-1),[pic,tx2]=S[i];
+  app.innerHTML=tmHead(p,`${t('tmLesson')}: ${name}`)+`<section class="panel blk tmles"><div class="tmpic">${pic}</div><p class="tmtx">${tx2}</p>
+   <div class="tmdots">${S.map((_,j)=>`<i class="${j===i?'on':''}"></i>`).join('')}</div>
+   <div class="row"><button class="btn" data-act="tmSlide" data-arg="${i-1}" ${i?'':'disabled'}>◀</button>${i<S.length-1?`<button class="btn pri big" data-act="tmSlide" data-arg="${i+1}" data-enter>${t('tmNext')}</button>`:`<button class="btn pri big" data-act="tmQuiz" data-enter>${t('tmToTasks')}</button>`}</div></section>`;return}
+ if(TM.view==='end'){const n=TM.ok,st=tmStars(n);app.innerHTML=tmHead(p,name)+`<section class="panel blk" style="text-align:center"><div style="font-size:56px">${n>=10?'🏆':n>=7?'🌟':'🙂'}</div><div class="stars" style="font-size:30px">${'⭐'.repeat(st)}${'☆'.repeat(3-st)}</div>
+  <h2>${esc(t('tmDone',{n,t:TM.total}))}</h2><p style="font-weight:900">${n>=7?t('tmPass'):t('tmFail')}</p><p class="donst ok">${esc(t('tmGain',{n:TM.gain}))}</p>${TM.extra||''}
+  <div class="row"><button class="btn" data-act="tmHome">${t('tmHome')}</button><button class="btn" data-act="tmLv" data-arg="${lv}">${t('tmAgain')}</button>${n>=7&&lv!=='exam'?`<button class="btn pri big" data-act="tmLv" data-arg="${TM_LV[TM_LV.findIndex(x=>x[0]===lv)+1][0]}" data-enter>${t('tmNextLv')}</button>`:''}</div></section>`;
+  if(n>=7){sndFanfare();try{fireworks(3)}catch(e){}}return}
+ /* задание */
+ const q=TM.q||(TM.q=TM_GEN[lv](TM.n));
+ app.innerHTML=tmHead(p,name)+`<div class="kprog">${Array.from({length:TM.total},(_,i)=>`<i class="${i<TM.res.length?(TM.res[i]?'ok':'no'):i===TM.n?'now':''}"></i>`).join('')}</div>
+ <section class="panel blk tmq" id="tmPanel"><h2>${esc(q.q)}</h2>${q.body?`<div class="tmpic">${q.body}</div>`:''}
+ ${q.set?`<div class="tmpic" id="tmSetClk">${tmClock(TM.set.h,TM.set.m)}</div><div class="tmsetbtn"><button class="btn" data-act="tmAdj" data-arg="-60">${t('tmHm')}</button><button class="btn" data-act="tmAdj" data-arg="60">${t('tmH')}</button><button class="btn" data-act="tmAdj" data-arg="-5">${t('tmMm')}</button><button class="btn" data-act="tmAdj" data-arg="5">${t('tmM')}</button></div>
+  <div class="row"><button class="btn pri big" data-act="tmSetOk" data-enter>${t('tmCheck')}</button></div>`
+ :`<div class="kgrid tmgrid ${q.html?'tmclk':''}">${q.opts.map((o,i)=>`<button class="btn" data-act="tmAns" data-arg="${i}">${q.html?o:esc(o)}</button>`).join('')}</div>`}
+ <div id="tmFb"></div></section>`}
+function tmAnswer(ok,shown){const p=cur();if(!p||TM.busy)return;TM.busy=true;TM.res.push(ok);
+ let fb='';if(ok){TM.ok++;const g=2;TM.gain+=g;p.dopa+=g;p.correct=(+p.correct||0)+1;tmP(p).ok=(+tmP(p).ok||0)+1;if(mgTick())TM.mg=true;save(p);
+   try{sndCorrect(Math.min(TM.ok,8))}catch(e){}fb=`<p class="tmfb ok">${esc(t('tmRight',{n:g}))}</p>`;const d=document.getElementById('dopaVal');if(d)d.textContent=p.dopa}
+ else{try{sndWrong()}catch(e){}fb=`<p class="tmfb no">${esc(t('tmWrongA',{a:shown}))}</p>`}
+ const el=document.getElementById('tmFb');if(el)el.innerHTML=fb+`<div class="row"><button class="btn pri big" data-act="tmGo" data-enter>${t('tmNext')}</button></div>`;
+ if(ok)TM.auto=setTimeout(()=>ACT.tmGo(),900)}
+function tmFinish(){const p=cur();const P=tmP(p),lv=TM.lv,r=P.lv[lv]||{best:0},first=r.best<7&&TM.ok>=7,perf=r.best<10&&TM.ok>=10;let extra='';
+ if(first){p.dopa+=10;TM.gain+=10;extra+=`<p class="lbl">${esc(t('tmFirst',{n:10}))}</p>`}
+ if(perf){p.dopa+=10;TM.gain+=10;extra+=`<p class="lbl">${esc(t('tmPerfect',{n:10}))}</p>`}
+ r.best=Math.max(+r.best||0,TM.ok);P.lv[lv]=r;if(lv==='exam'&&TM.ok>=8&&!P.exam){P.exam=1;extra+=`<p class="donst ok">🕰️ ${esc(t('tmExamOk'))}</p>`}
+ TM.extra=extra;save(p);try{announce(checkUnlocks(p))}catch(e){}TM.view='end';renderTime();
+ if(TM.mg){TM.mg=false;setTimeout(()=>{try{offerMinigame(()=>{TM.view='home';SCREEN='time';renderTime()})}catch(e){}},1400)}}
+Object.assign(ACT,{
+ timeOpen(){closeModal();TM.view='home';renderTime()},
+ tmHome(){clearTimeout(TM.auto);TM.view='home';renderTime()},
+ tmLock(){sndWrong();toast(esc(t('tmLocked')),2500)},
+ tmLv(k){clearTimeout(TM.auto);TM.lv=k;TM.slide=0;TM.view='lesson';renderTime();window.scrollTo(0,0)},
+ tmSlide(i){TM.slide=Math.max(0,+i);renderTime()},
+ tmQuiz(){TM.view='quiz';TM.n=0;TM.ok=0;TM.res=[];TM.gain=0;TM.q=null;TM.busy=false;TM.mg=false;tmPrep();renderTime()},
+ tmAns(i){const q=TM.q;if(!q||TM.busy)return;i=+i;const ok=i===q.a,bs=document.querySelectorAll('#tmPanel .tmgrid .btn');bs.forEach((b,j)=>{b.disabled=true;if(j===q.a)b.classList.add('good');else if(j===i)b.classList.add('bad')});
+  tmAnswer(ok,q.html?q.exp:q.opts[q.a]+(q.exp&&q.exp!==q.opts[q.a]?' — '+q.exp:''))},
+ tmAdj(d){if(TM.busy)return;let x=(TM.set.h%12)*60+TM.set.m+ +d;x=((x%720)+720)%720;TM.set={h:Math.floor(x/60)||12,m:x%60};const c=document.getElementById('tmSetClk');if(c)c.innerHTML=tmClock(TM.set.h,TM.set.m);try{sndTick()}catch(e){}},
+ tmSetOk(){const q=TM.q;if(!q||TM.busy)return;const ok=h12(TM.set.h)===h12(q.set.h)&&TM.set.m===q.set.m;tmAnswer(ok,hm(q.set.h,q.set.m))},
+ tmGo(){clearTimeout(TM.auto);if(!TM.busy)return;TM.busy=false;TM.n++;TM.q=null;if(TM.n>=TM.total)return tmFinish();tmPrep();renderTime()}
+});
+function tmPrep(){TM.q=TM_GEN[TM.lv](TM.n);if(TM.q.set){let h,m;do{h=rnd(1,12);m=pick([0,15,30,45])}while(h===TM.q.set.h&&m===TM.q.set.m);TM.set={h,m}}}
+const _renderTM=render;render=function(){if(SCREEN==='time')return renderTime();return _renderTM.apply(this,arguments)};
+document.head.insertAdjacentHTML('beforeend',`<style>
+.tmlvls{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;max-width:980px;margin:0 auto}
+.tmlv .tmst{font-size:20px;letter-spacing:2px}
+.tmles,.tmq{text-align:center;max-width:760px;margin:10px auto}
+.tmpic{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0}
+.tmtx{font-weight:800;font-size:clamp(16px,2.4vw,20px);line-height:1.45;max-width:640px;margin:10px auto}.tmtx .cr{color:#e5482f}.tmtx .cb{color:#2f6fe5}
+.tmdots{display:flex;gap:6px;justify-content:center;margin:6px 0}.tmdots i{width:10px;height:10px;background:#bbb;box-shadow:0 0 0 2px #000}.tmdots i.on{background:#ffd23f}
+.tmclock{max-width:46vw;height:auto;filter:drop-shadow(3px 3px 0 #000)}.tmclock.mini{max-width:92px}
+.tmdig{display:inline-flex;font-family:var(--font-px,monospace);font-size:clamp(34px,8vw,58px);padding:10px 18px;background:#101810;color:#5dff6a;text-shadow:0 0 8px #5dff6a;box-shadow:0 0 0 4px #000,inset 0 0 0 3px #2c3a2c;letter-spacing:2px}
+.tmdig i{font-style:normal;animation:tmblink 1s steps(2) infinite}@keyframes tmblink{50%{opacity:.2}}
+.tmweek,.tmyear{display:grid;gap:5px;width:100%;max-width:640px}.tmweek{grid-template-columns:repeat(7,1fr)}.tmyear{grid-template-columns:repeat(6,1fr)}
+.tmweek span,.tmyear span{display:flex;flex-direction:column;align-items:center;padding:6px 2px;background:var(--c,#fff);color:#2b1a08;font-weight:900;box-shadow:0 0 0 2px #000;font-size:clamp(11px,2.6vw,15px)}
+.tmweek span{--c:#e9f3ff}.tmweek span.we{--c:#ffd9d9}.tmweek b,.tmyear b{font-size:.8em;opacity:.7}
+.tmweek .hl,.tmyear .hl{outline:4px solid #ff3b3b;transform:scale(1.08)}.tmweek .pv{--c:#d8d8d8}.tmweek .nx{--c:#c9f5b8}
+.tmseas{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;width:100%;max-width:560px}.tmseas span{background:var(--c);padding:8px;box-shadow:0 0 0 2px #000;display:flex;flex-direction:column;font-weight:900;color:#2b1a08}.tmseas big{font-size:30px}
+.tmfist{font-size:64px}
+.tmgrid .btn{font-size:clamp(16px,3.6vw,22px)}.tmgrid.tmclk .btn{padding:6px}
+.tmgrid .btn.good{background:#5fd03a!important;color:#fff!important}.tmgrid .btn.bad{background:#ff5a5a!important;color:#fff!important}
+.tmsetbtn{display:grid;grid-template-columns:repeat(4,auto);gap:8px;justify-content:center;margin:6px 0}
+.tmfb{font-weight:900;font-size:20px;margin:10px 0}.tmfb.ok{color:#2f8f22}.tmfb.no{color:#c4231d}
+@media (max-width:520px){.tmsetbtn{grid-template-columns:repeat(2,auto)}.tmyear{grid-template-columns:repeat(4,1fr)}}
+</style>`);
+
+/* ============ НАГРАДЫ ЗА ВСЕ ИГРЫ: дофа за победы, статусы, новые рамки (одни — за достижения, самые значимые — только за дофу) ============ */
+Object.assign(S,{
+ rwWin:['+{n} ⚡ за победу!','+{n} ⚡ for the win!'],
+ rwCap:['На сегодня награды за игры закончились. Решай примеры — за них дофа всегда!','No more game rewards today. Solve problems — they always give dofa!'],
+ rwTtlT:['🏅 Статусы','🏅 Statuses'],rwTtlInfo:['Статус виден рядом с ником. Одни зарабатываются в играх, а самые почётные — только покупаются за дофу. Копи дофу — решай задачки!','The status is shown next to your nickname. Some are earned in games, the most honourable can only be bought with dofa. Solve problems to save up!'],
+ rwEarn:['За достижения','For achievements'],rwBuy:['💎 Только за дофу','💎 For dofa only'],rwOff:['Снять статус','Remove status'],
+ rwNewTtl:['Новый статус: {n}','New status: {n}'],rwBuyQ:['Купить статус «{n}» за ⚡ {p}?','Buy the status «{n}» for ⚡ {p}?'],
+ rwWinsT:['🎮 Победы в играх','🎮 Game wins'],rwWinsAll:['Всего побед: {n}','Total wins: {n}'],
+ h_tmExam:['Сдай «Экзамен времени»','Pass the Time exam'],h_chs10:['10 побед над компьютером в шахматах','Beat the computer at chess 10 times'],
+ h_sea10:['10 побед в морском бое','10 sea battle wins'],h_bc10:['10 уровней в танчиках','10 tank levels'],h_win50:['50 побед в любых играх','50 wins in any games'],
+});
+const gwN=(p,g)=>+((p.gw||{})[g])||0;
+const gwAll=p=>Object.values(p.gw||{}).reduce((a,b)=>a+(+b||0),0);
+const RW_G={maze:'🐱',mem:'🃏',pz:'🔢',mj:'🀄',chs:'♟️',sea:'🚢',bc:'🛡️',sd:'🧩',mp:'🤝'};
+/* статусы: c — условие (за достижения), pr — цена (только за дофу) */
+const TITLES=[
+ {id:'time',e:'🕰️',n:['Знаток времени','Time expert'],c:p=>p.tm&&p.tm.exam,h:'h_tmExam'},
+ {id:'excel',e:'📚',n:['Отличник','Top student'],c:p=>(+p.correct||0)>=1000,h:['1000 верных ответов','1000 correct answers']},
+ {id:'champ',e:'🏆',n:['Чемпион игр','Game champion'],c:p=>gwAll(p)>=50,h:'h_win50'},
+ {id:'chess',e:'♟️',n:['Шахматист','Chess player'],c:p=>gwN(p,'chs')>=10,h:'h_chs10'},
+ {id:'admiral',e:'⚓',n:['Адмирал','Admiral'],c:p=>gwN(p,'sea')>=10,h:'h_sea10'},
+ {id:'tank',e:'🛡️',n:['Танкист','Tank ace'],c:p=>gwN(p,'bc')>=10,h:'h_bc10'},
+ {id:'puzzle',e:'🧩',n:['Головоломщик','Puzzler'],c:p=>gwN(p,'maze')+gwN(p,'mem')+gwN(p,'pz')>=20,h:['20 побед в лабиринте, памяти и пятнашках','20 wins in maze, memory and 15-puzzle']},
+ {id:'mj',e:'🀄',n:['Мастер маджонга','Mahjong master'],c:p=>gwN(p,'mj')>=10,h:['10 собранных маджонгов','10 mahjong wins']},
+ {id:'sud',e:'🔢',n:['Мастер судоку','Sudoku master'],c:p=>gwN(p,'sd')>=10,h:['10 решённых судоку','10 sudoku wins']},
+ {id:'friend',e:'🤝',n:['Душа компании','Life of the party'],c:p=>gwN(p,'mp')>=10,h:['10 побед в играх с друзьями','10 wins playing with friends']},
+ {id:'cool',e:'😎',n:['Крутой','Cool'],pr:300},
+ {id:'genius',e:'🧠',n:['Гений','Genius'],pr:800},
+ {id:'hero',e:'🦸',n:['Супергерой','Superhero'],pr:1500},
+ {id:'gm',e:'👑',n:['Гроссмейстер чисел','Number grandmaster'],pr:3000},
+ {id:'legend',e:'💎',n:['Легенда','Legend'],pr:5000},
+ {id:'cosmos',e:'🌌',n:['Повелитель Вселенной','Master of the Universe'],pr:10000},
+];
+const ttl=id=>TITLES.find(x=>x.id===id);
+const ttlName=x=>tx(x.n);
+const ttlHint=x=>typeof x.h==='string'?t(x.h):tx(x.h);
+/* новые рамки: за игры и легендарные (только за дофу) */
+FRAMES.push(['clockf',p=>!!(p.tm&&p.tm.exam),()=>t('h_tmExam')],['chessb',p=>gwN(p,'chs')>=10,()=>t('h_chs10')],['navy',p=>gwN(p,'sea')>=10,()=>t('h_sea10')],['camo',p=>gwN(p,'bc')>=10,()=>t('h_bc10')],['champ',p=>gwAll(p)>=50,()=>t('h_win50')]);
+SHOP_FR.push(['legendf',2500],['dragon',4000],['crownf',7000]);
+Object.assign(FRAME_TX,{clockf:['Часовая','Clock'],chessb:['Шахматная','Chessboard'],navy:['Флотская','Navy'],camo:['Камуфляж','Camo'],champ:['Чемпионская','Champion'],
+ legendf:['💎 Легендарная','💎 Legendary'],dragon:['💎 Драконья','💎 Dragon'],crownf:['💎 Королевская корона','💎 Royal crown']});
+
+/* открытие статусов вместе с аватарками и рамками */
+const _checkUnlocksRW=checkUnlocks;checkUnlocks=function(p){const out=_checkUnlocksRW.apply(this,arguments);p.titles=p.titles||[];
+ TITLES.forEach(x=>{if(x.c&&!p.titles.includes(x.id)&&x.c(p)){p.titles.push(x.id);if(!p.title)p.title=x.id;out.push({k:'title',id:x.id})}});return out};
+const _announceRW=announce;announce=function(list){const a=[],b=[];(list||[]).forEach(u=>(u.k==='title'?b:a).push(u));_announceRW(a);
+ b.forEach((u,i)=>setTimeout(()=>{const x=ttl(u.id);if(!x)return;toast(`<big>${x.e}</big><span><span class="tt">${t('achv')}</span><br>${esc(t('rwNewTtl',{n:ttlName(x)}))}</span>`,5000);sndFanfare();try{burst(innerWidth/2,60,40,8)}catch(e){}},(a.length+i)*700))};
+/* значок статуса рядом с ником */
+const _pnameRW=pname;pname=p=>{const x=p&&p.title&&ttl(p.title);return _pnameRW(p)+(x?` <span class="ttlb" title="${esc(ttlName(x))}">${x.e}</span>`:'')};
+
+/* ---------- дофа за победу в любой игре ---------- */
+const RW_FREE=3,RW_CAP=10;
+function gmWin(g,paid){const p=cur();if(!p||!g)return;p.gw=p.gw||{};p.gw[g]=(+p.gw[g]||0)+1;let gain=0;
+ if(!paid){const d=new Date().toISOString().slice(0,10);if(!p.gwd||p.gwd.d!==d)p.gwd={d,n:0};if(p.gwd.n<RW_CAP){p.gwd.n++;gain=RW_FREE;p.dopa+=gain}}
+ save(p);document.querySelectorAll('#dopaVal').forEach(x=>x.textContent=p.dopa);
+ if(gain)toast(`<big>⚡</big><span>${esc(t('rwWin',{n:gain}))}</span>`,2600);else if(!paid)toast(`<big>📚</big><span>${esc(t('rwCap'))}</span>`,4000);
+ try{announce(checkUnlocks(p))}catch(e){}}
+/* лабиринт, память, пятнашки, танчики, морской бой — через общий mgWin */
+const _mgWinRW=mgWin;mgWin=function(){const paid=MG.reward,g=MG.type;const r=_mgWinRW.apply(this,arguments);gmWin(g,paid);return r};
+/* шахматы против компьютера */
+if(typeof chsFinish==='function'){const _chsFinRW=chsFinish;chsFinish=function(){const o=CH.over,paid=MG.reward,win=o&&!o.rw&&CH.mode==='ai'&&o.win!=='draw'&&o.win===CH.me;if(o)o.rw=1;const r=_chsFinRW.apply(this,arguments);if(win)gmWin('chs',paid);return r}}
+/* маджонг (за ежедневный и наградной уже даётся дофа) */
+if(typeof mjFinish==='function'){const _mjFinRW=mjFinish;mjFinish=function(){const was=MJ.over,paid=!!(MJ.rw||MJ.daily);const r=_mjFinRW.apply(this,arguments);if(!was&&MJ.over)gmWin('mj',paid);return r}}
+/* судоку (своя награда уже есть) */
+if(typeof sdWin==='function'){const _sdWinRW=sdWin;sdWin=function(){const st=SD.st,was=!st||st.done;const r=_sdWinRW.apply(this,arguments);if(!was)gmWin('sd',true);return r}}
+if(typeof sddFinish==='function'){const _sddFinRW=sddFinish;sddFinish=function(w){const d=SDD.d,ok=d&&!d.over&&d.mode==='bot'&&w===0;const r=_sddFinRW.apply(this,arguments);if(ok)gmWin('sd',true);return r}}
+/* игры с друзьями по сети */
+const _mpResultRW=mpResult;mpResult=function(key,res){const fresh=!FX.done.has(key);const r=_mpResultRW.apply(this,arguments);if(fresh&&res==='win')gmWin('mp',true);return r};
+const _mpPaidRW=mpPaid;mpPaid=function(r){const s=r&&r.st,key=RM.id+':'+(s&&s.r),ok=s&&s.win===SESSION&&!RM.paid.has(key);const x=_mpPaidRW.apply(this,arguments);if(ok)gmWin('mp',true);return x};
+
+/* ---------- коллекция: раздел статусов ---------- */
+function rwTtlItem(p,x){const own=(p.titles||[]).includes(x.id),on=p.title===x.id,can=x.pr&&shopWallet(p)>=x.pr;
+ const act=own?`data-act="ttlEquip" data-arg="${x.id}"`:x.pr?`data-act="ttlAsk" data-arg="${x.id}"`:'disabled';
+ return `<button class="item slotbox ttlit ${own?'':x.pr?(can?'':'poor'):'lock'} ${on?'selitem':''} ${x.pr?'prem':''}" ${act}><big>${own||x.pr?x.e:'🔒'}</big><span>${esc(ttlName(x))}</span>
+  <small>${own?(on?t('selected'):t('choose')):x.pr?`<span class="price">⚡ ${x.pr}</span>`:esc(ttlHint(x))}</small></button>`}
+const _renderCollectionRW=renderCollection;renderCollection=function(){const r=_renderCollectionRW.apply(this,arguments);const p=norm(cur());if(!p)return r;p.titles=p.titles||[];
+ const html=`<section class="panel blk ttlsec" id="ttlSec"><h2>${t('rwTtlT')} (${p.titles.length}/${TITLES.length})</h2><p class="muted" style="font-weight:800;margin:6px 0 10px">${esc(t('rwTtlInfo'))}</p>
+  <h3>${t('rwEarn')}</h3><div class="items">${TITLES.filter(x=>!x.pr).map(x=>rwTtlItem(p,x)).join('')}</div>
+  <h3>${t('rwBuy')} · <span class="wl">${esc(t('shopWallet',{n:shopWallet(p)}))}</span></h3><div class="items">${TITLES.filter(x=>x.pr).map(x=>rwTtlItem(p,x)).join('')}</div>
+  ${p.title?`<div class="row"><button class="btn sm" data-act="ttlEquip" data-arg="">${t('rwOff')}</button></div>`:''}</section>`;
+ const shop=document.querySelector('#app .shop'),head=document.querySelector('#app > header.top');(shop||head).insertAdjacentHTML('afterend',html);return r};
+Object.assign(ACT,{
+ ttlEquip(id){const p=cur();if(!p)return;if(id&&!(p.titles||[]).includes(id))return;p.title=id||null;save(p);const y=scrollY;renderCollection();scrollTo(0,y)},
+ ttlAsk(id){const p=cur(),x=ttl(id);if(!p||!x||!x.pr||(p.titles||[]).includes(id))return;const need=x.pr-shopWallet(p);if(need>0){sndWrong();return toast(esc(t('shopNo',{n:need})),3500)}
+  modal(`<div style="font-size:64px">${x.e}</div><p style="font-weight:900;font-size:20px">${esc(t('rwBuyQ',{n:ttlName(x),p:x.pr}))}</p><p class="muted" style="font-weight:800">${esc(t('shopWallet',{n:shopWallet(p)}))} → ⚡ ${shopWallet(p)-x.pr}</p>
+   <div class="row"><button class="btn" data-act="close">${t('cancel')}</button><button class="btn pri" data-act="ttlBuy" data-arg="${x.id}" data-enter>${t('shopBuy')}</button></div>`)},
+ ttlBuy(id,b){const p=cur(),x=ttl(id);if(!p||!x||!x.pr||(p.titles||[]).includes(id)||shopWallet(p)<x.pr)return closeModal();if(b)b.disabled=true;
+  p.spent=(+p.spent||0)+x.pr;p.titles=p.titles||[];p.titles.push(id);p.title=id;save(p);closeModal();sndFanfare();try{fireworks(3)}catch(e){}toast(`<big>${x.e}</big><span>${esc(t('rwNewTtl',{n:ttlName(x)}))}</span>`,3500);const y=scrollY;renderCollection();scrollTo(0,y)}
+});
+/* меню: полный статус под ником; статистика: победы по играм */
+const _renderMenuRW=renderMenu;renderMenu=function(){const r=_renderMenuRW.apply(this,arguments);const p=cur(),x=p&&p.title&&ttl(p.title),w=document.querySelector('#app header .who');
+ if(x&&w&&!w.querySelector('.ttlfull'))w.insertAdjacentHTML('beforeend',`<small class="ttlfull">${x.e} ${esc(ttlName(x))}</small>`);return r};
+const _renderStatsRW=renderStats;renderStats=function(){const r=_renderStatsRW.apply(this,arguments);const p=cur();if(!p)return r;
+ const html=`<section class="panel blk"><h2>${t('rwWinsT')}</h2><p style="font-weight:900">${esc(t('rwWinsAll',{n:gwAll(p)}))}</p><div class="rwwins">${Object.keys(RW_G).map(g=>`<span class="slotbox">${RW_G[g]} <b>${gwN(p,g)}</b></span>`).join('')}</div></section>`;
+ const sec=document.querySelector('#app > section.panel');if(sec)sec.insertAdjacentHTML('afterend',html);return r};
+document.head.insertAdjacentHTML('beforeend',`<style>
+.ttlb{display:inline-block;font-size:.95em;vertical-align:middle;filter:drop-shadow(0 0 3px rgba(255,210,63,.8))}
+.ttlfull{display:block;font-weight:900;color:#ffd23f;text-shadow:1px 1px 0 #000;font-size:13px}
+.ttlsec h3{margin:12px 0 8px;font-size:16px}.ttlsec .wl{color:#b8860b}
+.item.ttlit{display:flex;flex-direction:column;align-items:center;gap:2px}.item.ttlit big{font-size:34px;line-height:1.1}.item.ttlit span{font-weight:900;font-size:13px}
+.item.ttlit.prem{background:linear-gradient(#fff6c9,#ffe07a)}.item.ttlit.poor{opacity:.6}.item.ttlit .price{font-family:var(--font-px);color:#8a5a00}
+.rwwins{display:flex;flex-wrap:wrap;gap:8px}.rwwins span{padding:6px 10px;font-size:20px}
+.fr-clockf::before{background:conic-gradient(from 0deg,#fffbe8 0 8%,#3a2410 8% 9%,#fffbe8 9% 25%,#3a2410 25% 26%,#fffbe8 26% 50%,#3a2410 50% 51%,#fffbe8 51% 75%,#3a2410 75% 76%,#fffbe8 76%);box-shadow:inset 0 0 0 3px #ffd23f}
+.fr-chessb::before{background:repeating-conic-gradient(#111 0 25%,#f2f2f2 0 50%) 0 0/12px 12px}
+.fr-navy::before{background:repeating-linear-gradient(0deg,#0c2a66 0 4px,#fff 4px 6px,#0c2a66 6px 10px,#d22 10px 12px)}
+.fr-camo::before{background:radial-gradient(circle at 20% 30%,#3f5a1f 0 18%,transparent 19%),radial-gradient(circle at 70% 60%,#6b4a24 0 20%,transparent 21%),radial-gradient(circle at 40% 80%,#2c3d17 0 16%,transparent 17%),radial-gradient(circle at 80% 15%,#8a8a4a 0 15%,transparent 16%),#5d7a2c}
+.fr-champ::before{background:repeating-linear-gradient(90deg,#d9a51a 0 5px,#fff07a 5px 7px,#ffcf3f 7px 12px);box-shadow:inset 0 0 0 2px #7a5200}.fr-champ{filter:drop-shadow(0 0 6px #ffcf3f)}
+.fr-legendf::before{background:linear-gradient(120deg,#ffe36a,#fff,#ffb800,#fff7b0,#ffcf3f);background-size:300% 300%;animation:rwshine 2.2s linear infinite}.fr-legendf{filter:drop-shadow(0 0 10px #ffd23f)}
+.fr-dragon::before{background:repeating-linear-gradient(60deg,#7a0d0d 0 5px,#d42a10 5px 9px,#ff8a1a 9px 12px);background-size:24px 24px;animation:rwscale 1.2s linear infinite}.fr-dragon{filter:drop-shadow(0 0 10px #ff4a1a)}
+.fr-crownf::before{background:linear-gradient(135deg,#4b1a8a,#9b4bff 50%,#4b1a8a);box-shadow:inset 0 0 0 3px #ffd23f,inset 0 0 0 6px #4b1a8a}.fr-crownf{filter:drop-shadow(0 0 10px #c88bff)}
+.fr-crownf::after{content:"👑";position:absolute;left:50%;top:0;transform:translate(-50%,-62%);font-size:22px;z-index:2;filter:drop-shadow(0 1px 0 #000)}.frame.s.fr-crownf::after{font-size:14px}.frame.l.fr-crownf::after{font-size:38px}
+@keyframes rwshine{to{background-position:300% 0}}@keyframes rwscale{to{background-position:24px 0}}
+@media (prefers-reduced-motion:reduce){.fr-legendf::before,.fr-dragon::before{animation:none}}
 </style>`);
 
 /* ============ ЗАКОН: возрастной знак 6+, политика конфиденциальности, согласие родителя ============ */
