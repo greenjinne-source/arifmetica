@@ -7117,6 +7117,199 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .fr-grandpiano::after{content:"🎹";position:absolute;right:-6px;bottom:-6px;font-size:20px;z-index:2}.frame.s.fr-grandpiano::after{font-size:12px}.frame.l.fr-grandpiano::after{font-size:32px}
 </style>`);
 
+/* ============ ГРУВБОКС: дофики-музыканты (как Incredibox) + сетка своей мелодии (как Song Maker). Всё всегда в ритме и в тональности ============ */
+Object.assign(S,{
+ gbT:['🎛️ Грувбокс','🎛️ Groovebox'],
+ gbTip:['Нажимай на звуки — дофики сами споют их в ритм. Неправильно не бывает! Собери все 5 цветов — откроется секрет ⭐','Tap sounds — the dofiks play them in time. There are no wrong notes! Collect all 5 colours to unlock a secret ⭐'],
+ gbPlay:['▶ Играть','▶ Play'],gbStop:['⏸ Стоп','⏸ Stop'],gbRnd:['🎲 Случайный хит','🎲 Random hit'],gbClr:['🧹 Очистить','🧹 Clear'],
+ gbGrid:['🎹 Своя мелодия','🎹 My melody'],gbGridTip:['Нажимай на клеточки — получится своя мелодия и ритм. Ноты подобраны так, что звучит красиво всегда','Tap the cells to make your own melody and beat. The notes always sound good together'],
+ gbSave:['💾 В альбом','💾 Save'],gbSaved:['Трек «{n}» сохранён в альбом!','Track «{n}» saved!'],gbAlbum:['Мой альбом','My album'],gbTrack:['Трек {n}','Track {n}'],gbFull:['Альбом полон — самый старый трек заменён','Album is full — the oldest track was replaced'],
+ gbBonus:['⭐ Секрет открыт! Звёздный хор теперь твой!','⭐ Secret unlocked! The star choir is yours!'],gbSlots:['Места на сцене закончились — нажми на дофика, чтобы убрать звук','The stage is full — tap a dofik to remove a sound'],
+ gbCat:['Ритм|Бас|Аккорды|Мелодия|Голоса','Beat|Bass|Chords|Melody|Voices'],gbTempo:['Темп','Tempo'],
+ gbK_pop:['🍭 Поп','🍭 Pop'],gbK_hip:['🧢 Хип-хоп','🧢 Hip-hop'],gbK_space:['🚀 Космос','🚀 Space'],gbK_bit:['👾 8-бит','👾 8-bit'],
+ learnT:['📚 Обучение и творчество','📚 Learning and creativity'],
+});
+const GB_CAT=[['#ff5a5a','🥁'],['#3d9bff','🎸'],['#5fd03a','🎹'],['#ffc21a','🎵'],['#b65cff','🎤']];
+const GB_P=[
+ ['b1',0,'🥁',['Бум-бам','Boom-bap']],['b2',0,'👏',['Хлопки','Claps']],['b3',0,'🎩',['Тарелочки','Hi-hats']],
+ ['bs1',1,'🎸',['Бас','Bass']],['bs2',1,'🦘',['Прыгучий бас','Bouncy bass']],['bs3',1,'🐋',['Кит-бас','Whale bass']],
+ ['c1',2,'☁️',['Облака','Clouds']],['c2',2,'⚡',['Удары','Stabs']],['c3',2,'🌀',['Арпеджио','Arpeggio']],
+ ['m1',3,'🎹',['Мелодия','Tune']],['m2',3,'🎺',['Труба','Trumpet']],['m3',3,'🔔',['Колокольчики','Bells']],
+ ['v1',4,'🎤',['Хор дофиков','Dofik choir']],['v2',4,'🐱',['Мяу','Meow']],['fx',4,'🚀',['Космос','Space fx']],
+ ['bonus',4,'⭐',['Звёздный хор','Star choir']]];
+const GB_KITS={pop:{bpm:104,sw:0,lead:'square',pad:'sawtooth',cut:1800,dl:.18},hip:{bpm:88,sw:.18,lead:'triangle',pad:'triangle',cut:1400,dl:.12,kick:1.4},space:{bpm:110,sw:0,lead:'sawtooth',pad:'sawtooth',cut:2600,dl:.42},bit:{bpm:126,sw:0,lead:'square',pad:'square',cut:5000,dl:.1,chip:1}};
+const GB_CH=[[57,60,64],[57,60,65],[55,60,64],[55,59,62]],GB_ROOT=[45,41,48,43];
+const GB_M1=[[0,0,69,2],[0,2,72,2],[0,4,76,4],[0,8,74,2],[0,10,72,2],[0,12,69,4],[1,0,72,2],[1,2,69,2],[1,4,67,4],[1,8,69,2],[1,10,72,6],[2,0,76,2],[2,2,79,2],[2,4,76,2],[2,6,74,2],[2,8,72,8],[3,0,74,2],[3,2,71,2],[3,4,74,4],[3,8,67,4],[3,12,69,4]];
+const GB_BON=[[0,0,81,2],[0,2,84,2],[0,4,88,6],[0,12,86,4],[1,0,84,4],[1,4,81,4],[1,8,84,8],[2,0,88,2],[2,2,91,2],[2,4,88,4],[2,8,84,8],[3,0,86,4],[3,4,83,4],[3,8,86,4],[3,12,91,4]];
+const GB_ROWS=[76,72,69,67,64,'hat','snare','kick'];
+const GB={on:false,kit:'pop',bpm:104,step:0,next:0,parts:[],grid:GB_ROWS.map(()=>Array(16).fill(0)),showGrid:false,q:[],raf:0,bars:0,paid:false,lastBar:-1};
+const gbP=p=>{p.gb=p.gb||{};p.gb.saves=p.gb.saves||[];return p.gb};
+const gbPart=id=>GB_P.find(x=>x[0]===id);
+const mtf=m=>440*Math.pow(2,(m-69)/12);
+let GBN=null;
+function gbNodes(){const a=ac();if(!a)return null;if(GBN&&GBN.a===a)return GBN;
+ const out=a.createGain();out.gain.value=.55;const comp=a.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;const an=a.createAnalyser();an.fftSize=64;
+ const dl=a.createDelay(1),fb=a.createGain(),dsend=a.createGain();dl.delayTime.value=.3;fb.gain.value=.35;dsend.gain.value=.18;dsend.connect(dl);dl.connect(fb).connect(dl);dl.connect(out);
+ out.connect(comp).connect(an).connect(a.destination);
+ const nb=a.createBuffer(1,a.sampleRate*.5,a.sampleRate),d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+ return GBN={a,out,an,dsend,dl,fb,noise:nb}}
+const gbMute=()=>!SET.sound||SET.mute||document.hidden;
+/* ---------- инструменты ---------- */
+function env(g,t,v,att,dec){g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+att);g.gain.exponentialRampToValueAtTime(.0008,t+att+dec)}
+function gbOsc(t,m,dur,type,vol,o={}){const N=gbNodes();if(!N)return;const a=N.a,g=a.createGain(),f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=o.cut||3000;f.Q.value=o.q||.7;
+ (o.det||[0]).forEach(dt=>{const s=a.createOscillator();s.type=type;s.frequency.value=mtf(m);s.detune.value=dt;if(o.glide){s.frequency.setValueAtTime(mtf(m+o.glide),t);s.frequency.exponentialRampToValueAtTime(mtf(m),t+.08)}s.connect(f);s.start(t);s.stop(t+dur+(o.rel||.1)+.05)});
+ f.connect(g);g.connect(N.out);if(o.send)g.connect(N.dsend);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+(o.att||.005));g.gain.setValueAtTime(vol,t+Math.max(o.att||.005,dur*.6));g.gain.exponentialRampToValueAtTime(.0008,t+dur+(o.rel||.1))}
+function gbNoise(t,vol,dur,type,freq,q=1){const N=gbNodes();if(!N)return;const a=N.a,s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();s.buffer=N.noise;f.type=type;f.frequency.value=freq;f.Q.value=q;s.connect(f).connect(g).connect(N.out);env(g,t,vol,.002,dur);s.start(t);s.stop(t+dur+.05)}
+const D={
+ kick(t,k){const N=gbNodes();if(!N)return;const a=N.a,o=a.createOscillator(),g=a.createGain(),h=(k.kick||1);o.type=k.chip?'square':'sine';o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(42,t+.12*h);o.connect(g).connect(N.out);env(g,t,k.chip?.35:.95,.002,.32*h);o.start(t);o.stop(t+.5*h)},
+ snare(t,k){gbNoise(t,k.chip?.22:.32,.16,'highpass',1300);gbOsc(t,55,.06,'triangle',.18,{cut:2000})},
+ clap(t){[0,.012,.026].forEach((d,i)=>gbNoise(t+d,i<2?.25:.32,i<2?.02:.18,'bandpass',1500,1.4))},
+ hat(t,k,open){gbNoise(t,k.chip?.08:.12,open?.28:.045,'highpass',k.chip?5000:7500)},
+};
+function gbVoice(t,m,dur,vol=.12){const N=gbNodes();if(!N)return;const a=N.a,s=a.createOscillator(),lfo=a.createOscillator(),lg=a.createGain(),g=a.createGain();s.type='sawtooth';s.frequency.value=mtf(m);lfo.frequency.value=5.5;lg.gain.value=6;lfo.connect(lg).connect(s.frequency);
+ [[320,6,1],[870,8,.5],[2250,10,.2]].forEach(([fr,q,v])=>{const f=a.createBiquadFilter(),fg=a.createGain();f.type='bandpass';f.frequency.value=fr;f.Q.value=q;fg.gain.value=v;s.connect(f).connect(fg).connect(g)});
+ g.connect(N.out);g.connect(N.dsend);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.12);g.gain.setValueAtTime(vol,t+dur*.8);g.gain.exponentialRampToValueAtTime(.0008,t+dur+.25);s.start(t);lfo.start(t);s.stop(t+dur+.3);lfo.stop(t+dur+.3)}
+function gbMeow(t,m){const N=gbNodes();if(!N)return;const a=N.a,s=a.createOscillator(),f=a.createBiquadFilter(),g=a.createGain(),b=mtf(m);s.type='sawtooth';s.frequency.setValueAtTime(b*.9,t);s.frequency.linearRampToValueAtTime(b*1.35,t+.16);s.frequency.exponentialRampToValueAtTime(b*.8,t+.42);
+ f.type='bandpass';f.Q.value=5;f.frequency.setValueAtTime(700,t);f.frequency.linearRampToValueAtTime(1900,t+.16);f.frequency.exponentialRampToValueAtTime(800,t+.42);s.connect(f).connect(g).connect(N.out);env(g,t,.3,.04,.42);s.start(t);s.stop(t+.5)}
+function gbZap(t,up){const N=gbNodes();if(!N)return;const a=N.a,s=a.createOscillator(),g=a.createGain();s.type=up?'sine':'square';s.frequency.setValueAtTime(up?900:1800,t);s.frequency.exponentialRampToValueAtTime(up?2600:140,t+(up?.09:.24));s.connect(g).connect(N.out);g.connect(N.dsend);env(g,t,up?.14:.08,.003,up?.1:.24);s.start(t);s.stop(t+.3)}
+function gbBell(t,m){gbOsc(t,m,.05,'sine',.12,{rel:1.1,send:1});gbOsc(t,m+19,.03,'sine',.035,{rel:.6})}
+/* ---------- что играет каждый звук на шаге (s — 0..15 внутри такта, b — номер такта 0..3) ---------- */
+function gbPartStep(id,s,b,t,k,sd){const ch=GB_CH[b],r=GB_ROOT[b],L=k.lead,bar=sd*16;
+ switch(id){
+  case 'b1':if(s===0||s===8||(k.sw&&s===10))D.kick(t,k);if(s===4||s===12)D.snare(t,k);break;
+  case 'b2':if(s===4||s===12)D.clap(t);if(s===15&&b%2)D.clap(t);break;
+  case 'b3':if(s%2===0)D.hat(t,k,s===14);else if(k.sw||k.chip)D.hat(t+0,k,false);break;
+  case 'bs1':if(s===0||s===6)gbOsc(t,r,sd*3,k.chip?'square':'sawtooth',.2,{cut:k.chip?2000:520,q:4});if(s===10)gbOsc(t,r+7,sd*2,k.chip?'square':'sawtooth',.18,{cut:520,q:4});break;
+  case 'bs2':if(s%2===0)gbOsc(t,r+(s%4?12:0),sd*.9,k.chip?'square':'sawtooth',.16,{cut:900,q:6});break;
+  case 'bs3':if(s===0)gbOsc(t,r-12,bar*.55,'sine',.38,{att:.02,rel:.2});if(s===8)gbOsc(t,r-12,bar*.4,'sine',.32,{att:.02});break;
+  case 'c1':if(s===0)ch.forEach(n=>gbOsc(t,n,bar*.85,k.pad,.06,{att:.25,rel:.6,cut:k.cut*.7,det:k.chip?[0]:[-8,8],send:1}));break;
+  case 'c2':if(s%4===2)ch.forEach(n=>gbOsc(t,n+12,sd*.8,k.pad,.06,{cut:k.cut,send:1}));break;
+  case 'c3':gbOsc(t,ch[s%3]+12+(s%6>2?12:0),sd*.7,k.chip?'square':'triangle',.07,{cut:k.cut*1.5,send:1});break;
+  case 'm1':GB_M1.forEach(([bb,ss,m,len])=>{if(bb===b&&ss===s)gbOsc(t,m,sd*len*.9,L,.09,{cut:k.cut*1.3,send:1,glide:k.chip?0:-1})});break;
+  case 'm2':{const pat={0:ch[2]+12,3:ch[2]+12,6:ch[1]+12,10:ch[0]+12,12:ch[1]+12};if(pat[s])gbOsc(t,pat[s],sd*1.6,'sawtooth',.075,{cut:1600,q:3,att:.02})}break;
+  case 'm3':{const pat={0:ch[2]+24,7:ch[1]+24,10:ch[0]+24};if(pat[s])gbBell(t,pat[s])}break;
+  case 'v1':if(s===0||s===8)[ch[1],ch[2]].forEach((n,i)=>gbVoice(t,n+(i?0:-12)+12,sd*7));break;
+  case 'v2':if(s===12)gbMeow(t,72+[0,-3,4,2][b]);break;
+  case 'fx':if(s===15&&b%2)gbZap(t,false);if(s===7&&b%2===0){gbZap(t,true);gbZap(t+sd,true)}break;
+  case 'bonus':GB_BON.forEach(([bb,ss,m,len])=>{if(bb===b&&ss===s){gbVoice(t,m-12,sd*len*.9,.1);gbOsc(t,m,sd*len*.9,'triangle',.05,{send:1})}});break}}
+function gbStep(st,t){const k=GB_KITS[GB.kit],sd=60/GB.bpm/4,s=st%16,b=Math.floor(st/16)%4,tt=t+(s%2?k.sw*sd:0);
+ if(!gbMute()){GB.parts.forEach(id=>gbPartStep(id,s,b,tt,k,sd));
+  GB_ROWS.forEach((r,i)=>{if(!GB.grid[i][s])return;if(r==='kick')D.kick(tt,k);else if(r==='snare')D.snare(tt,k);else if(r==='hat')D.hat(tt,k,false);else gbOsc(tt,r,sd*1.8,k.chip?'square':'triangle',.1,{cut:k.cut*1.5,send:1})})}
+ GB.q.push({st,t:tt})}
+function gbSched(){const N=gbNodes();if(!N||!GB.on)return;const sd=60/GB.bpm/4;while(GB.next<N.a.currentTime+.12){gbStep(GB.step,GB.next);GB.next+=sd;GB.step=(GB.step+1)%64}}
+function gbStart(){const N=gbNodes();if(!N)return;if(N.a.state==='suspended'&&!document.hidden)N.a.resume();const k=GB_KITS[GB.kit];N.fb.gain.value=k.dl;N.dsend.gain.value=k.dl>.3?.3:.15;
+ if(GB.on)return;GB.on=true;GB.step=0;GB.bars=0;GB.next=N.a.currentTime+.08;GB.tm=setInterval(gbSched,25);gbSched();cancelAnimationFrame(GB.raf);GB.raf=requestAnimationFrame(gbFrame);gbUI()}
+function gbStop(){GB.on=false;clearInterval(GB.tm);cancelAnimationFrame(GB.raf);GB.q=[];document.querySelectorAll('.gbcol.now').forEach(e=>e.classList.remove('now'));gbUI()}
+/* ---------- картинка: столбик сетки, прыжки дофиков, эквалайзер ---------- */
+function gbFrame(){if(!GB.on)return;const N=gbNodes();const now=N.a.currentTime;let cur=null;while(GB.q.length&&GB.q[0].t<=now)cur=GB.q.shift();
+ if(cur){const s=cur.st%16;document.querySelectorAll('.gbcol').forEach(e=>e.classList.toggle('now',+e.dataset.s===s));
+  if(s%4===0)document.querySelectorAll('.gbslot.on').forEach(e=>{e.classList.remove('hop');void e.offsetWidth;e.classList.add('hop')});
+  if(s===0){const bar=Math.floor(cur.st/16);if(bar!==GB.lastBar){GB.lastBar=bar;GB.bars++;gbProgress()}}}
+ const c=document.getElementById('gbEq');if(c){const x=c.getContext('2d'),d=new Uint8Array(N.an.frequencyBinCount);N.an.getByteFrequencyData(d);x.clearRect(0,0,c.width,c.height);const n=24,w=c.width/n;
+  for(let i=0;i<n;i++){const v=d[i+1]/255,h=Math.max(3,v*c.height);x.fillStyle=`hsl(${(i*15+GB.step*3)%360},90%,60%)`;x.fillRect(i*w+2,c.height-h,w-4,h)}}
+ GB.raf=requestAnimationFrame(gbFrame)}
+/* награда: трек из 3+ звуков звучит 8 тактов */
+function gbProgress(){const p=cur();if(!p||GB.paid||GB.parts.length+gbGridN()/4<3||GB.bars<8)return;GB.paid=true;
+ if(MG.reward){MG.reward=false;p.dopa+=10;save(p);toast(`<big>⚡</big><span>+10 ⚡</span>`,2600);try{gmWin('groove',true)}catch(e){}}else try{gmWin('groove',false)}catch(e){}}
+const gbGridN=()=>GB.grid.reduce((t,r)=>t+r.reduce((a,b)=>a+b,0),0);
+/* ---------- экран ---------- */
+function gbSlotHtml(i){const id=GB.parts[i],P=id&&gbPart(id);if(!P)return `<button class="gbslot empty" data-act="gbSlot" data-arg="${i}"><span>+</span></button>`;
+ return `<button class="gbslot on" data-act="gbSlot" data-arg="${i}" style="--c:${GB_CAT[P[1]][0]};--hue:${[0,200,110,50,280][P[1]]}deg"><i class="gbdof"></i><b>${P[2]}</b><small>${esc(tx(P[3]))}</small></button>`}
+function renderGroove(){SCREEN='groove';const p=cur();if(!p){SCREEN='login';return render()}const G=gbP(p),cats=t('gbCat').split('|');
+ app.innerHTML=`<header class="top blk"><button class="icon" data-act="gbBack" aria-label="←">⬅</button><h2 style="margin:0">${t('gbT')}</h2><div class="sp"></div><span class="dopa">⚡ <b id="dopaVal">${p.dopa}</b></span></header>
+ <section class="panel blk gbwrap gbk-${GB.kit}">
+  <div class="gbkits">${Object.keys(GB_KITS).map(k=>`<button class="btn sm ${GB.kit===k?'pri':''}" data-act="gbKit" data-arg="${k}">${t('gbK_'+k)}</button>`).join('')}</div>
+  <div class="gbstage" id="gbStage">${Array.from({length:7},(_,i)=>gbSlotHtml(i)).join('')}</div>
+  <canvas id="gbEq" class="gbeq" width="480" height="60"></canvas>
+  <div class="gbtr"><button class="btn big ${GB.on?'':'pri'}" data-act="gbToggle" id="gbPlayB">${GB.on?t('gbStop'):t('gbPlay')}</button><button class="btn" data-act="gbRandom">${t('gbRnd')}</button><button class="btn" data-act="gbClear">${t('gbClr')}</button>
+   <span class="gbtempo">🐢<input type="range" min="70" max="140" value="${GB.bpm}" id="gbBpm" aria-label="${esc(t('gbTempo'))}">🐇</span></div>
+  <div class="gbpal">${GB_CAT.map(([col,ic],ci)=>`<div class="gbcat" style="--c:${col}"><span class="gbcl">${ic} ${esc(cats[ci])}</span>${GB_P.filter(x=>x[1]===ci&&(x[0]!=='bonus'||G.bonus)).map(x=>`<button class="gbsnd ${GB.parts.includes(x[0])?'act':''}" data-act="gbAdd" data-arg="${x[0]}" title="${esc(tx(x[3]))}">${x[2]}<small>${esc(tx(x[3]))}</small></button>`).join('')}</div>`).join('')}</div>
+  <p class="gbtip">${t('gbTip')}</p>
+  <div class="row"><button class="btn ${GB.showGrid?'pri':''}" data-act="gbGridT">${t('gbGrid')}</button><button class="btn" data-act="gbSave">${t('gbSave')}</button></div>
+  ${GB.showGrid?`<p class="gbtip">${t('gbGridTip')}</p><div class="gbgrid">${Array.from({length:16},(_,s)=>`<div class="gbcol ${s%4===0?'beat':''}" data-s="${s}">${GB_ROWS.map((r,i)=>`<button class="gbc r${i} ${GB.grid[i][s]?'on':''}" data-act="gbCell" data-arg="${i}:${s}">${GB.grid[i][s]?(i>4?['🎩','👏','🥁'][i-5]:'●'):''}</button>`).join('')}</div>`).join('')}</div>`:''}
+  ${G.saves.length?`<h3>${t('gbAlbum')}</h3><div class="gbalb">${G.saves.map((s,i)=>`<button class="btn sm" data-act="gbLoad" data-arg="${i}">▶ ${esc(s.n)}</button>`).join('')}</div>`:''}
+ </section>`;
+ const r=document.getElementById('gbBpm');if(r)r.addEventListener('input',()=>{GB.bpm=+r.value})}
+function gbUI(){const b=document.getElementById('gbPlayB');if(b){b.textContent=GB.on?t('gbStop'):t('gbPlay');b.classList.toggle('pri',!GB.on)}}
+function gbRefresh(){if(SCREEN!=='groove')return;const y=scrollY;renderGroove();scrollTo(0,y)}
+function gbCheckBonus(){const p=cur(),G=gbP(p),cats=new Set(GB.parts.map(id=>gbPart(id)[1]));if(G.bonus||cats.size<5)return;G.bonus=1;save(p);sndFanfare();try{fireworks(4);rain(60)}catch(e){}
+ toast(`<big>⭐</big><span>${esc(t('gbBonus'))}</span>`,5000);try{announce(checkUnlocks(p))}catch(e){}}
+Object.assign(ACT,{
+ gbOpen(){closeModal();GB.paid=false;GB.bars=0;renderGroove()},
+ gbBack(){gbStop();if(MG.after){const f=MG.after;MG.after=null;MG.reward=false;return f()}MG.reward=false;if(typeof MU!=='undefined'&&MU.fromGb){MU.fromGb=0;MU.view='home';return renderMusic()}ACT.back()},
+ gbKit(k){GB.kit=k;GB.bpm=GB_KITS[k].bpm;if(GB.on){const N=gbNodes();const kk=GB_KITS[k];N.fb.gain.value=kk.dl}gbRefresh()},
+ gbToggle(){GB.on?gbStop():gbStart()},
+ gbAdd(id){const i=GB.parts.indexOf(id);if(i>=0){GB.parts.splice(i,1)}else{const P=gbPart(id);const same=GB.parts.findIndex(x=>gbPart(x)[1]===P[1]&&GB.parts.filter(y=>gbPart(y)[1]===P[1]).length>=2);
+  if(GB.parts.length>=7){sndWrong();return toast(esc(t('gbSlots')),2500)}GB.parts.push(id);if(!GB.on)gbStart();gbCheckBonus()}gbRefresh()},
+ gbSlot(i){i=+i;if(GB.parts[i]){GB.parts.splice(i,1);try{sndTick()}catch(e){}gbRefresh()}},
+ gbClear(){GB.parts=[];GB.grid=GB_ROWS.map(()=>Array(16).fill(0));gbRefresh()},
+ gbRandom(){const ks=Object.keys(GB_KITS);GB.kit=pick(ks);GB.bpm=GB_KITS[GB.kit].bpm;const G=gbP(cur());GB.parts=[0,1,2,3,4].filter(c=>c<4||Math.random()<.6).map(c=>pick(GB_P.filter(x=>x[1]===c&&(x[0]!=='bonus'||G.bonus)))[0]);if(Math.random()<.5)GB.parts.push(pick(['b3','c3','m3']));GB.parts=[...new Set(GB.parts)].slice(0,7);
+  gbStop();gbStart();gbCheckBonus();gbRefresh()},
+ gbGridT(){GB.showGrid=!GB.showGrid;gbRefresh()},
+ gbCell(a){const [i,s]=String(a).split(':').map(Number);GB.grid[i][s]=GB.grid[i][s]?0:1;const r=GB_ROWS[i],k=GB_KITS[GB.kit];if(GB.grid[i][s]&&!gbMute()){const N=gbNodes(),t0=N.a.currentTime+.01;if(r==='kick')D.kick(t0,k);else if(r==='snare')D.snare(t0,k);else if(r==='hat')D.hat(t0,k);else gbOsc(t0,r,.25,'triangle',.1,{cut:3000})}
+  if(!GB.on&&gbGridN()===1)gbStart();gbRefresh()},
+ gbSave(){const p=cur(),G=gbP(p);if(!GB.parts.length&&!gbGridN())return;const n=t('gbTrack',{n:(+G.cnt||0)+1});G.cnt=(+G.cnt||0)+1;if(G.saves.length>=6){G.saves.shift();toast(esc(t('gbFull')),2500)}
+  G.saves.push({n,kit:GB.kit,bpm:GB.bpm,parts:GB.parts.slice(),grid:GB.grid.map(r=>r.join('')).join('|')});save(p);sndFanfare();toast(`<big>💾</big><span>${esc(t('gbSaved',{n}))}</span>`,3000);gbRefresh()},
+ gbLoad(i){const s=gbP(cur()).saves[+i];if(!s)return;GB.kit=s.kit;GB.bpm=s.bpm;GB.parts=s.parts.slice();GB.grid=String(s.grid).split('|').map(r=>r.split('').map(Number));while(GB.grid.length<GB_ROWS.length)GB.grid.push(Array(16).fill(0));gbStop();gbStart();gbRefresh()},
+});
+const _renderGB=render;render=function(){if(SCREEN==='groove')return renderGroove();return _renderGB.apply(this,arguments)};
+/* мини-игры: грувбокс в общем списке */
+const _mgPickGB=mgPickHtml;mgPickHtml=function(){const h=_mgPickGB.apply(this,arguments),i=h.lastIndexOf('</div>');return h.slice(0,i)+`<button class="btn" data-act="mgStart" data-arg="groove"><span>🎛️</span>${t('gbT').replace('🎛️ ','')}</button>`+h.slice(i)};
+const _mgStartGB=ACT.mgStart;ACT.mgStart=function(k){if(k==='groove'){MG.type='groove';return ACT.gbOpen()}return _mgStartGB.apply(this,arguments)};
+/* фоновая музыка молчит на уроках музыки и в грувбоксе; грувбокс выключается, если ушли с экрана */
+const MUSQ={off:false};
+setInterval(()=>{const quiet=SCREEN==='music'||SCREEN==='groove';
+ if(quiet&&typeof MS!=='undefined'&&MS){stopMusic();MUSQ.off=true}
+ else if(!quiet&&MUSQ.off){MUSQ.off=false;try{if(SET.music&&!MS&&!(typeof MJM!=='undefined'&&MJM.on))startMusic()}catch(e){}}
+ if(GB.on&&SCREEN!=='groove')gbStop()},400);
+/* общий список: обучение и грувбокс */
+const _renderMenuLRN=renderMenu;renderMenu=function(){const r=_renderMenuLRN.apply(this,arguments);const p=cur(),ms=document.querySelectorAll('#app .modes'),last=ms[ms.length-1];if(!p||!last||document.getElementById('lrnModes'))return r;
+ const tmN=Object.values((p.tm&&p.tm.lv)||{}).filter(x=>x.best>=7).length,muN=Object.values((p.mu&&p.mu.lv)||{}).filter(x=>x.best>=7).length;
+ const card=(act,ic,nm,ds,c,pr)=>`<button class="mode blk" style="--c:${c}" data-act="${act}"><span class="mi slotbox">${ic}</span><b>${esc(nm)}</b><small>${esc(ds)}</small>${pr!=null?`<div class="xp"><i style="width:${pr}%"></i></div>`:''}</button>`;
+ last.insertAdjacentHTML('afterend',`<h2 class="on-sky">${t('learnT')}</h2><div class="modes" id="lrnModes">
+  ${card('timeOpen','⏰',t('tmT').replace('⏰ ',''),tx(['Часы, недели, месяцы, времена года','Clocks, weeks, months, seasons']),'#ff7a3d',Math.round(tmN/6*100))}
+  ${card('muOpen','🎵',t('muT').replace('🎵 ',''),tx(['Ноты, клавиатура, такты, гаммы','Notes, keyboard, bars, scales']),'#b65cff',Math.round(muN/8*100))}
+  ${card('gbOpen','🎛️',t('gbT').replace('🎛️ ',''),tx(['Собери свой хит из готовых звуков','Build your own hit from ready sounds']),'#1fd1d1',null)}</div>`);return r};
+/* кнопка грувбокса в музыкальной школе */
+const _renderMusicGB=renderMusic;renderMusic=function(){const r=_renderMusicGB.apply(this,arguments);if(MU.view==='home'){const row=document.querySelector('#app .row:last-of-type');if(row&&!row.querySelector('[data-act="muGb"]'))row.insertAdjacentHTML('beforeend',`<button class="btn big pri" data-act="muGb">${t('gbT')}</button>`)}return r};
+ACT.muGb=function(){MU.fromGb=1;ACT.gbOpen()};
+/* статусы и рамка */
+RW_G.groove='🎛️';
+TITLES.push({id:'dj',e:'🎧',n:['Диджей','DJ'],c:p=>gwN(p,'groove')>=10,h:['10 треков в грувбоксе','10 groovebox tracks']},{id:'hitm',e:'🌟',n:['Хитмейкер','Hitmaker'],c:p=>!!(p.gb&&p.gb.bonus),h:['Открой секретный звук в грувбоксе','Unlock the secret groovebox sound']});
+TITLES.sort((a,b)=>(a.pr?1:0)-(b.pr?1:0)||(a.pr||0)-(b.pr||0));
+FRAMES.push(['eqf',p=>gwN(p,'groove')>=5,()=>tx(['5 треков в грувбоксе','5 groovebox tracks'])]);
+FRAME_TX.eqf=['Эквалайзер','Equalizer'];
+document.head.insertAdjacentHTML('beforeend',`<style>
+.gbwrap{max-width:900px;margin:10px auto;text-align:center;background:linear-gradient(#2a1d4a,#15102a)!important;color:#fff}
+.gbwrap.gbk-pop{background:linear-gradient(#ff7ab8,#7a3dff)!important}.gbwrap.gbk-hip{background:linear-gradient(#3a3a3a,#111)!important}.gbwrap.gbk-space{background:radial-gradient(circle at 30% 20%,#3b2b8a,#0a0820 70%)!important}.gbwrap.gbk-bit{background:linear-gradient(#1b5e20,#0b2b10)!important}
+.gbkits{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+.gbstage{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;min-height:120px;padding:8px;background:rgba(0,0,0,.25);box-shadow:inset 0 -10px 0 rgba(255,255,255,.08)}
+.gbslot{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:110px;justify-content:flex-end}
+.gbslot.empty span{width:56px;height:56px;border:3px dashed rgba(255,255,255,.35);border-radius:12px;display:grid;place-items:center;font-size:28px;color:rgba(255,255,255,.5)}
+.gbslot b{font-size:22px;line-height:1;filter:drop-shadow(0 2px 0 #000)}.gbslot small{font-weight:900;font-size:11px;color:#fff;text-shadow:1px 1px 0 #000;max-width:90px}
+.gbdof{display:block;width:64px;height:64px;background:url(sprites/village/dofik.png) 0 0/256px 384px;image-rendering:pixelated;filter:hue-rotate(var(--hue)) drop-shadow(0 0 8px var(--c));transform-origin:50% 100%}
+.gbslot.hop .gbdof{animation:gbhop .28s ease-out}@keyframes gbhop{0%{transform:scale(1.15,.82)}45%{transform:translateY(-12px) scale(.95,1.08)}100%{transform:none}}
+.gbeq{width:100%;max-width:640px;height:60px;margin:8px auto 4px;display:block}
+.gbtr{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;align-items:center;margin:6px 0 10px}
+.gbtempo{display:inline-flex;align-items:center;gap:6px;font-size:22px}.gbtempo input{width:120px}
+.gbpal{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.gbcat{background:rgba(0,0,0,.25);padding:6px;box-shadow:inset 0 0 0 3px var(--c);display:flex;flex-direction:column;gap:6px}
+.gbcl{font-weight:900;font-size:13px;color:var(--c);text-shadow:1px 1px 0 #000}
+.gbsnd{all:unset;cursor:pointer;background:var(--c);color:#1a1030;border-radius:10px;padding:6px 4px;font-size:26px;display:flex;flex-direction:column;align-items:center;box-shadow:0 4px 0 rgba(0,0,0,.45);transition:transform .08s}
+.gbsnd small{font-size:11px;font-weight:900;line-height:1.1}.gbsnd:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.45)}
+.gbsnd.act{outline:4px solid #fff;animation:gbpulse .9s ease-in-out infinite}@keyframes gbpulse{50%{filter:brightness(1.25)}}
+.gbtip{font-weight:800;font-size:14px;margin:10px auto;max-width:640px;opacity:.95}
+.gbgrid{display:grid;grid-template-columns:repeat(16,1fr);gap:3px;padding:6px;background:rgba(0,0,0,.3);overflow-x:auto}
+.gbcol{display:flex;flex-direction:column;gap:3px;border-radius:4px}.gbcol.beat{background:rgba(255,255,255,.07)}.gbcol.now{background:rgba(255,255,255,.35)}
+.gbc{all:unset;cursor:pointer;aspect-ratio:1;min-width:16px;border-radius:5px;background:rgba(255,255,255,.12);display:grid;place-items:center;font-size:12px}
+.gbc.on.r0{background:#ff5a5a}.gbc.on.r1{background:#ff9a3d}.gbc.on.r2{background:#ffd23f}.gbc.on.r3{background:#5fd03a}.gbc.on.r4{background:#3d9bff}.gbc.on.r5,.gbc.on.r6,.gbc.on.r7{background:#e6e6ff}
+.gbc.r5,.gbc.r6,.gbc.r7{background:rgba(255,255,255,.06)}
+.gbalb{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.gbwrap h3{color:#fff;margin:12px 0 6px}
+@media (max-width:640px){.gbtr{gap:5px}.gbtr .btn{font-size:13px;padding:8px 10px}.gbtr .btn.big{font-size:15px}.gbtempo{width:100%;justify-content:center}.gbstage{grid-template-columns:repeat(4,1fr)}.gbpal{grid-template-columns:repeat(3,1fr)}.gbdof{width:48px;height:48px;background-size:192px 288px}.gbslot{min-height:88px}}
+.fr-eqf::before{background:repeating-linear-gradient(90deg,#ff3bd4 0 3px,#111 3px 4px,#3bd8ff 4px 7px,#111 7px 8px,#3bff9a 8px 11px,#111 11px 12px);background-size:24px 100%;animation:rwscale 1s linear infinite}.fr-eqf{filter:drop-shadow(0 0 7px #3bd8ff)}
+</style>`);
+
 /* ============ ЗАКОН: возрастной знак 6+, политика конфиденциальности, согласие родителя ============ */
 const LEGAL={ver:'v1',date:'3 ноября 2026 г.',op:'Евгений (автор игры, самозанятый)',opD:'Евгению (автору игры, самозанятому)',mail:'jin.ne@mail.ru'};
 Object.assign(S,{
