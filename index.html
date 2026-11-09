@@ -811,8 +811,11 @@ function norm(p){p.modes=p.modes||{};p.avatars=p.avatars||[...STARTERS];p.frames
 
 /* ============ ЗВУКИ ИГРЫ ============ */
 let AC=null;
-function ac(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
-function tone(f,t0,d,type='sine',vol=.15){if(!SET.sound)return;const a=ac();if(!a)return;const tt=a.currentTime+t0,o=a.createOscillator(),g=a.createGain();
+function ac(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended'&&!document.hidden)AC.resume();return AC}
+/* игра свёрнута или экран погас — звук не играет */
+function audHide(){if(!document.hidden)return;try{if(AC&&AC.state==='running')AC.suspend()}catch(e){}}
+document.addEventListener('visibilitychange',audHide);window.addEventListener('pagehide',()=>{try{if(AC)AC.suspend()}catch(e){}});document.addEventListener('freeze',()=>{try{if(AC)AC.suspend()}catch(e){}});
+function tone(f,t0,d,type='sine',vol=.15){if(!SET.sound||document.hidden)return;const a=ac();if(!a)return;const tt=a.currentTime+t0,o=a.createOscillator(),g=a.createGain();
  o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0,tt);g.gain.linearRampToValueAtTime(vol,tt+.01);g.gain.exponentialRampToValueAtTime(.001,tt+d);o.connect(g).connect(a.destination);o.start(tt);o.stop(tt+d+.05)}
 const SCALE=[0,2,4,7,9,12,14,16,19,21,24,26,28,31,33,36,38,40];
 const nf=n=>523.25*Math.pow(2,SCALE[Math.min(n,SCALE.length-1)]/12);
@@ -3284,7 +3287,7 @@ function setMute(v){SET.mute=!!v;saveSettings();MUTE.ctx.forEach(m=>{try{m.g.gai
 ACT.muteT=function(){setMute(!SET.mute);if(!SET.mute)setTimeout(()=>tone(880,0,.05,'square',.03),30)};
 const _toneMU=tone;tone=function(){if(SET.mute)return;return _toneMU.apply(this,arguments)};
 /* --- звук на смартфонах: iPhone глушит звук игр кнопкой «Без звука», а браузеры не дают играть до первого касания --- */
-function audUnlock(){try{if(navigator.audioSession&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback'}catch(e){}
+function audUnlock(){if(document.hidden)return;try{if(navigator.audioSession&&navigator.audioSession.type!=='playback')navigator.audioSession.type='playback'}catch(e){}
  const a=ac();if(!a)return;if(a.state!=='running'){try{a.resume().catch(()=>{})}catch(e){}}
  if(!AU.unl){try{const b=a.createBuffer(1,1,22050),s=a.createBufferSource();s.buffer=b;s.connect(a.destination);s.start(0);AU.unl=true}catch(e){}}}
 ['pointerdown','touchend','mousedown','keydown'].forEach(ev=>document.addEventListener(ev,audUnlock,{capture:true,passive:true}));
@@ -6112,7 +6115,7 @@ const VST=[[6.5,.6,'vilSt20'],[18.5,.6,'vilSt100'],[38.5,.6,'vilStGames'],[50.5,
    колонки домов u0 = 1, 13, 33, 45, 57 (проспекты на u0+4), ряды v0 = 2, 12 … 62 (через 10 клеток — дома не заслоняют друг друга) */
 const VIL_HOUSES=[
  ['kids',1,2,'u','kids',''],['add20',1,12,'v','play','add20'],['sub20',1,22,'u','play','sub20'],['miss',1,32,'v','play','miss'],['cmp',1,42,'u','play','cmp'],['cafe',1,52,'v','deco','vilCafe'],
- ['add100',13,2,'u','play','add100'],['sub100',13,12,'v','play','sub100'],['mul',13,22,'u','play','mul'],['word',13,32,'u','play','word'],['extra',13,42,'u','play','extra'],['five',13,52,'v','play','five'],['clock',13,62,'u','timeOpen',''],
+ ['add100',13,2,'u','play','add100'],['sub100',13,12,'v','play','sub100'],['mul',13,22,'u','play','mul'],['word',13,32,'u','play','word'],['extra',13,42,'u','play','extra'],['five',13,52,'v','play','five'],['clock',13,62,'u','timeOpen',''],['music',45,31,'v','muOpen',''],
  ['sd',33,2,'u','mgStart','sd'],['mj',33,12,'v','mgStart','mj'],['mem',33,22,'u','mgStart','mem'],['chess',33,32,'u','mgStart','chs'],['pz',33,42,'u','mgStart','pz'],['maze',33,52,'v','mgStart','maze'],['bc',33,62,'u','mgStart','bc'],
  ['collection',45,2,'u','collection',''],['shop',45,12,'u','collection','shop'],['stats',45,42,'u','stats',''],['donate',45,52,'v','donOpen',''],['leaders',45,62,'u','leaders',''],
  ['friends',57,2,'u','friends',''],['mp',57,12,'v','mp',''],['cinema',57,22,'u','deco','vilCinema'],['cafe2',57,32,'v','deco','vilCafe'],['gift',57,42,'u','deco','vilGift'],['monument',57,52,'u','deco','vilMonument'],['cottage',57,62,'u','deco','vilCottage'],
@@ -6188,7 +6191,7 @@ function vilDepth(u,v){const p=vilXY(u,v);let fMax=0,bMin=1e9;
   if(u>=o.u0+o.w-.02||v>=o.v0+o.h-.02){if(zo>fMax)fMax=zo}else if(zo<bMin)bMin=zo}
  let z=fMax?fMax+1:60;if(z>=bMin)z=bMin-1;return Math.max(1,z)}
 function vilName(o){const k=o.k;if(o.act==='play')return mName(o.arg);if(o.act==='deco')return({cafe:'☕ Кафе',cafe2:'🍰 Кафе',cinema:'🎬 Кино',gift:'🎁 Сувениры',monument:'🏅 Памятник',fountain:'⛲ Фонтан',cottage:'🏡 Домик'})[k]||'';
- return({chess:'♞ '+t('g_chs'),sd:t('gSd'),mj:t('gMj'),mem:t('gMem'),pz:t('gPz'),maze:t('gMaze'),sea:t('g_sea'),bc:t('g_bc'),kids:t('kidsBtn'),clock:t('tmT'),mp:t('mpBtn'),stats:t('btnStats'),shop:t('shopT'),collection:t('btnCollection'),leaders:t('allPlayers'),friends:t('friends'),donate:t('donBtn')})[k]||k}
+ return({chess:'♞ '+t('g_chs'),sd:t('gSd'),mj:t('gMj'),mem:t('gMem'),pz:t('gPz'),maze:t('gMaze'),sea:t('g_sea'),bc:t('g_bc'),kids:t('kidsBtn'),clock:t('tmT'),music:t('muT'),mp:t('mpBtn'),stats:t('btnStats'),shop:t('shopT'),collection:t('btnCollection'),leaders:t('allPlayers'),friends:t('friends'),donate:t('donBtn')})[k]||k}
 /* ---------- картинки ---------- */
 function vilLoadImgs(cb){if(VIL.imgOk)return cb(true);let left=VIL_KEYS.length,bad=0;const fin=()=>{if(--left===0){VIL.imgOk=bad<VIL_KEYS.length/2;cb(VIL.imgOk)}};
  VIL_KEYS.forEach(k=>{if(VIL.img[k])return fin();const im=new Image();im.onload=()=>{VIL.img[k]=im.alt==='alias'?vilAliasImg(k,im):im;fin()};
@@ -6873,6 +6876,245 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .fr-crownf::after{content:"👑";position:absolute;left:50%;top:0;transform:translate(-50%,-62%);font-size:22px;z-index:2;filter:drop-shadow(0 1px 0 #000)}.frame.s.fr-crownf::after{font-size:14px}.frame.l.fr-crownf::after{font-size:38px}
 @keyframes rwshine{to{background-position:300% 0}}@keyframes rwscale{to{background-position:24px 0}}
 @media (prefers-reduced-motion:reduce){.fr-legendf::before,.fr-dragon::before{animation:none}}
+</style>`);
+
+/* ============ МУЗЫКА: ноты → клавиатура → нотный стан → длительности → такты → гамма → знаки → экзамен ============ */
+document.head.insertAdjacentHTML('beforeend','<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Music&display=swap&text='+encodeURIComponent('𝄞𝅝𝅗𝅥𝅘𝅥𝅘𝅥𝅮𝄻𝄼𝄽𝄾♯♭♮')+'">');
+Object.assign(S,{
+ muT:['🎵 Музыка','🎵 Music'],
+ muIntro:['Учимся музыкальной грамоте: ноты, клавиатура, нотный стан, такты и гаммы. Включи звук — будут задания на слух!','Learn music basics: notes, keyboard, staff, bars and scales. Turn the sound on — there are listening tasks!'],
+ muFree:['🎹 Поиграть на пианино','🎹 Play the piano'],muFreeT:['Пианино','Piano'],muFreeTx:['Нажимай на клавиши — под каждой подписана нота','Tap the keys — every key is signed'],
+ muListen:['🔊 Послушать','🔊 Listen'],muAgain:['🔁 Ещё раз','🔁 Again'],muTapN:['Нажато {n} из {t}','Pressed {n} of {t}'],muSoundOff:['Включи звук 🔊, чтобы выполнять задания на слух','Turn on the sound 🔊 for listening tasks'],
+ mu_notes:['Семь нот','Seven notes'],mu_keys:['Клавиатура','Keyboard'],mu_staff:['Нотный стан','The staff'],mu_dur:['Длительности','Note values'],mu_bar:['Такты и размер','Bars and time'],mu_scale:['Гамма','Scales'],mu_signs:['Знаки и слова','Signs and words'],mu_exam:['Экзамен музыканта','Music exam'],
+ muExamOk:['Ты — Маэстро! Новый статус и рамка «Маэстро»','You are a Maestro! New status and the «Maestro» frame'],
+});
+const MU_LV=[['notes','🎵'],['keys','🎹'],['staff','🎼'],['dur','𝅘𝅥'],['bar','📏'],['scale','🪜'],['signs','♯'],['exam','🎓']];
+const MU={view:'home',lv:null,slide:0,q:null,n:0,total:10,ok:0,res:[],gain:0,busy:false,tap:[],mg:false};
+const muL=(ru,en)=>LANG==='ru'?ru:en;
+const N_RU=['до','ре','ми','фа','соль','ля','си'],N_EN=['C','D','E','F','G','A','B'],SEMI=[0,2,4,5,7,9,11];
+const nn=i=>muL(N_RU,N_EN)[((i%7)+7)%7];
+const midiOf=(oct,i)=>12*(oct+1)+SEMI[((i%7)+7)%7]+12*Math.floor(i/7);
+const muP=p=>{p.mu=p.mu||{};p.mu.lv=p.mu.lv||{};return p.mu};
+const muBest=(p,k)=>{const r=muP(p).lv[k];return r?+r.best||0:0};
+const muOpen=(p,i)=>i===0||muBest(p,MU_LV[i-1][0])>=7;
+const SYM={w:'𝅝',h:'𝅗𝅥',q:'𝅘𝅥',e:'𝅘𝅥𝅮',rw:'𝄻',rh:'𝄼',rq:'𝄽',re:'𝄾',sh:'♯',fl:'♭',na:'♮'};
+const sym=(k,cls='')=>`<span class="musym ${cls}">${SYM[k]}</span>`;
+const DUR=[['w',4,['целая','whole']],['h',2,['половинная','half']],['q',1,['четвертная','quarter']],['e',.5,['восьмая','eighth']]];
+const durN=k=>tx(DUR.find(d=>d[0]===k)[2]);
+
+/* ---------- звук пианино (молчит, если звук выключен или игра свёрнута) ---------- */
+function muNote(m,t0=0,d=.9,vol=.22){if(!SET.sound||SET.mute||document.hidden)return;const a=ac();if(!a)return;const f=440*Math.pow(2,(m-69)/12),tt=a.currentTime+t0;
+ [[1,'triangle',vol],[2,'sine',vol*.35],[3,'sine',vol*.12]].forEach(([k,ty,v])=>{const o=a.createOscillator(),g=a.createGain();o.type=ty;o.frequency.value=f*k;
+  g.gain.setValueAtTime(0,tt);g.gain.linearRampToValueAtTime(v,tt+.008);g.gain.exponentialRampToValueAtTime(v*.35,tt+.25);g.gain.exponentialRampToValueAtTime(.0008,tt+d);o.connect(g).connect(a.destination);o.start(tt);o.stop(tt+d+.05)})}
+const muSeq=(ms,gap=.45,vol)=>ms.forEach((m,i)=>Array.isArray(m)?m.forEach(x=>muNote(x,i*gap,1.2,vol||.16)):muNote(m,i*gap,.8,vol));
+
+/* ---------- клавиатура: 2 октавы от до первой октавы ---------- */
+function muPiano(o={}){const W=[];for(let i=0;i<14;i++)W.push(i);const lbl=o.labels,only=o.only;
+ const white=W.map(i=>{const m=midiOf(4,i),l=lbl==='all'||(lbl==='c'&&i%7===0)||(only&&only.includes(i));return `<button class="mukey w" data-act="muKey" data-arg="${m}" data-i="${i}">${l?`<b>${esc(nn(i))}</b>`:''}</button>`}).join('');
+ const black=W.filter(i=>![2,6].includes(i%7)&&i<13).map(i=>`<button class="mukey b" data-act="muKey" data-arg="${midiOf(4,i)+1}" style="--x:${i+1}"></button>`).join('');
+ return `<div class="mupiano ${o.cls||''}" style="--n:14">${white}${black}</div>`}
+/* ---------- нотный стан ---------- */
+function muStaff(notes,o={}){const w=o.w||(notes.length*44+80),Y=d=>78-d*6;let s=`<svg class="mustaff" viewBox="0 0 ${w} 110" width="${Math.min(w*1.6,560)}" role="img">`;
+ for(let i=0;i<5;i++)s+=`<line x1="4" y1="${30+i*12}" x2="${w-4}" y2="${30+i*12}" stroke="#2b1a08" stroke-width="1.6"/>`;
+ s+=`<text x="6" y="88" font-size="68" font-family="'Noto Music','Segoe UI Symbol','Apple Symbols',serif" fill="#2b1a08">𝄞</text>`;
+ notes.forEach((d,k)=>{const x=70+k*44,y=Y(d);if(d<=-2)for(let L=-2;L>=d;L-=2)s+=`<line x1="${x-12}" y1="${Y(L)}" x2="${x+12}" y2="${Y(L)}" stroke="#2b1a08" stroke-width="1.6"/>`;
+  if(d>=10)for(let L=10;L<=d;L+=2)s+=`<line x1="${x-12}" y1="${Y(L)}" x2="${x+12}" y2="${Y(L)}" stroke="#2b1a08" stroke-width="1.6"/>`;
+  const up=d<4;s+=`<ellipse cx="${x}" cy="${y}" rx="7.5" ry="5.6" transform="rotate(-20 ${x} ${y})" fill="${o.col&&o.col[k]||'#2b1a08'}"/><line x1="${up?x+7:x-7}" y1="${y}" x2="${up?x+7:x-7}" y2="${up?y-34:y+34}" stroke="#2b1a08" stroke-width="1.8"/>`});
+ return s+'</svg>'}
+const dOf=(i)=>i-2; /* номер белой клавиши 0..13 (от до первой октавы) → ступень на стане: ми первой октавы = 0 */
+
+/* ---------- уроки ---------- */
+function muSlides(k){
+ if(k==='notes')return [
+  [muPiano({labels:'all'}),muL('В музыке всего <b>7 нот</b>: <b>до, ре, ми, фа, соль, ля, си</b>. Нажимай на клавиши — послушай, как они звучат!','There are only <b>7 notes</b>: <b>C, D, E, F, G, A, B</b> (do, re, mi, fa, sol, la, si). Tap the keys and listen!')],
+  [`<div class="mubig">до → ре → ми → фа → соль → ля → си → <b>до</b></div>`,muL('После <b>си</b> снова идёт <b>до</b>, только выше. Ноты повторяются по кругу, как дни недели.','After <b>B</b> comes <b>C</b> again, just higher. Notes repeat in a circle, like days of the week.')],
+  [muPiano({labels:'c'}),muL('Каждая нота живёт на своей клавише. Чем правее клавиша — тем <b>выше</b> звук, чем левее — тем <b>ниже</b>.','Each note lives on its own key. The further right — the <b>higher</b> the sound, further left — <b>lower</b>.')]];
+ if(k==='keys')return [
+  [muPiano({labels:'c'}),muL('У пианино белые и чёрные клавиши. Чёрные собраны в группы: <b>по 2 и по 3</b>.','A piano has white and black keys. Black keys come in groups of <b>2 and 3</b>.')],
+  [muPiano({labels:'c',cls:'hlc'}),muL('Нота <b>до</b> — белая клавиша <b>слева от двух чёрных</b>. Найдёшь до — найдёшь и все остальные ноты!','The note <b>C</b> is the white key <b>left of the two black keys</b>. Find C — and you find all the others!')],
+  [muPiano({labels:'all'}),muL('От одного до до следующего до — <b>8 белых клавиш</b>. Это называется <b>октава</b>.','From one C to the next C there are <b>8 white keys</b>. This is an <b>octave</b>.')],
+  [`<div class="mubig">🔊 🎹</div>`,muL('В заданиях ты будешь <b>слушать</b> звуки и <b>повторять</b> мелодии. Сначала послушай, потом нажимай клавиши по порядку!','In the tasks you will <b>listen</b> and <b>repeat</b> melodies. Listen first, then tap the keys in order!')]];
+ if(k==='staff')return [
+  [muStaff([]),muL('Ноты записывают на <b>нотном стане</b> — это <b>5 линеек</b>. Считают их снизу вверх.','Notes are written on a <b>staff</b> — <b>5 lines</b>, counted from the bottom up.')],
+  [muStaff([5]),muL('В начале рисуют <b>скрипичный ключ</b>. Он закручивается вокруг <b>второй линейки</b> — там живёт нота <b>соль</b>. Поэтому его ещё зовут «ключ соль».','At the start we draw the <b>treble clef</b>. It curls around the <b>second line</b> — the home of <b>G</b>.')],
+  [muStaff([-2,-1,0,1,2,3,4,5]),muL('Ноты пишут <b>на линейках</b> и <b>между ними</b>. <b>До</b> первой октавы — на маленькой <b>добавочной линейке</b> снизу, дальше ре, ми, фа, соль, ля, си, до.','Notes sit <b>on lines</b> and <b>between them</b>. Middle <b>C</b> sits on a small <b>ledger line</b> below, then D, E, F, G, A, B, C.')],
+  [muStaff([0,2,4,6,8]),muL('Ноты на линейках снизу вверх: <b>ми, соль, си, ре, фа</b>. Чем выше нота на стане — тем выше звук.','Notes on the lines bottom to top: <b>E, G, B, D, F</b>. The higher on the staff, the higher the sound.')]];
+ if(k==='dur')return [
+  [`<div class="mudur">${DUR.map(d=>`<span>${sym(d[0],'big')}<b>${esc(tx(d[2]))}</b></span>`).join('')}</div>`,muL('Ноты бывают долгие и короткие — это <b>длительность</b>. Белая без палочки — <b>целая</b>, белая с палочкой — <b>половинная</b>, чёрная — <b>четвертная</b>, чёрная с хвостиком — <b>восьмая</b>.','Notes can be long or short — that is the <b>note value</b>: whole, half, quarter, eighth.')],
+  [`<div class="mubig">${sym('w','big')} = ${sym('h','big')}${sym('h','big')} = ${sym('q','big')}${sym('q','big')}${sym('q','big')}${sym('q','big')}</div>`,muL('<b>Целая</b> = 2 половинные = <b>4 четверти</b>. Половинная = 2 четверти. Четвертная = 2 восьмые. Считай: «раз-и, два-и…»','<b>Whole</b> = 2 halves = <b>4 quarters</b>. A half = 2 quarters. A quarter = 2 eighths.')],
+  [`<div class="mudur">${['rw','rh','rq','re'].map((r,i)=>`<span>${sym(r,'big')}<b>${esc(tx(DUR[i][2]))}</b></span>`).join('')}</div>`,muL('<b>Пауза</b> — это когда музыка молчит. Паузы тоже бывают целые, половинные, четвертные и восьмые.','A <b>rest</b> is when the music is silent. Rests can be whole, half, quarter and eighth too.')]];
+ if(k==='bar')return [
+  [`<div class="mubig">${sym('q')}${sym('q')}${sym('q')}${sym('q')} | ${sym('h')}${sym('h')} | ${sym('w')} |</div>`,muL('Музыку делят на <b>такты</b> — равные кусочки. Между тактами ставят <b>тактовую черту</b> | .','Music is split into <b>bars</b> — equal pieces divided by a <b>bar line</b> | .')],
+  [`<div class="mubig"><span class="mutime">3<br>4</span> ${sym('q')}${sym('q')}${sym('q')} | ${sym('h')}${sym('q')} |</div>`,muL('<b>Размер</b> пишут в начале дробью. <b>3/4</b> значит: в каждом такте <b>3 четверти</b>. Считаем «раз-два-три» — так танцуют <b>вальс</b>.','The <b>time signature</b> is written at the start. <b>3/4</b> means <b>3 quarters</b> per bar — like a <b>waltz</b>: one-two-three.')],
+  [`<div class="mubig"><span class="mutime">2<br>4</span> ${sym('q')}${sym('q')} | <span class="mutime">4<br>4</span> ${sym('q')}${sym('q')}${sym('h')} |</div>`,muL('<b>2/4</b> — «раз-два», как <b>марш</b>. <b>4/4</b> — четыре четверти в такте, так написано много песен. Главное — такт должен быть заполнен ровно!','<b>2/4</b> — one-two, like a <b>march</b>. <b>4/4</b> — four quarters per bar. A bar must be filled exactly!')]];
+ if(k==='scale')return [
+  [muPiano({labels:'all',cls:'scale'}),muL('<b>Гамма</b> — это ноты по порядку, ступенька за ступенькой: до, ре, ми, фа, соль, ля, си, до. Её играют вверх и вниз.','A <b>scale</b> is notes in order, step by step: C D E F G A B C. It is played up and down.')],
+  [muStaff([-2,-1,0,1,2,3,4,5]),muL('Гамма <b>до мажор</b> играется только на <b>белых клавишах</b>. В ней <b>8 звуков</b>, а первая нота — главная, её зовут <b>тоника</b>.','<b>C major</b> uses only <b>white keys</b>. It has <b>8 sounds</b>; the first note is the main one — the <b>tonic</b>.')],
+  [`<div class="mubig">I II III IV V VI VII</div>`,muL('Ноты гаммы — это <b>ступени</b>. В до мажоре: до — 1-я, ре — 2-я, ми — 3-я… соль — 5-я ступень.','Scale notes are <b>degrees</b>: in C major C is 1st, D 2nd, E 3rd… G is the 5th degree.')]];
+ if(k==='signs')return [
+  [`<div class="mubig">${sym('sh','big')} ${sym('fl','big')} ${sym('na','big')}</div>`,muL('<b>Диез ♯</b> поднимает ноту на полтона (чёрная клавиша справа). <b>Бемоль ♭</b> опускает на полтона. <b>Бекар ♮</b> отменяет их.','<b>Sharp ♯</b> raises a note by a semitone, <b>flat ♭</b> lowers it, <b>natural ♮</b> cancels them.')],
+  [`<div class="mubig"><i>pp p mf f ff</i></div>`,muL('Громкость: <b>p</b> (пиано) — тихо, <b>f</b> (форте) — громко, <b>pp</b> — очень тихо, <b>ff</b> — очень громко, <b>mf</b> — не очень громко.','Dynamics: <b>p</b> quiet, <b>f</b> loud, <b>pp</b> very quiet, <b>ff</b> very loud, <b>mf</b> moderately loud.')],
+  [`<div class="mubig"><i>Adagio · Andante · Allegro · Presto</i></div>`,muL('Темп — скорость музыки: <b>Adagio</b> — медленно, <b>Andante</b> — спокойно, шагом, <b>Allegro</b> — быстро, <b>Presto</b> — очень быстро.','Tempo is speed: <b>Adagio</b> slow, <b>Andante</b> walking, <b>Allegro</b> fast, <b>Presto</b> very fast.')],
+  [`<div class="mubig">😊 🎶 😢</div>`,muL('<b>Мажор</b> звучит светло и весело, <b>минор</b> — грустно и задумчиво. Послушай в заданиях и угадай!','<b>Major</b> sounds bright and happy, <b>minor</b> sad and thoughtful. Listen in the tasks and guess!')]];
+ return [[`<div class="mubig">🎓🎻</div>`,muL('Экзамен: задания из всех уроков. Ответь верно на 8 из 10 — и станешь <b>Маэстро</b>!','Exam: tasks from all lessons. Get 8 of 10 right to become a <b>Maestro</b>!')]]}
+
+/* ---------- задания ---------- */
+const muO=(ans,pool,extra)=>Object.assign(tmOpts(ans,pool.filter(x=>x!==ans)),extra);
+const names7=()=>[0,1,2,3,4,5,6].map(nn);
+const ear=()=>SET.sound&&!SET.mute;
+function genNotes(i){const k=i%6,x=rnd(0,6);
+ if(k===0){const a=nn(x+1);return muO(a,names7(),{q:muL(`Какая нота идёт после «${nn(x)}»?`,`Which note comes after ${nn(x)}?`),exp:a})}
+ if(k===1){const a=nn(x+6);return muO(a,names7(),{q:muL(`Какая нота идёт перед «${nn(x)}»?`,`Which note comes before ${nn(x)}?`),exp:a})}
+ if(k===2){const s=rnd(0,4),a=nn(s+2);return muO(a,names7(),{q:muL('Какая нота пропущена?','Which note is missing?'),body:`<div class="mubig">${nn(s)} · ${nn(s+1)} · <b class="muq">?</b> · ${nn(s+3)}</div>`,exp:a})}
+ if(k===3){const t=rnd(0,13);return {q:muL(`Нажми клавишу «${nn(t)}». Подсказка: подписана только «до»`,`Tap the key ${nn(t)}. Hint: only C is signed`),piano:{labels:'c'},target:[t%7],mode:'name',exp:nn(t)}}
+ if(k===4){const v=pick([['7',muL('Сколько всего разных нот?','How many different notes are there?'),['5','8','12','10']],[nn(0),muL('С какой ноты начинается ряд нот?','Which note starts the row?'),names7()],[nn(6),muL('Какая нота седьмая, последняя?','Which note is the seventh, the last?'),names7()]]);return muO(v[0],v[2],{q:v[1],exp:v[0]})}
+ const a=nn(x);return muO(a,names7(),{q:muL(`Какая нота ${x+1}-я по счёту?`,`Which note is number ${x+1}?`),exp:a})}
+function genKeys(i){const k=i%7;
+ if(k===0)return {q:muL('Найди и нажми любую ноту «до» (подписей нет!)','Find and tap any C (no labels!)'),piano:{},target:[0],mode:'name',exp:muL('до — слева от двух чёрных','C is left of the two black keys')};
+ if(k===1&&ear()){const a=rnd(60,70),b=a+pick([-7,-5,-4,-3,3,4,5,7]),up=b>a;const ans=muL(up?'Выше':'Ниже',up?'Higher':'Lower');return muO(ans,[muL('Выше','Higher'),muL('Ниже','Lower')],{q:muL('Послушай два звука. Второй выше или ниже первого?','Listen to two sounds. Is the second higher or lower?'),play:[a,b],ear:1,exp:ans})}
+ if(k===2){const a=muL('по 2 и по 3','in 2s and 3s');return muO(a,[muL('по 1 и по 4','in 1s and 4s'),muL('только по 2','only in 2s'),muL('по 3 и по 4','in 3s and 4s')],{q:muL('Как сгруппированы чёрные клавиши?','How are black keys grouped?'),body:muPiano({}),exp:a})}
+ if(k===3){const t=rnd(1,6);return {q:muL(`Нажми клавишу «${nn(t)}» (подписей нет!)`,`Tap ${nn(t)} (no labels!)`),piano:{},target:[t],mode:'name',exp:nn(t)}}
+ if(k===4){const a=muL('Справа','On the right');return muO(a,[muL('Слева','On the left'),muL('В середине','In the middle'),muL('Везде одинаково','Same everywhere')],{q:muL('Где на пианино высокие звуки?','Where are the high sounds on a piano?'),exp:a})}
+ if(k===5&&ear()){const n=rnd(2,3),s=[];for(let j=0;j<n;j++)s.push(rnd(0,4));return {q:muL(`Повтори мелодию из ${n} нот: послушай и нажми клавиши по порядку`,`Repeat a ${n}-note melody: listen and tap the keys in order`),piano:{labels:'all',only:[0,1,2,3,4]},target:s,mode:'seq',play:s.map(j=>midiOf(4,j)),ear:1,exp:s.map(nn).join(' – ')}}
+ const v=pick([['8',muL('Сколько белых клавиш от «до» до следующего «до» (включая оба)?','How many white keys from C to the next C (both included)?'),['7','12','5','10']],[muL('октава','an octave'),muL('Как называется расстояние от «до» до следующего «до»?','What is the distance from C to the next C called?'),[muL('гамма','a scale'),muL('такт','a bar'),muL('пауза','a rest')]]]);return muO(v[0],v[2],{q:v[1],exp:v[0]})}
+function genStaff(i){const k=i%7,w=rnd(0,12),d=dOf(w);
+ if(k<=3){const a=nn(w);return muO(a,names7(),{q:muL('Какая это нота?','Which note is this?'),body:muStaff([d]),play:ear()?[midiOf(4,w)]:null,exp:a})}
+ if(k===4){const a='5';return muO(a,['4','6','7','3'],{q:muL('Сколько линеек в нотном стане?','How many lines does a staff have?'),body:muStaff([]),exp:a})}
+ if(k===5){const v=pick([[nn(4),muL('Вокруг какой ноты закручивается скрипичный ключ?','Which note does the treble clef curl around?'),names7()],[muL('на добавочной линейке снизу','on a ledger line below'),muL('Где пишется нота «до» первой октавы?','Where is middle C written?'),[muL('на первой линейке','on the first line'),muL('над пятой линейкой','above the fifth line'),muL('между 2 и 3 линейкой','between lines 2 and 3')]]]);return muO(v[0],v[2],{q:v[1],exp:v[0]})}
+ return {q:muL('Нажми на клавиатуре эту ноту','Play this note on the keyboard'),body:muStaff([d]),piano:{labels:'c'},target:[w],mode:'exact',exp:nn(w)}}
+function genDur(i){const k=i%6,D=pick(DUR);
+ if(k===0){const a=tx(D[2]);return muO(a,DUR.map(x=>tx(x[2])),{q:muL('Как называется эта длительность?','What is this note value?'),body:`<div class="mubig">${sym(D[0],'big')}</div>`,exp:a})}
+ if(k===1){const d=pick(DUR.slice(0,3)),a=String(d[1]);return muO(a,['1','2','3','4','8'],{q:muL(`Сколько четвертей в ${['целой','половинной','четвертной'][DUR.indexOf(d)]} ноте?`,`How many quarters in a ${tx(d[2])} note?`),body:`<div class="mubig">${sym(d[0],'big')}</div>`,exp:a})}
+ if(k===2){let a=pick(DUR),b=pick(DUR.filter(x=>x!==a));const L=a[1]>b[1]?a:b,ans=tx(L[2]);return muO(ans,[tx(a[2]),tx(b[2]),muL('одинаковые','equal')],{q:muL('Какая нота звучит дольше?','Which note sounds longer?'),body:`<div class="mubig">${sym(a[0],'big')} ${muL('или','or')} ${sym(b[0],'big')}</div>`,exp:ans})}
+ if(k===3){const ps=pick([['h','q'],['q','q','q'],['h','h'],['q','e','e'],['h','q','q'],['e','e','q']]),s=ps.reduce((t,x)=>t+DUR.find(d=>d[0]===x)[1],0),a=String(s);
+  return muO(a,['1','2','3','4','5'],{q:muL('Сколько всего четвертей?','How many quarters in total?'),body:`<div class="mubig">${ps.map(x=>sym(x,'big')).join(' + ')}</div>`,exp:a})}
+ if(k===4){const r=rnd(0,3),a=muL('пауза '+['целая','половинная','четвертная','восьмая'][r],tx(DUR[r][2])+' rest');return muO(a,[0,1,2,3].map(j=>muL('пауза '+['целая','половинная','четвертная','восьмая'][j],tx(DUR[j][2])+' rest')),{q:muL('Что это за знак?','What is this sign?'),body:`<div class="mubig">${sym(['rw','rh','rq','re'][r],'big')}</div>`,exp:a})}
+ const v=pick([['2',muL('Сколько восьмых в одной четвертной?','How many eighths in a quarter?'),['1','3','4','8']],['4',muL('Сколько восьмых в половинной?','How many eighths in a half?'),['2','3','6','8']],[muL('музыка молчит','the music is silent'),muL('Что значит пауза?','What does a rest mean?'),[muL('играть громко','play loud'),muL('играть быстро','play fast'),muL('повторить','repeat')]]]);return muO(v[0],v[2],{q:v[1],exp:v[0]})}
+const val=x=>DUR.find(d=>d[0]===x)[1];
+function genBar(i){const k=i%6,m=pick([2,3,4]);
+ if(k===0){const a=String(m);return muO(a,['1','2','3','4','6'],{q:muL(`Сколько четвертей в одном такте размера ${m}/4?`,`How many quarters in a bar of ${m}/4?`),body:`<div class="mubig"><span class="mutime">${m}<br>4</span></div>`,exp:a})}
+ if(k===1){const opts=[['h'],['q'],['q','q'],['h','q'],['e','e'],['q','e','e']].filter(x=>x.reduce((t,y)=>t+val(y),0)<4),c=pick(opts),need=4-c.reduce((t,y)=>t+val(y),0),a=String(need);
+  return muO(a,['1','2','3','4'],{q:muL('Сколько четвертей не хватает, чтобы заполнить такт 4/4?','How many quarters are missing to fill a 4/4 bar?'),body:`<div class="mubig"><span class="mutime">4<br>4</span> ${c.map(x=>sym(x)).join(' ')} <b class="muq">?</b> |</div>`,exp:a})}
+ if(k===2){const c=pick([[['h'],'q',3],[['q','q'],'q',3],[['q'],'h',3],[['h'],'h',4],[['q','q','q'],'q',4],[['q'],'q',2],[['e','e'],'q',2]]),a=c[1];
+  return Object.assign(tmOpts(a,['w','h','q','e'].filter(x=>x!==a)),{q:muL(`Какой нотой закончить такт ${c[2]}/4?`,`Which note completes the ${c[2]}/4 bar?`),body:`<div class="mubig"><span class="mutime">${c[2]}<br>4</span> ${c[0].map(x=>sym(x)).join(' ')} <b class="muq">?</b> |</div>`,symopt:1,exp:durN(a)})}
+ if(k===3){const v=pick([['3/4',muL('В каком размере танцуют вальс («раз-два-три»)?','What time is a waltz (one-two-three)?'),['2/4','5/4','7/8']],['2/4',muL('В каком размере марш («раз-два»)?','What time is a march (one-two)?'),['3/4','5/4','7/8']]]);return muO(v[0],v[2],{q:v[1],exp:v[0]})}
+ if(k===4){const a=muL('тактовой чертой','a bar line');return muO(a,[muL('паузой','a rest'),muL('скрипичным ключом','a treble clef'),muL('диезом','a sharp')],{q:muL('Чем отделяют один такт от другого?','What separates one bar from the next?'),exp:a})}
+ const c=pick([['q','q'],['h'],['q','q','q'],['h','q'],['q'],['e','e','q'],['w']]),s=c.reduce((t,y)=>t+val(y),0),A=[muL('Да, ровно','Yes, exactly'),muL('Нет, слишком много','No, too much'),muL('Нет, не хватает','No, not enough')],a=A[s===m?0:s>m?1:2];
+ return muO(a,A,{q:muL(`Правильно ли заполнен такт ${m}/4?`,`Is this ${m}/4 bar filled correctly?`),body:`<div class="mubig"><span class="mutime">${m}<br>4</span> ${c.map(x=>sym(x)).join(' ')} |</div>`,exp:a})}
+function genScale(i){const k=i%7;
+ if(k===0){const s=rnd(0,4),a=nn(s+3);return muO(a,names7(),{q:muL('Гамма до мажор вверх. Какая нота следующая?','C major scale going up. What comes next?'),body:muStaff([dOf(s),dOf(s+1),dOf(s+2)]),exp:a})}
+ if(k===1){const s=rnd(3,7),a=nn(s-3);return muO(a,names7(),{q:muL('Гамма вниз. Какая нота следующая?','The scale goes down. What comes next?'),body:`<div class="mubig">${nn(s)} · ${nn(s-1)} · ${nn(s-2)} · <b class="muq">?</b></div>`,exp:a})}
+ if(k===2){const v=pick([['8',muL('Сколько звуков в гамме от «до» до «до»?','How many sounds in a scale from C to C?'),['7','5','12','10']],[muL('тоника','the tonic'),muL('Как называется первая, главная нота гаммы?','What is the first, main note of a scale called?'),[muL('октава','the octave'),muL('пауза','a rest'),muL('такт','a bar')]],[muL('только белые','only white keys'),muL('Какие клавиши нужны для гаммы до мажор?','Which keys does C major need?'),[muL('только чёрные','only black keys'),muL('все подряд','all keys'),muL('через одну','every other key')]]]);return muO(v[0],v[2],{q:v[1],exp:v[0]})}
+ if(k===3){const x=rnd(1,6),a=String(x+1);return muO(a,['1','2','3','4','5','6','7'],{q:muL(`Какая ступень — нота «${nn(x)}» в гамме до мажор?`,`Which degree is ${nn(x)} in C major?`),exp:a})}
+ if(k===4&&ear()){const up=Math.random()<.5,s=up?[0,1,2,3,4]:[7,6,5,4,3],a=muL(up?'Вверх':'Вниз',up?'Up':'Down');return muO(a,[muL('Вверх','Up'),muL('Вниз','Down')],{q:muL('Послушай гамму. Она идёт вверх или вниз?','Listen to the scale. Is it going up or down?'),play:s.map(j=>midiOf(4,j)),gap:.32,ear:1,exp:a})}
+ if(k===5){const n=pick([4,5]);return {q:muL(`Сыграй гамму вверх: от «до» ${n} нот подряд`,`Play the scale up: ${n} notes from C`),piano:{labels:'c'},target:[...Array(n).keys()],mode:'seqx',exp:[...Array(n).keys()].map(nn).join(' – ')}}
+ const s=rnd(0,3),a=nn(s+4);return muO(a,names7(),{q:muL('Какая нота спряталась в гамме?','Which note is hiding in the scale?'),body:muStaff([dOf(s),dOf(s+1),dOf(s+2),dOf(s+3),dOf(s+4)],{col:['#2b1a08','#2b1a08','#2b1a08','#2b1a08','#ff3b3b']}),exp:a})}
+function genSigns(i){const k=i%7;
+ if(k===0){const r=pick([['sh',muL('диез','sharp')],['fl',muL('бемоль','flat')],['na',muL('бекар','natural')]]);return muO(r[1],[muL('диез','sharp'),muL('бемоль','flat'),muL('бекар','natural'),muL('пауза','rest')],{q:muL('Как называется этот знак?','What is this sign called?'),body:`<div class="mubig">${sym(r[0],'big')}</div>`,exp:r[1]})}
+ if(k===1){const v=pick([[muL('повышает на полтона','raises by a semitone'),muL('Что делает диез ♯?','What does a sharp ♯ do?')],[muL('понижает на полтона','lowers by a semitone'),muL('Что делает бемоль ♭?','What does a flat ♭ do?')],[muL('отменяет диез и бемоль','cancels sharp and flat'),muL('Что делает бекар ♮?','What does a natural ♮ do?')]]);return muO(v[0],[muL('повышает на полтона','raises by a semitone'),muL('понижает на полтона','lowers by a semitone'),muL('отменяет диез и бемоль','cancels sharp and flat'),muL('делает громче','makes it louder')],{q:v[1],exp:v[0]})}
+ if(k===2){const D=[['p',muL('тихо','quiet')],['f',muL('громко','loud')],['pp',muL('очень тихо','very quiet')],['ff',muL('очень громко','very loud')]],r=pick(D);return muO(r[1],D.map(x=>x[1]),{q:muL('Что значит этот знак громкости?','What does this dynamic mark mean?'),body:`<div class="mubig"><i>${r[0]}</i></div>`,exp:r[1]})}
+ if(k===3){const D=[['Adagio',muL('медленно','slowly')],['Allegro',muL('быстро','fast')],['Andante',muL('спокойно, шагом','at walking pace')],['Presto',muL('очень быстро','very fast')]],r=pick(D);return muO(r[1],D.map(x=>x[1]),{q:muL(`Темп «${r[0]}» — это как?`,`What does «${r[0]}» mean?`),exp:r[1]})}
+ if(k===4&&ear()){const maj=Math.random()<.5,r=rnd(57,64),ch=maj?[r,r+4,r+7]:[r,r+3,r+7],a=muL(maj?'Весело — мажор':'Грустно — минор',maj?'Happy — major':'Sad — minor');return muO(a,[muL('Весело — мажор','Happy — major'),muL('Грустно — минор','Sad — minor')],{q:muL('Послушай аккорд. Как он звучит?','Listen to the chord. How does it sound?'),play:[ch[0],ch[1],ch[2],ch],gap:.35,ear:1,exp:a})}
+ if(k===5&&ear()){const fast=Math.random()<.5,a=muL(fast?'Быстро — Allegro':'Медленно — Adagio',fast?'Fast — Allegro':'Slow — Adagio');return muO(a,[muL('Быстро — Allegro','Fast — Allegro'),muL('Медленно — Adagio','Slow — Adagio')],{q:muL('Послушай мелодию. Какой у неё темп?','Listen to the tune. What is its tempo?'),play:[60,62,64,65,67,65,64,62],gap:fast?.14:.55,ear:1,exp:a})}
+ const loud=Math.random()<.5,a=muL(loud?'Громко — forte':'Тихо — piano',loud?'Loud — forte':'Quiet — piano');if(!ear())return genSigns(rnd(0,3));
+ return muO(a,[muL('Громко — forte','Loud — forte'),muL('Тихо — piano','Quiet — piano')],{q:muL('Послушай. Это громко или тихо?','Listen. Is it loud or quiet?'),play:[60,64,67],vol:loud?.34:.035,ear:1,exp:a})}
+const MU_GEN={notes:genNotes,keys:genKeys,staff:genStaff,dur:genDur,bar:genBar,scale:genScale,signs:genSigns,exam:i=>[genNotes,genKeys,genStaff,genDur,genBar,genScale,genSigns][i%7](rnd(0,6))};
+
+/* ---------- экраны ---------- */
+const muHead=(p,title)=>`<header class="top blk"><button class="icon" data-act="${MU.view==='home'?'back':'muHome'}" aria-label="←">⬅</button><h2 style="margin:0">${title}</h2><div class="sp"></div><span class="dopa">⚡ <b id="dopaVal">${p.dopa}</b></span></header>`;
+function renderMusic(){SCREEN='music';const p=cur();if(!p){SCREEN='login';return render()}muP(p);
+ if(MU.view==='home'){app.innerHTML=muHead(p,t('muT'))+`<p class="on-sky" style="font-weight:900;text-align:center;max-width:640px;margin:6px auto 12px">${t('muIntro')}</p>
+  <div class="tmlvls">${MU_LV.map(([k,ic],i)=>{const op=muOpen(p,i),b=muBest(p,k),st=tmStars(b);
+   return `<button class="mode blk tmlv ${op?'':'locked'}" style="--c:${['#ff7a3d','#3d9bff','#5fd03a','#b65cff','#ffc21a','#ff4f9a','#1fd1d1','#ff4545'][i]}" data-act="${op?'muLv':'tmLock'}" data-arg="${k}"><span class="mi slotbox">${op?(ic.length>2?ic:`<span class="musym">${ic}</span>`):'🔒'}</span><b>${i+1}. ${t('mu_'+k)}</b>
+    <span class="tmst">${'⭐'.repeat(st)}${'☆'.repeat(3-st)}</span><small>${b?esc(t('tmDone',{n:b,t:10})):''}</small></button>`}).join('')}</div>
+  <div class="row"><button class="btn big" data-act="muFree">${t('muFree')}</button></div>`;return}
+ if(MU.view==='free'){app.innerHTML=muHead(p,t('muFreeT'))+`<section class="panel blk tmles"><p class="tmtx">${t('muFreeTx')}</p><div class="tmpic">${muPiano({labels:'all'})}</div><div class="mulast" id="muLast">&nbsp;</div></section>`;return}
+ const lv=MU.lv,name=t('mu_'+lv);
+ if(MU.view==='lesson'){const S=muSlides(lv),i=Math.min(MU.slide,S.length-1),[pic,tx2]=S[i];
+  app.innerHTML=muHead(p,`${t('tmLesson')}: ${name}`)+`<section class="panel blk tmles"><div class="tmpic">${pic}</div><p class="tmtx">${tx2}</p><div class="mulast" id="muLast">&nbsp;</div>
+   <div class="tmdots">${S.map((_,j)=>`<i class="${j===i?'on':''}"></i>`).join('')}</div>
+   <div class="row"><button class="btn" data-act="muSlide" data-arg="${i-1}" ${i?'':'disabled'}>◀</button>${i<S.length-1?`<button class="btn pri big" data-act="muSlide" data-arg="${i+1}" data-enter>${t('tmNext')}</button>`:`<button class="btn pri big" data-act="muQuiz" data-enter>${t('tmToTasks')}</button>`}</div></section>`;return}
+ if(MU.view==='end'){const n=MU.ok,st=tmStars(n),idx=MU_LV.findIndex(x=>x[0]===lv);app.innerHTML=muHead(p,name)+`<section class="panel blk" style="text-align:center"><div style="font-size:56px">${n>=10?'🏆':n>=7?'🌟':'🙂'}</div><div class="stars" style="font-size:30px">${'⭐'.repeat(st)}${'☆'.repeat(3-st)}</div>
+  <h2>${esc(t('tmDone',{n,t:MU.total}))}</h2><p style="font-weight:900">${n>=7?t('tmPass'):t('tmFail')}</p><p class="donst ok">${esc(t('tmGain',{n:MU.gain}))}</p>${MU.extra||''}
+  <div class="row"><button class="btn" data-act="muHome">${t('tmHome')}</button><button class="btn" data-act="muLv" data-arg="${lv}">${t('tmAgain')}</button>${n>=7&&lv!=='exam'?`<button class="btn pri big" data-act="muLv" data-arg="${MU_LV[idx+1][0]}" data-enter>${t('tmNextLv')}</button>`:''}</div></section>`;
+  if(n>=7){sndFanfare();try{fireworks(3)}catch(e){}}return}
+ const q=MU.q;
+ app.innerHTML=muHead(p,name)+`<div class="kprog">${Array.from({length:MU.total},(_,i)=>`<i class="${i<MU.res.length?(MU.res[i]?'ok':'no'):i===MU.n?'now':''}"></i>`).join('')}</div>
+ <section class="panel blk tmq" id="muPanel"><h2>${esc(q.q)}</h2>${q.body?`<div class="tmpic">${q.body}</div>`:''}
+ ${q.play?`<div class="row"><button class="btn" data-act="muPlayQ">${t('muListen')}</button></div>`:''}${q.ear&&!SET.sound?`<p class="tmfb no">${t('muSoundOff')}</p>`:''}
+ ${q.piano?`<div class="tmpic">${muPiano(q.piano)}</div>${q.mode&&q.mode.startsWith('seq')?`<p class="mulast" id="muLast">${esc(t('muTapN',{n:0,t:q.target.length}))}</p>`:''}`
+ :`<div class="kgrid tmgrid ${q.symopt?'musymopt':''}">${q.opts.map((o,i)=>`<button class="btn" data-act="muAns" data-arg="${i}">${q.symopt?sym(o,'big'):esc(o)}</button>`).join('')}</div>`}
+ <div id="tmFb"></div></section>`;
+ if(q.play)setTimeout(()=>{if(MU.q===q&&SCREEN==='music')ACT.muPlayQ()},450)}
+function muAnswer(ok,shown){const p=cur();if(!p||MU.busy)return;MU.busy=true;MU.res.push(ok);const q=MU.q,P=muP(p);let fb='';
+ if(ok){MU.ok++;const g=2;MU.gain+=g;p.dopa+=g;p.correct=(+p.correct||0)+1;P.ok=(+P.ok||0)+1;if(q.ear)P.ear=(+P.ear||0)+1;if(q.piano)P.keys=(+P.keys||0)+1;if(mgTick())MU.mg=true;save(p);
+  fb=`<p class="tmfb ok">${esc(t('tmRight',{n:g}))}</p>`;document.querySelectorAll('#dopaVal').forEach(d=>d.textContent=p.dopa);setTimeout(()=>{try{sndCorrect(Math.min(MU.ok,8))}catch(e){}},q.piano?350:0)}
+ else{setTimeout(()=>{try{sndWrong()}catch(e){}},q.piano?300:0);fb=`<p class="tmfb no">${esc(t('tmWrongA',{a:shown}))}</p>`}
+ const el=document.getElementById('tmFb');if(el)el.innerHTML=fb+`<div class="row"><button class="btn pri big" data-act="muGo" data-enter>${t('tmNext')}</button></div>`;
+ document.querySelectorAll('#muPanel .mukey').forEach(b=>b.disabled=true);if(ok)MU.auto=setTimeout(()=>ACT.muGo(),1100)}
+function muFinish(){const p=cur(),P=muP(p),lv=MU.lv,r=P.lv[lv]||{best:0},first=r.best<7&&MU.ok>=7,perf=r.best<10&&MU.ok>=10;let extra='';
+ if(first){p.dopa+=10;MU.gain+=10;extra+=`<p class="lbl">${esc(t('tmFirst',{n:10}))}</p>`}
+ if(perf){p.dopa+=10;MU.gain+=10;extra+=`<p class="lbl">${esc(t('tmPerfect',{n:10}))}</p>`}
+ r.best=Math.max(+r.best||0,MU.ok);P.lv[lv]=r;if(lv==='exam'&&MU.ok>=8&&!P.exam){P.exam=1;extra+=`<p class="donst ok">🎻 ${esc(t('muExamOk'))}</p>`}
+ MU.extra=extra;save(p);try{announce(checkUnlocks(p))}catch(e){}MU.view='end';renderMusic();
+ if(MU.mg){MU.mg=false;setTimeout(()=>{try{offerMinigame(()=>{MU.view='home';SCREEN='music';renderMusic()})}catch(e){}},1400)}}
+function muPrep(){MU.q=MU_GEN[MU.lv](MU.n);MU.tap=[]}
+Object.assign(ACT,{
+ muOpen(){closeModal();MU.view='home';renderMusic()},
+ muHome(){clearTimeout(MU.auto);MU.view='home';renderMusic()},
+ muFree(){MU.view='free';renderMusic()},
+ muLv(k){clearTimeout(MU.auto);MU.lv=k;MU.slide=0;MU.view='lesson';renderMusic();window.scrollTo(0,0)},
+ muSlide(i){MU.slide=Math.max(0,+i);renderMusic()},
+ muQuiz(){MU.view='quiz';MU.n=0;MU.ok=0;MU.res=[];MU.gain=0;MU.busy=false;MU.mg=false;muPrep();renderMusic()},
+ muPlayQ(){const q=MU.q;if(q&&q.play)muSeq(q.play,q.gap||.6,q.vol)},
+ muAns(i){const q=MU.q;if(!q||MU.busy)return;i=+i;const ok=i===q.a;document.querySelectorAll('#muPanel .tmgrid .btn').forEach((b,j)=>{b.disabled=true;if(j===q.a)b.classList.add('good');else if(j===i)b.classList.add('bad')});
+  muAnswer(ok,q.symopt?durN(q.opts[q.a]):q.opts[q.a])},
+ muKey(m,b){m=+m;muNote(m);if(b){b.classList.add('on');setTimeout(()=>b.classList.remove('on'),220)}
+  const wi=b&&b.dataset.i!==undefined?+b.dataset.i:null,lastEl=document.getElementById('muLast');
+  if(MU.view!=='quiz'){if(lastEl)lastEl.textContent=wi!==null?nn(wi):'♯';return}
+  const q=MU.q;if(!q||!q.piano||MU.busy)return;
+  if(q.mode==='name'||q.mode==='exact'){const ok=wi!==null&&(q.mode==='name'?wi%7===q.target[0]%7:wi===q.target[0]);if(b)b.classList.add(ok?'good':'bad');return muAnswer(ok,q.exp)}
+  MU.tap.push(wi);if(b)b.classList.add('pick');if(lastEl)lastEl.textContent=t('muTapN',{n:MU.tap.length,t:q.target.length});
+  const k=MU.tap.length-1;if(wi===null||wi%7!==q.target[k]%7)return muAnswer(false,q.exp);if(MU.tap.length>=q.target.length)muAnswer(true,q.exp)},
+ muGo(){clearTimeout(MU.auto);if(!MU.busy)return;MU.busy=false;MU.n++;if(MU.n>=MU.total)return muFinish();muPrep();renderMusic()}
+});
+const _renderMU=render;render=function(){if(SCREEN==='music')return renderMusic();return _renderMU.apply(this,arguments)};
+
+/* ---------- статусы и рамки по музыке ---------- */
+TITLES.push(
+ {id:'mu1',e:'🎵',n:['Юный музыкант','Young musician'],c:p=>muBest(p,'notes')>=7,h:['Пройди урок «Семь нот»','Pass «Seven notes»']},
+ {id:'mu2',e:'🎼',n:['Знаток нот','Note expert'],c:p=>muBest(p,'staff')>=7&&muBest(p,'dur')>=7,h:['Пройди «Нотный стан» и «Длительности»','Pass «The staff» and «Note values»']},
+ {id:'mu3',e:'🎹',n:['Пианист','Pianist'],c:p=>(+(p.mu&&p.mu.keys)||0)>=40,h:['40 верных ответов на клавиатуре','40 correct answers on the keyboard']},
+ {id:'mu4',e:'👂',n:['Чуткий слух','Keen ear'],c:p=>(+(p.mu&&p.mu.ear)||0)>=30,h:['30 верных заданий на слух','30 correct listening tasks']},
+ {id:'mu5',e:'🎻',n:['Маэстро','Maestro'],c:p=>!!(p.mu&&p.mu.exam),h:['Сдай «Экзамен музыканта»','Pass the Music exam']},
+ {id:'stage',e:'🎤',n:['Звезда сцены','Stage star'],pr:4000});
+/* платные статусы — в конце, по цене */
+TITLES.sort((a,b)=>(a.pr?1:0)-(b.pr?1:0)||(a.pr||0)-(b.pr||0));
+FRAMES.push(['notesf',p=>muBest(p,'staff')>=7,()=>tx(['Пройди «Нотный стан»','Pass «The staff»'])],['pianof',p=>(+(p.mu&&p.mu.keys)||0)>=40,()=>tx(['40 верных ответов на клавиатуре','40 correct keyboard answers'])],['maestro',p=>!!(p.mu&&p.mu.exam),()=>tx(['Сдай «Экзамен музыканта»','Pass the Music exam'])]);
+SHOP_FR.push(['grandpiano',3500]);
+Object.assign(FRAME_TX,{notesf:['Нотная','Sheet music'],pianof:['Клавишная','Piano keys'],maestro:['Маэстро','Maestro'],grandpiano:['💎 Золотой рояль','💎 Golden grand']});
+
+document.head.insertAdjacentHTML('beforeend',`<style>
+.musym{font-family:'Noto Music','Segoe UI Symbol','Apple Symbols',serif;line-height:1}.musym.big{font-size:1.9em}
+.mubig{font-size:clamp(22px,5vw,34px);font-weight:900;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;color:#2b1a08}
+.mubig .muq{color:#ff3b3b}.mubig i{font-family:Georgia,serif}
+.mutime{display:inline-block;font-family:Georgia,serif;font-weight:900;line-height:.95;text-align:center;font-size:.9em;padding:0 4px;border-left:3px solid #2b1a08}
+.mudur{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;max-width:520px}.mudur span{display:flex;flex-direction:column;align-items:center;background:#fffbe8;box-shadow:0 0 0 2px #000;padding:8px 4px;font-weight:900;color:#2b1a08}
+.mustaff{background:#fffbe8;box-shadow:0 0 0 3px #000;max-width:94vw;height:auto}
+.mupiano{position:relative;display:grid;grid-template-columns:repeat(var(--n),1fr);width:min(640px,94vw);height:clamp(120px,26vw,180px);background:#222;padding:6px 6px 8px;box-shadow:0 0 0 3px #000,0 6px 0 #000;border-radius:6px 6px 2px 2px;touch-action:manipulation}
+.mukey{all:unset;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mukey.w{background:linear-gradient(#fff,#f1f1f1 85%,#d6d6d6);margin:0 1px;border-radius:0 0 5px 5px;box-shadow:inset 0 -6px 0 #cfcfcf;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;font-weight:900;color:#3a2410;font-size:clamp(10px,2.4vw,15px)}
+.mukey.b{position:absolute;top:6px;left:calc(6px + (100% - 12px) / var(--n) * var(--x) - (100% - 12px) / var(--n) * .32);width:calc((100% - 12px) / var(--n) * .64);height:58%;background:linear-gradient(#444,#111);border-radius:0 0 4px 4px;box-shadow:inset 0 -4px 0 #000,0 2px 0 #000;z-index:2}
+.mukey.on.w,.mukey.w:active{background:#ffe36a}.mukey.on.b,.mukey.b:active{background:#7a5cff}
+.mukey.good{background:#5fd03a!important}.mukey.bad{background:#ff5a5a!important}.mukey.pick.w{background:#bfe3ff}
+.mupiano.hlc .mukey.w:nth-child(7n+1){background:#ffe36a}
+.mulast{font-weight:900;font-size:22px;min-height:1.3em;margin:6px 0;color:#2b1a08}
+.musymopt .btn{font-size:30px}
+.fr-notesf::before{background:repeating-linear-gradient(0deg,#fffbe8 0 3px,#2b1a08 3px 4px);box-shadow:inset 0 0 0 2px #2b1a08}
+.fr-pianof::before{background:repeating-linear-gradient(90deg,#fff 0 6px,#111 6px 9px,#fff 9px 12px)}
+.fr-maestro::before{background:linear-gradient(135deg,#7a0d2b,#c41d4d 45%,#ffd23f 50%,#c41d4d 55%,#7a0d2b);background-size:250% 250%;animation:rwshine 2.6s linear infinite}.fr-maestro{filter:drop-shadow(0 0 7px #ff5a8a)}
+.fr-grandpiano::before{background:linear-gradient(#1a1a1a,#3a3a3a 50%,#111);box-shadow:inset 0 0 0 3px #ffd23f,inset 0 0 0 5px #111,inset 0 0 0 6px #ffd23f}.fr-grandpiano{filter:drop-shadow(0 0 9px #ffd23f)}
+.fr-grandpiano::after{content:"🎹";position:absolute;right:-6px;bottom:-6px;font-size:20px;z-index:2}.frame.s.fr-grandpiano::after{font-size:12px}.frame.l.fr-grandpiano::after{font-size:32px}
 </style>`);
 
 /* ============ ЗАКОН: возрастной знак 6+, политика конфиденциальности, согласие родителя ============ */
